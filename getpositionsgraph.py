@@ -209,42 +209,9 @@ class MyGraphGen:
                 self._fset.add(form)
                 for k, v in dic.items():
                     if type(v) == dict:
-                        qtydic[k][form]=v['Qty']
-
-
-        #diff=todate-fromdate
-        ll=datetime.now - fromdate
-        for k,dic in qtydic.items():
-            lastv=None
-            diffdic={}
-            for f in sorted(list(dic.keys())):
-                if not math.isnan(dic[f]):
-                    lastv=dic[f]
-                if math.isnan(dic[f]) and lastv!=None:
-                    dic[f]=lastv
-
-                diffdic[f]
-
-
-
-
-            hist = get_symbol_history(k, '%sd' % ll.days,'1d'  ) #should be rounded
-            for l in hist:
-
-                #if l['t']>todate:
-                #    break
-                tim=l[t]
-                if
-        for day in range(diff.days+1  ):
-
-
-
-
-
-
-            self._alldates[k][form] = v['Value']
-            self._allprofit[k][form]= v['TotProfit']
-            self._price[k][form] = v['CurAvg'] if 'CurAvg' in v else v['Open']
+                        self._alldates[k][form] = v['Value']
+                        self._allprofit[k][form]= v['TotProfit']
+                        self._price[k][form] = v['CurAvg'] if 'CurAvg' in v else v['Open']
 #
     # def process_file(self,fromdate=None,todate=None):
     #     self._alldates =defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
