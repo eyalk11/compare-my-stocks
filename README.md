@@ -12,5 +12,5 @@ It also opens a UI to generate this command eaisly.
 The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later  Interactive brokers account's positions. 
 The additional input data is account in Interactive Brokers. 
 
-Having said that, it is in prelimaniry said and not guarnteed to work, currently. 
+Having said that, it is in preliminary considtion and not guarnteed to work, currently. 
 
