@@ -1,3 +1,6 @@
+#Taken from https://github.com/ActiveState/code/tree/3b27230f418b714bc9a0f897cb8ea189c3515e99/recipes/Python/576696_OrderedSet_with_Weakrefs
+#By Raymond Hettinger
+
 import collections
 from weakref import proxy
 
