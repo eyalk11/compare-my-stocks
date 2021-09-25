@@ -132,7 +132,7 @@ def lookup_symbol(symb):
     return list(dic.items())[0][1] #random
 
 @flaskapp.route("/get_symbol_history")
-def get_symbol_history(name,period,interval,time):
+def get_symbol_history(name,period,interval):
     condid=lookup_symbol(name)
     hist = ib_client.market_data_history(condid,period, interval)['data']
     return hist

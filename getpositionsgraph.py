@@ -1,10 +1,16 @@
-import datetime
 import inspect
-import math
 import locale
-import time
+import pickle
+import sys
+try:
+    import config
+except:
+    print('please rename exampleconfig to config and adjust accordingly')
+    sys.exit(1)
 
-from ibtest import main,get_symbol_history
+from ib.ibtest import main,get_symbol_history
+
+
 
 locale.setlocale(locale.LC_ALL, 'C')
 
@@ -23,15 +29,14 @@ if __name__=='__main__':
 
 
 #
-from math import floor
-from msvcrt import getch
-from enum import Flag, auto
 import matplotlib
 import pandas as pd
 from collections import defaultdict
 import mplcursors
+import math
+from dateutil import parser
+import datetime
 
-from matplotlib import interactive
 import numpy
 #interactive(True)
 import matplotlib.pyplot as plt
@@ -39,7 +44,8 @@ from functools import partial
 
 from orederedset import OrderedSet
 plt.rcParams["figure.autolayout"] = False
-FN = r'C:\Users\ekarni\Downloads\logs-insights-results (6).csv'
+
+
 #matplotlib.use('WebAgg')
 #plt.rcParams['figure.constrained_layout.use'] = True
 
@@ -56,7 +62,7 @@ class MyOrderedSet(OrderedSet):
                 l.add(k)
         return l
 
-import collections
+
 from orederedset import  *
 
 linesandfig=[]
@@ -66,6 +72,8 @@ class Types(Flag):
     PRICE=1
     VALUE=auto()
     PROFIT = auto()
+    TOTPROFIT = auto()
+    RELPROFIT = auto()
     ABS= auto()
     RELTOMAX=auto()
     PRECENTAGE=auto()
@@ -91,16 +99,7 @@ def show_annotation(sel,cls=None, ax=None):
 
 
 class MyGraphGen:
-    Groups = {'Chips': ['NVDA', 'AMD', 'CLOU', 'ARKG', 'ARKK']
-        , 'FANG': ['FB', 'AAPL', 'GOOGL', 'AMZN']
-        , 'crypt': ['ethereum', 'cardano', 'bitcoin']
-        , 'broadec': ['VO', 'VPU', 'GSG', ]
-        , 'anotherus': [ 'MSOS', 'MAC']
-        , 'china': ['ADRE']
-        , 'europe': ['EWA', 'EWG', 'EZU', 'EDEN']
-        , 'moneyothers': ['TGT' 'FVRR', 'SQ', 'TSLA'],
-              'med': ['NVAX', 'BNTX', 'MRNA', 'REGN']}
-
+    Groups = config.GROUPS
 
     def __init__(self,filename,o):
         self._fn=filename
@@ -108,27 +107,34 @@ class MyGraphGen:
         self._fset=set()
         self._linesandfig=[]
         self._annotation=[]
-        t=inspect.getfullargspec(MyGraphGen.gen_graph)
-        [self.__setattr__(a, d) for a, d in zip(t.args, t.defaults)]
+        t=inspect.getfullargspec(MyGraphGen.gen_graph) #generate all fields from paramters of gengraph
+        [self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
         self._out=o
         self.cur_shown_stock=set()
         self.last_stock_list=set()
+        self._symbols=set()
 
 
-    def getli(self, mincrit, div=Types.RELTOMAX,compare_with=None):
+    def get_data_by_type(self, mincrit, div=Types.RELTOMAX, compare_with=None):
 
         flist=sorted(self._fset)
 
         if div & Types.PROFIT:
-            dic=self._allprofit
+            dic=self._unrel_profit
+        elif div & Types.RELPROFIT:
+            dic=self._rel_profit_by_stock
         elif div & Types.PRICE:
-            dic = self._price
-        else: #value
-            dic=self._alldates
+            dic = self._alldates
+        elif div & Types.TOTPROFIT:
+            dic= self._tot_profit_by_stock
+        elif div & Types.VALUE:
+            dic=self._value
+        else:
+            dic= self._alldates
 
 
-        #dic=dic.deepcopy()
-        compit = dic[compare_with]#dic.pop(compare_with)
+
+        compit = dic[compare_with]
 
         for st, v in dic.items():
             ign = False
@@ -160,106 +166,160 @@ class MyGraphGen:
             else:
                 pass #print('ignoring ', st)
 
-    def process_file(self,fromdate=None,todate=None):
-        self._alldates =defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
-        self._allprofit = defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
-        self._price=defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
+    def populate_buydic(self):
 
-        self._fset = set()
+        x=pd.read_csv(self._fn)
+        self._buydic = collections.OrderedDict()
+        self._symbols=set()
+        for t in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],
+                     x['TimeOfDay']):
+            #if not math.isnan(t[1]):
+            #    self._symbols.add(t[1])
 
-        qtydic= defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
-
-        lines=list([x.replace('\n','').replace('\r','') for x in open(self._fn)])[1:]
-        #lines=
-        lst=list(zip(lines,lines[1:]))
-        getf =( fromdate==None)
-        gett = ( todate==None)
-
-        for i in range(0,len(lines),2):
-            arr=lst[i]
-            #lst.next()
-            #arr= l.split(',')
-            date_time_obj = datetime.datetime.strptime( arr[1][2:], '%Y-%m-%d %H:%M:%S.%f')
-            if fromdate==None:
-                fromdate=date_time_obj
-            elif date_time_obj<fromdate:
-                fromdate=date_time_obj
-            if todate == None:
-                todate = date_time_obj
-            elif date_time_obj > todate:
-                todate = date_time_obj
-
-            l=arr[0]
-            if not 'TotProfit' in l:
-                #print(arr[1])
+            if (self.portfolio and  t[0] != self.portfolio) or math.isnan(t[2]):
                 continue
-            #l=arr[1]
-            l=l[l.index(',')+2:]
+            dt = str(t[-2]) + ' ' + str(t[-1])
+            # print(dt)
+            try:
+                if math.isnan(t[-2]):
+                    print(t)
+            except:
+                pass
+            arr = dt.split(' ')
+
+            dt = parser.parse(' '.join([arr[0], arr[2], arr[1]]))
+            print(type(dt))
+            self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1]) #Qty,cost,sym
+            self._symbols.add(t[1])
+
+    def process(self):
+        self.populate_buydic()
+        self.process_ib()
+
+    def process_ib(self):
+
+        def update_curholding():
+            stock = cur_action[1][2]
+            old_cost = _cur_avg_cost_bystock[stock]
 
 
-            if l.startswith('{'):
-                t = l[:-1]
-                dic = eval(t)
-                dic = dic
-                if fromdate and date_time_obj<fromdate:
-                    continue
-                if  todate and date_time_obj > todate:
-                    continue
-                form = matplotlib.dates.date2num(date_time_obj)
-                self._fset.add(form)
-                for k, v in dic.items():
-                    if type(v) == dict:
-                        self._alldates[k][form] = v['Value']
-                        self._allprofit[k][form]= v['TotProfit']
-                        self._price[k][form] = v['CurAvg'] if 'CurAvg' in v else v['Open']
-#
-    # def process_file(self,fromdate=None,todate=None):
-    #     self._alldates =defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
-    #     self._allprofit = defaultdict(lambda: defaultdict(lambda:numpy.NaN ))
-    #     self._fset = set()
-    #
-    #     for l in open(self._fn):
-    #         if l.startswith('"{'):
-    #             t = l[1:-1]
-    #             dic = eval(t)
-    #             dic = dic
-    #             if fromdate and dic['TIME']<fromdate:
-    #                 continue
-    #             if  todate and dic['TIME'] > todate:
-    #                 continue
-    #             form = matplotlib.dates.date2num( dic['TIME'])
-    #             self._fset.add(form)
-    #             for k, v in dic.items():
-    #                 if type(v) == dict:
-    #                     self._alldates[k][form] = v['CurAvg'] * v['OldQty']
+            old_holding= _cur_holding_bystock[stock]
+            if cur_action[1][0]>0:
+                _cur_avg_cost_bystock[stock] =nv= (old_holding * old_cost + cur_action[1][0] * cur_action[1][1]) / (old_holding + cur_action[1][1])
+                #self._avg_cost_by_stock[stock][cur_action[0]] = nv
+            else:
+                _cur_relprofit_bystock[stock] += cur_action[1][0] * (cur_action[1][1]* (-1)  -_cur_avg_cost_bystock[stock])
+                #self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
+
+            _cur_holding_bystock[stock] += cur_action[1][1]
+
+        self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN)) #how much we hold
+        self._avg_cost_by_stock=defaultdict(lambda: defaultdict(lambda: numpy.NaN)) #cost per unit
+        self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  #re
+        self._tot_profit_by_stock  = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+
+        _cur_avg_cost_bystock=defaultdict(lambda: 0)
+        _cur_holding_bystock = defaultdict(lambda: 0)
+        _cur_relprofit_bystock=defaultdict(lambda: 0)
 
 
-    def gen_graph(self,groups=None ,mincrit=MIN,maxnum=MAXCOLS,type=Types.VALUE,ext=['QQQ'],increase_fig=1,fromdate=None,todate=None,isline=True,starthidden=1,compare_with=None,reprocess=1,just_upd=0,shown_stock=set()):
+        b= self._buydic.copy()
+
+
+        cur_action= b.popitem(False)
+
+        if not cur_action:
+            return
+        if self.fromdate == None:
+            self.fromdate=cur_action[0]
+
+        ll = datetime.datetime.now() - self.fromdate
+
+        #update_profit = lambda y: y[0]
+
+        query_ib=not self.use_cache
+        if self.use_cache:
+            if self._cache_date - datetime.datetime.now() > config.MAXCACHETIMESPAN:
+                query_ib=True
+            else:
+                try:
+                    self._hist_by_date , self._cache_date= pickle.load(open(config.HIST_F,'rb'))
+                except:
+                    print('failed to use cache')
+                    query_ib=True
+
+        if query_ib:
+            self._hist_by_date = collections.OrderedDict() #like all dates but by
+
+            for sym in self._symbols:
+                hist = get_symbol_history(sym, '%sd' % ll.days, '1d')  # should be rounded
+
+                for l in hist:
+                    if not l['t'] in self._hist_by_date:
+                        self._hist_by_date[l['t']]={}
+                    self._hist_by_date[l['t']][sym]=l['v']
+
+            pickle.dump( (self._hist_by_date,datetime.datetime.now()), open(config.HIST_F,'wb') )
+
+
+        for tim,dic in self._hist_by_date.items():
+            while tim>cur_action[0]:
+                update_curholding()
+                if len(b)==0:
+                    cur_action=None
+                    break
+                cur_action = b.popitem(False)
+                if self.todate and tim>self.todate:
+                    break
+
+            t=matplotlib.dates.date2num(tim)
+            for sym,v in dic.items():
+                self._alldates[sym][t]=v
+                self._value[sym][t]=  v* _cur_holding_bystock[sym]
+                self._unrel_profit[sym][t]= v * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * _cur_avg_cost_bystock[sym]
+                self._rel_profit_by_stock[sym][t]=_cur_relprofit_bystock[sym]
+                self._tot_profit_by_stock[sym][t] = self._rel_profit_by_stock[sym][t] + self._unrel_profit[sym][t]
+
+        self._fset = sorted(self._alldates[sym].keys()) #last sym hopefully
+        if cur_action:
+            update_curholding()
+            print('after, should update rel_prof... ')
+
+
+
+
+    def gen_graph(self, groups=None, mincrit=MIN, maxnum=MAXCOLS, type=Types.VALUE, ext=['QQQ'], increase_fig=1, fromdate=None, todate=None, isline=True, starthidden=1, compare_with=None, reprocess=1, just_upd=0, shown_stock=set(), portfolio=config.DEF_PORTFOLIO):
         t = inspect.getfullargspec(MyGraphGen.gen_graph)
         for a in t.args:
             self.__setattr__(a, locals()[a])
         B = (1, 0.5)
         if reprocess:
-            self.process_file(fromdate,todate)
-        odata = list(self.getli( mincrit, type,compare_with))
+            self.process()
+        cols, dt = self.generate_data(compare_with, ext, groups, maxnum, mincrit, type)
+
+        self.gen_actual_graph(B, cols, dt, increase_fig, isline, starthidden,just_upd,type)
+
+    def generate_data(self, compare_with, ext, groups, maxnum, mincrit, type):
+        odata = list(self.get_data_by_type(mincrit, type, compare_with))
         odata.sort(key=lambda x: x[2])
         data = odata[(-1) * maxnum:]
-        ll=[x[0] for x in data]
+        ll = [x[0] for x in data]
         cols = MyOrderedSet(ll)
-        self.cols=cols
+        self.cols = cols
         if groups:
-            curse=set()
+            curse = set()
             for g in groups:
-                curse=curse.union( set(self.Groups[g]))
-            cols=cols.intersection(curse)
+                curse = curse.union(set(self.Groups[g]))
+            cols = cols.intersection(curse)
         for sym in ext:
             if not sym in cols:
                 data += [(k, x, y) for k, x, y in odata if k == sym]
                 cols.add(sym)
         data = {x: y for (x, y, z) in data}
-        dt = pd.DataFrame(data, columns=cols, index=[  matplotlib.dates.num2date(y) for y in self._fset])
-
-        self.gen_actual_graph(B, cols, dt, increase_fig, isline, starthidden,just_upd,type)
+        dt = pd.DataFrame(data, columns=cols, index=[matplotlib.dates.num2date(y) for y in self._fset])
+        return cols, dt
 
     def update_graph(self,**kwargs):
         reprocess= 1 if  (set(['fromdate','todate']).intersection(set(kwargs.keys())) or not self._alldates) else 0
@@ -493,7 +553,7 @@ class MyGraphGen:
 #fig.canvas.draw()
 if __name__=='__main__':
     main(False)
-    gg=MyGraphGen(FN,open('a.t','w'))
+    gg=MyGraphGen(config.FN,open('a.t','w'))
     if USEWX:
         matplotlib.use('WxAgg')
     elif USEWEB:
@@ -503,7 +563,7 @@ if __name__=='__main__':
     #interactive(True)
     #gg.gen_graph()
 
-    x= {'group': ('FANG',),
+    x= {'groups': ('FANG',),
      'type': 196,
      'compare_with': 'QQQ',
      'mincrit': 0,
@@ -516,10 +576,7 @@ if __name__=='__main__':
     #plt.show(block=True)
     a=1
     #getch()
-#import matplotlib.pyplot as plt
-#plt.plot(ar)
-#plt.show()
-#lis= map(lambda x:x[1],lis)
+
 
 
 

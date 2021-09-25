@@ -14,4 +14,5 @@ GROUPS= {'Chips': ['NVDA', 'AMD', 'CLOU', 'ARKG', 'ARKK']
         , 'europe': ['EWA', 'EWG', 'EZU', 'EDEN']
         , 'moneyothers': ['TGT' 'FVRR', 'SQ', 'TSLA'],
               'med': ['NVAX', 'BNTX', 'MRNA', 'REGN']}
+DEF_PORTFOLIO = 'My Portfolio'
 FN="Csv From MyStockProtofolio (buy/sells)"
