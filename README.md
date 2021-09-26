@@ -22,14 +22,13 @@ The additional input data is account in Interactive Brokers as it works with IB 
 
 ## Running Instructions
 
- 1. Copy example_config and change accordingly.
+ 1. Copy exampleconfig.py to config.py
+ 2. Change according to instructions there.
 
-    Notice that you should provide a CSV in MyStocksProtoflio format: (at least) 
+    Notice that you should provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
 
 ![image](https://user-images.githubusercontent.com/72234965/134824863-f0d174e3-4123-47c4-b6c1-d9ee2fb92113.png)
+   
 
-
-   for every transaction (Type is Buy/Sell). 
-
- 2. If you want to use the provided cache, increase the MAXCACHETIMESPAN siginificantly. Otherwise, provide IB data and run client portal gateway.
- 3. Run the provided sample.ipynb in jupyter (using TK with getpositionsgraph.py is supported too, but doesn't include a dialog).
+ 3. If you want to use the provided cache, increase the MAXCACHETIMESPAN siginificantly. Otherwise, provide IB data and run client portal gateway.
+ 4. Run the provided sample.ipynb in jupyter (using TK with getpositionsgraph.py is supported too, but doesn't include a dialog).
