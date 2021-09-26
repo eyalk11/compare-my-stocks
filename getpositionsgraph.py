@@ -113,6 +113,7 @@ class MyGraphGen:
         self.cur_shown_stock=set()
         self.last_stock_list=set()
         self._symbols=set()
+        self._cache_date=None
 
 
     def get_data_by_type(self, mincrit, div=Types.RELTOMAX, compare_with=None):
@@ -235,36 +236,40 @@ class MyGraphGen:
         if self.fromdate == None:
             self.fromdate=cur_action[0]
 
-        ll = datetime.datetime.now() - self.fromdate
+        ll = datetime.datetime.now(config.TZINFO) - self.fromdate
 
         #update_profit = lambda y: y[0]
 
-        query_ib=not self.use_cache
-        if self.use_cache:
-            if self._cache_date - datetime.datetime.now() > config.MAXCACHETIMESPAN:
-                query_ib=True
-            else:
-                try:
-                    self._hist_by_date , self._cache_date= pickle.load(open(config.HIST_F,'rb'))
-                except:
-                    print('failed to use cache')
-                    query_ib=True
+        query_ib=True
+        if self.use_cache :
+            try:
+                hist_by_date, self._cache_date = pickle.load(open(config.HIST_F, 'rb'))
+                if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN:
+                    self._hist_by_date=hist_by_date
+                query_ib = False
+            except:
+                print('failed to use cache')
+
+
 
         if query_ib:
             self._hist_by_date = collections.OrderedDict() #like all dates but by
 
             for sym in self._symbols:
                 hist = get_symbol_history(sym, '%sd' % ll.days, '1d')  # should be rounded
-
+                if hist==None:
+                    continue
                 for l in hist:
                     if not l['t'] in self._hist_by_date:
                         self._hist_by_date[l['t']]={}
-                    self._hist_by_date[l['t']][sym]=l['v']
+                    self._hist_by_date[l['t']][sym]= (l['c']+l['o'])/2
 
             pickle.dump( (self._hist_by_date,datetime.datetime.now()), open(config.HIST_F,'wb') )
 
 
         for tim,dic in self._hist_by_date.items():
+            tz=datetime.timezone(datetime.timedelta(hours=0),'UTC')
+            tim=datetime.datetime.fromtimestamp(tim/1000,tz)
             while tim>cur_action[0]:
                 update_curholding()
                 if len(b)==0:
@@ -290,7 +295,7 @@ class MyGraphGen:
 
 
 
-    def gen_graph(self, groups=None, mincrit=MIN, maxnum=MAXCOLS, type=Types.VALUE, ext=['QQQ'], increase_fig=1, fromdate=None, todate=None, isline=True, starthidden=1, compare_with=None, reprocess=1, just_upd=0, shown_stock=set(), portfolio=config.DEF_PORTFOLIO):
+    def gen_graph(self, groups=None, mincrit=MIN, maxnum=MAXCOLS, type=Types.VALUE, ext=['QQQ'], increase_fig=1, fromdate=None, todate=None, isline=True, starthidden=1, compare_with=None, reprocess=1, just_upd=0, shown_stock=set(), portfolio=config.DEF_PORTFOLIO,use_cache=True):
         t = inspect.getfullargspec(MyGraphGen.gen_graph)
         for a in t.args:
             self.__setattr__(a, locals()[a])
@@ -569,9 +574,9 @@ if __name__=='__main__':
      'mincrit': 0,
      'maxnum': 0}
 
-    gg.gen_graph(**x)
+    #gg.gen_graph(**x)
     #gg.gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ', mincrit=-100000, maxnum=4000, groups=["FANG"],  starthidden=0)
-    #gg.gen_graph(type=Types.VALUE, isline=True,groups=['broadec'],mincrit=-100000,maxnum=4000)
+    gg.gen_graph(type=Types.PRICE, isline=True,groups=['broadec'],mincrit=-100000,maxnum=4000)
     #gg.update_graph(type=Types.PROFIT)
     #plt.show(block=True)
     a=1

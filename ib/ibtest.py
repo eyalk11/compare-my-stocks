@@ -2,6 +2,7 @@ import math
 import time
 import datetime
 from collections import defaultdict
+from requests import HTTPError
 
 import flask
 import numpy
@@ -100,7 +101,7 @@ def get_updated_dict(w):
 def get_account_data():
     return {'data': list(grep_positions_value(REGULAR_ACCOUNT))}
 
-PREFERED_BORSA=['NASDAQ','ISLAND']
+PREFERED_BORSA=['NASDAQ','ISLAND','IBIS']
 def test():
     acc = ib_client.portfolio_accounts()
     symid = lookup_symbol('AAPL')
@@ -115,6 +116,8 @@ def test():
 def main(runFalsk=True):
     # create a new session.
     ib_client.connect(start_server=False, check_user_input=False)
+    #acc = ib_client.portfolio_accounts()
+    #acc2 = ib_client.server_accounts()
     if not runFalsk:
         return
     if 0:
@@ -123,7 +126,11 @@ def main(runFalsk=True):
         flaskapp.run(debug=True, port=PORT)
 
 def lookup_symbol(symb):
-    contr = ib_client.symbol_search(symb)
+    try:
+        contr = ib_client.symbol_search(symb)
+    except Exception as e:
+        print('failed %s' % symb)
+        return None
     dic= {x['description']:x['conid'] for x in contr}
     picked=None
     for desc in PREFERED_BORSA:
@@ -134,7 +141,14 @@ def lookup_symbol(symb):
 @flaskapp.route("/get_symbol_history")
 def get_symbol_history(name,period,interval):
     condid=lookup_symbol(name)
-    hist = ib_client.market_data_history(condid,period, interval)['data']
+    if not condid:
+        return  None
+    try:
+
+        hist = ib_client.market_data_history(condid,period, interval)['data']
+    except:
+        print('failed getting data %s' % name )
+        return None
     return hist
 
 
