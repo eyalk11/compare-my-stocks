@@ -5,9 +5,11 @@
 import pandas as pd
 import ipywidgets as widgets
 from IPython.display import display
+from ipywidgets import ValueWidget
 
-class DateRangePicker(object):
-    def __init__(self,start,end,freq='D',fmt='%Y-%m-%d',layout=None):
+
+class DateRangePicker(ValueWidget):
+    def __init__(self,start,end,freq='D',fmt='%Y-%m-%d',layout=None,description=' '):
         """
         Parameters
         ----------
@@ -21,6 +23,7 @@ class DateRangePicker(object):
             Format to use to display the selected period
 
         """
+        self.description=description
         self.date_range=pd.date_range(start=start,end=end,freq=freq)
         options = [(item.strftime(fmt),item) for item in self.date_range]
         lay={}
@@ -41,7 +44,7 @@ class DateRangePicker(object):
         self.slider_start.on_trait_change(self.slider_start_changed, 'value')
         self.slider_end.on_trait_change(self.slider_end_changed, 'value')
 
-        self.widget = widgets.VBox([self.slider_start,self.slider_end])
+        #self.widget = widgets.VBox([self.slider_start,self.slider_end])
 
     def slider_start_changed(self,key,value):
         self.slider_end.value=max(self.slider_start.value,self.slider_end.value)
@@ -57,6 +60,7 @@ class DateRangePicker(object):
     def _observe(self,**kwargs):
         if hasattr(self,'observe'):
             self.observe(**kwargs)
+    @property
+    def value(self):
+        return (self.slider_start.value, self.slider_end.value)
 
-    def fct(start,end):
-        print(start,end)

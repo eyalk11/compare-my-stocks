@@ -9,6 +9,10 @@ from ipywidgets import Layout, Button, Box, FloatText, Textarea, Dropdown, Label
 
 from widgets import DateRangePicker
 
+SELECT_BY_STOCKS = 'Select by stocks'
+
+SELECT_BY_GROUP = 'Select by group'
+
 rad=widgets.RadioButtons(
     options=['PRICE', 'VALUE', 'PROFIT','TOTPROFIT'],
 #    value='pineapple', # Defaults to 'pineapple'
@@ -38,10 +42,8 @@ unite=widgets.Checkbox(
 autoupd=widgets.Checkbox(
     description='Select by groups' ,value=False)
 rad3=widgets.RadioButtons(
-    options=['Select by group', 'Select by stocks'])
+    options=[SELECT_BY_GROUP, SELECT_BY_STOCKS])
 
-autoupd=widgets.Checkbox(
-    description='Select by groups' ,value=False)
 
 
 
@@ -58,10 +60,7 @@ to_show=False
 def dialog(gg):
 
 
-    def myf(dl, ft,com,mn,numit):
-        updateall(dl,ft,com,mn,d.value,numit)
-
-    def updateall(dl, ft,com,mn,cb,numit):
+    def myf(dl, ft,com,mn,numit,unite,rad3,dt2):
         #breakpoint()
         t = Types.__getattribute__(Types, dl) | Types.__getattribute__(Types, ft)
         gg.compare_with = com
@@ -69,16 +68,19 @@ def dialog(gg):
             gg.type =t | Types.COMPARE
         else:
             gg.type = t
-        gg.groups= cb
+
         gg.mincrit=mn
         gg.maxnum=numit
+        gg.fromdate=dt2[0].to_pydatetime()
+        gg.todate=dt2[1].to_pydatetime()
+
         #stockl.options= get_options_from_groups(cb)
         #stockl.value=stockl.options
         # if cb=='ALL':
         #     gg.groups = None
         # else:
         #     gg.groups= [cb]
-        #gg.update_graph()
+        gg.update_graph()
         return 1
 
     def show_hide(b):
@@ -99,14 +101,19 @@ def dialog(gg):
             return
         ls= change.new['index']
 
-        stockl.options= get_options_from_groups([ d.options[x] for x in ls])
+        value = [d.options[x] for x in ls]
+        stockl.options= get_options_from_groups(value)
         stockl.value=stockl.options
-        updateall(dl=rad.value,
-                  ft=rad2.value,
-                  com=comp.value,
-                  mn=mn.value,
-                  numit=numit.value, cb=d.value)
-        #breakpoint()
+        if rad3.value== SELECT_BY_GROUP:
+            # updateall(dl=rad.value,
+            #           ft=rad2.value,
+            #           com=comp.value,
+            #           mn=mn.value,
+            #           numit=numit.value, cb=d.value,
+            #           unite=unite.value,rad3=rad3.value,dt2=dd.value)
+            gg.groups = value
+            gg.update_graph() #assuming rad3 updated it
+            #breakpoint()
         pass
 
     #MyGraphGen.Groups.keys()
@@ -125,14 +132,7 @@ def dialog(gg):
     numit=IntSlider(min=0, max=100, description= ' ')
 
 
-    i = widgets.interactive(myf,
-                            dl=rad,
-                            ft=rad2,
-                            com=comp,
-                            mn=mn,
-                            numit=numit
 
-                            )
 
 
     b = Button(description='HideShow')
@@ -189,6 +189,16 @@ def dialog(gg):
                  layout=Layout(display='flex',height='300pt',width='100%',justify_content='flex-start',align_items='stretch'))
     #form = HBox([mbox, widgets.Box([stockl, bb], layout=col_item_layout), gb2, stock_shown],                layout=bestlt)
 
+    i = widgets.interactive(myf,
+                            dl=rad,
+                            ft=rad2,
+                            com=comp,
+                            mn=mn,
+                            numit=numit,
+                            unite=unite,
+                            rad3=rad3,
+                            dt2=dd
+                            )
 
     display(form)
     t=1
