@@ -5,7 +5,8 @@ The idea is to provide commands for generating useful portfolio graphs inline in
 For instance, to compare the performance of the FANG stocks in your portfolioto a stock of your choice (i.e. QQQ) in a single command, that you could execute when you want.
 
 
-![image](https://user-images.githubusercontent.com/72234965/134785971-c3199e48-690e-4ddd-8bb6-3b023f694c8d.png)
+![image](https://user-images.githubusercontent.com/72234965/134824596-3660e4e0-9d73-4dac-82c8-60a21730fced.png)
+
 
 It also opens a UI to generate this command easily. 
 
