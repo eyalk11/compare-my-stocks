@@ -1,6 +1,6 @@
 # stocks-visualizer-jupyter
 
-== General ==
+## General 
 Visualize Stocks in your portfolio using matplotlib and jupyter. 
 
 The idea is to provide commands for generating useful portfolio graphs inline in jupyter. 
@@ -20,7 +20,7 @@ The additional input data is account in Interactive Brokers as it works with IB 
 ![image](https://user-images.githubusercontent.com/72234965/134824685-dba476e4-6a84-47b4-a37d-db7247324414.png)
 
 
-== Running Instructions ===
+## Running Instructions
 
 1. Copy example_config and change accordingly.
 
