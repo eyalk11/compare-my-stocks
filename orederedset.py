@@ -79,3 +79,12 @@ class OrderedSet(collections.MutableSet):
         if isinstance(other, OrderedSet):
             return len(self) == len(other) and list(self) == list(other)
         return not self.isdisjoint(other)
+
+
+class MyOrderedSet(OrderedSet):
+    def intersection(self,set):
+        l=OrderedSet()
+        for k in self:
+            if k in set:
+                l.add(k)
+        return l

@@ -10,6 +10,7 @@ from common import USEQT
 from common import Types
 plt.rcParams["figure.autolayout"] = False
 
+
 def show_annotation(sel,cls=None, ax=None):
     xi = sel.target[0]
     vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
@@ -29,7 +30,7 @@ class GraphGenerator:
         self.last_stock_list=set()
         self.cur_shown_stock=set()
 
-    def gen_actual_graph(self, B, cols, dt, increase_fig, isline, starthidden, just_upd,type):
+    def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         if not just_upd:
             self.cur_shown_stock = set()
         if just_upd:
@@ -47,7 +48,7 @@ class GraphGenerator:
                 self.cursor.disconnect('add',cb=self.cb)
                 del self.cursor
             #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
-            dt.plot.line(figsize=self.def_fig_size, reuse_plot=True,ax=ar)
+            dt.plot.line(figsize=self.params.def_fig_size, reuse_plot=True,ax=ar)
             #ar.legend_.figure.canvas.clear()
             #ar.legend_.figure.canvas.draw()
         else:
@@ -56,7 +57,7 @@ class GraphGenerator:
                 ar = dt.plot.area(figsize=(15.1,6.46), stacked=False)
             else:
                 #mplfinance.plot(dt, figsize=(16, 10), type='candle')
-                ar = dt.plot.line(figsize=self.def_fig_size)
+                ar = dt.plot.line(figsize=self.params.def_fig_size)
         FACy = 1.2
         FACx = 2.4
         box = ar.get_position()
@@ -76,7 +77,7 @@ class GraphGenerator:
         if type & Types.PRICE:
             st += 'Stock Price'
         if type & Types.COMPARE:
-            st += ' Compared To ' + self.compare_with
+            st += ' Compared To ' + self.params.compare_with
         ar.set_title(st)
 
         # match type:
@@ -95,11 +96,11 @@ class GraphGenerator:
         #ar.set_title(st)
 
 
-        mfig.set_size_inches(self.def_fig_size)
+        mfig.set_size_inches(self.params.def_fig_size)
         #nice hack
         def set_fig_size(my,def_fig_size,*args,**kwargs):
             my.figsize= def_fig_size  #if anyone asks
-        mfig.set_size_inches=partial(set_fig_size,mfig,self.def_fig_size)
+        mfig.set_size_inches=partial(set_fig_size,mfig,self.params.def_fig_size)
 
 
         #ar.set_size_inches(15.1,6.46)#(7*FACx, hi * 0.6*FACy)
@@ -112,7 +113,8 @@ class GraphGenerator:
             ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
         if isline:
             (lined, fig) = self.handle_line(ar, starthidden,just_upd)
-        if increase_fig or len(self._linesandfig)==0:
+
+        if self.params.increase_fig or len(self._linesandfig)==0:
             # plt.figure(len(self.graphs))
             if isline:
                 self._linesandfig += [(lined, fig,ar)]
@@ -140,13 +142,13 @@ class GraphGenerator:
                 self.update_limit(ar, fig, mfig, lined.values())
                 if self.adjust_date:
                     f,t = plt.xlim()
-                    fromdateNum = matplotlib.dates.date2num(self.fromdate) if self.fromdate else f
-                    todateNum = matplotlib.dates.date2num(self.todate) if self.todate else t
+                    fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
+                    todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
                     plt.xlim([fromdateNum,todateNum])
                     plt.grid(b=True)
                     self.adjust_date=False
                     #plt.draw()
-            elif self.show_graph:
+            elif self.params.show_graph:
                 print('strange')
                 pass#plt.show()
                     #from IPython.core.display import display
@@ -170,12 +172,12 @@ class GraphGenerator:
 
 
 
-        istrivial=( len(self.shown_stock)==0 or len(self.shown_stock)==len(ar.lines))
+        istrivial=( len(self.params.shown_stock)==0 or len(self.params.shown_stock)==len(ar.lines))
         iscurtrivial = (len(self.cur_shown_stock) == 0 or len(self.cur_shown_stock) == len(ar.lines))
         if (iscurtrivial and starthidden):
             self.cur_shown_stock=set()
         if not istrivial:
-            self.cur_shown_stock=self.shown_stock
+            self.cur_shown_stock=self.params.shown_stock
 
 
         if just_upd:
@@ -186,7 +188,7 @@ class GraphGenerator:
             legline.set_picker(5)  # 5 pts tolerance
             lined[legline] = origline
             if not istrivial:
-                hide=   legline._label not in self.shown_stock #act based on shown_stock
+                hide=   legline._label not in self.params.shown_stock #act based on shown_stock
             else:
                 hide=  (iscurtrivial and starthidden) or (not iscurtrivial and   (legline._label not in self.cur_shown_stock))
 

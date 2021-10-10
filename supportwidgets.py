@@ -7,9 +7,7 @@ from IPython.core.display import display
 from ipywidgets import Layout, Button, Box, FloatText, Textarea, Dropdown, Label, IntSlider
 from widgets import DateRangePicker
 
-from getpositionsgraph import CompareEngine
-
-
+from compareengine import CompareEngine
 
 SELECT_BY_STOCKS = 'Select by stocks'
 

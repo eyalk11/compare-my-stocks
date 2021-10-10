@@ -82,3 +82,6 @@ class Parameters:
         if self._baseclass:
             self._baseclass.adjust_date = 1
         pass
+
+class ParameterError(Exception):
+    pass
