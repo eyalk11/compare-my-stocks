@@ -2,19 +2,21 @@ from datetime import datetime
 
 from ipywidgets import interact, interactive, fixed, interact_manual, SelectMultiple, Combobox, HBox, VBox
 import ipywidgets as widgets
-from getpositionsgraph import Types
+from common import Types
 from IPython.core.display import display
-from getpositionsgraph import MyGraphGen
 from ipywidgets import Layout, Button, Box, FloatText, Textarea, Dropdown, Label, IntSlider
-
 from widgets import DateRangePicker
+
+from getpositionsgraph import CompareEngine
+
+
 
 SELECT_BY_STOCKS = 'Select by stocks'
 
 SELECT_BY_GROUP = 'Select by group'
 
 rad=widgets.RadioButtons(
-    options=['PRICE', 'VALUE', 'PROFIT','TOTPROFIT'],
+    options=['PRICE', 'VALUE', 'PROFIT','TOTPROFIT',"THEORTICAL_PROFIT"],
 #    value='pineapple', # Defaults to 'pineapple'
 #    layout={'width': 'max-content'}, # If the items' names are long
     description='Main',
@@ -45,8 +47,6 @@ rad3=widgets.RadioButtons(
     options=[SELECT_BY_GROUP, SELECT_BY_STOCKS])
 
 
-
-
 form_item_layout = Layout(
     display='flex',
     flex_flow='row',
@@ -56,6 +56,9 @@ form_item_layout = Layout(
 
 
 to_show=False
+
+
+
 
 def dialog(gg):
 
@@ -88,20 +91,17 @@ def dialog(gg):
         gg.show_hide(to_show)
         to_show=not to_show
 
-    def get_options_from_groups(ls):
-        s=set()
-        for g in ls:
-            s=s.union( set(gg.Groups[g] ))
-        return list(s)
+
 
     def observe_group(change):
 
-        if not 'index' in change.new:
+        if  'index' in change.new:
             #print(change.new)
-            return
-        ls= change.new['index']
+            ls= change.new['index']
+            value = [d.options[x] for x in ls]
+        else:
+            value=change.new
 
-        value = [d.options[x] for x in ls]
         stockl.options= get_options_from_groups(value)
         stockl.value=stockl.options
         if rad3.value== SELECT_BY_GROUP:
@@ -117,16 +117,16 @@ def dialog(gg):
         pass
 
     #MyGraphGen.Groups.keys()
-    d = SelectMultiple(options=list(MyGraphGen.Groups.keys()), value=gg.groups if gg.groups!=None else list(),description=' ')
-    d.observe(observe_group)
+    d = SelectMultiple(options=list(CompareEngine.Groups.keys()), value=gg.groups if gg.groups != None else list(), description=' ')
+    d.observe(observe_group,names='value')
     stockl=SelectMultiple(options=list(get_options_from_groups(d.value)) ,layout=Layout(flex='3 0 auto',display='inline-flex',flex_flow='row wrap', height='90%',
                                                                                         justify_content='flex-start', align_items='flex-start'))
     # stockl = SelectMultiple(options=list(get_options_from_groups(d.value)),
     #                         layout=Layout(flex='3 0 auto', display='inline-block',object_fit='fill', height='100%',
     #                                     ))
-    comp = Combobox(options=list(), ensure_option=False, placeholder='Choose stock', description=' ')
+    #comp = Combobox(options=list(), ensure_option=False, placeholder='Choose stock', description=' ')
     addbox=Combobox(options=list(), ensure_option=False, placeholder='Choose stock', description=' ',layout=Layout(flex='1 1 auto',display='inline-flex',flex_flow='column wrap', align_items='flex-start'))
-    #comp=Combobox(options=list(gg.cols), ensure_option=False,placeholder='Choose stock',description=' ')
+    comp=Combobox(options=list(gg.cols), ensure_option=False,placeholder='Choose stock',description=' ')
     mn=IntSlider(min=-10000, max=10000,description =' ')
 
     numit=IntSlider(min=0, max=100, description= ' ')
