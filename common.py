@@ -1,13 +1,10 @@
+from abc import ABC, abstractmethod
+
 USEWX=0
 USEWEB=0
 USEQT=1
 import sys
 
-try:
-    import config
-except:
-    print('please rename exampleconfig to config and adjust accordingly')
-    sys.exit(1)
 
 
 from enum import Flag, auto, Enum
@@ -38,3 +35,10 @@ class UniteType(Flag):
     SUM=auto()
     AVG=auto()
     ADDTOTAL=auto()
+
+class InputSourceType(Flag):
+    Cache=0
+    IB=auto()
+    InvestPy=auto()
+
+

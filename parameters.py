@@ -1,4 +1,5 @@
 import dataclasses
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -17,7 +18,7 @@ def paramaware(klass):
 
     def newinit(self,*args,**kwargs):
         orginit(self,*args,**kwargs)
-        self._changed_keys=set(kwargs.keys()) #TODO: take care of args.
+        self._changed_keys=set(kwargs.keys()).intersection(set(self.__dataclass_fields__.keys())) #TODO: take care of args.
 
     def update_from(self,another):
         dic= dataclasses.asdict(another)
@@ -51,6 +52,7 @@ class Parameters:
     unite_by_group : UniteType =UniteType.NONE
     show_graph : bool =False
     use_groups: bool =True
+    use_ext: bool = True
     selected_stocks: list =field(default_factory=list)
     shown_stock: list =field(default_factory=list)
     increase_fig: bool = False
@@ -85,3 +87,11 @@ class Parameters:
 
 class ParameterError(Exception):
     pass
+
+
+
+class HasParams(ABC):
+    @property
+    @abstractmethod
+    def params(self) -> Parameters:
+        ...

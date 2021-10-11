@@ -10,22 +10,64 @@ import pandas as pd
 from dateutil import parser
 
 import config
-from common import UseCache
-from ib.ibtest import get_symbol_history
+from common import UseCache, InputSourceType
+
+from abc import ABC, abstractmethod
+
+from parameters import HasParams
 
 
-class InputProcessor:
+class InputSource(ABC):
+    @abstractmethod
+    def get_symbol_history(self,sym,startdate,enddate):
+        pass
+
+class IBSource(InputSource):
+
+    def get_symbol_history(self,sym,startdate,enddate):
+        ll = datetime.datetime.now(config.TZINFO) - startdate
+        from ib.ibtest import get_symbol_history
+        return get_symbol_history(sym, '%sd' % ll.days, '1d')
+
+class InvestPySource(InputSource):
+
+    def get_symbol_history(self, sym, startdate, enddate):
+        try:
+            import investpy
+            l=None
+            for l in investpy.search_quotes(text=sym,n_results=10):
+                l=l.__dict__
+                if l['exchange'].lower() in  config.EXCHANGES:
+                    break
+            else:
+                if l:
+                    print(f'not  right exchange {sym}, picking {l}' )
+                else:
+                    print('nothing for %s ' % sym )
+            if l['pair_type']=='etfs':
+                df = investpy.get_etf_historical_data(etf=l['symbol'], country=l['country'],
+                                                        from_date=startdate.strftime('%d/%m/%Y'),
+                                                        to_date=enddate.strftime('%d/%m/%Y'))
+            elif l['pair_type']=='stock':
+                df = investpy.get_stock_historical_data(stock=l['symbol'],country= l['country'] ,from_date=startdate.strftime('%d/%m/%Y') ,to_date= enddate.strftime('%d/%m/%Y'))
+            else:
+                print(l['pair_type'])
+                return None
+            return { row[0].to_pydatetime():{j:row[1][j] for j in df} for row in df.iterrows()}
+        except Exception as  r:
+            print(f'{l if l else ""} is  {r}')
+            return None
+
+
+class TransactionHandler(HasParams):
     def __init__(self,filename):
-        self._symbols=set()
-        self._fromdate=None
         self._fn=filename
-        self._todate=None
 
     def populate_buydic(self):
 
         x=pd.read_csv(self._fn)
         self._buydic = {}
-        self._symbols=set()
+        self._buysymbols=set()
         for t in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],
                      x['TimeOfDay']):
             #if not math.isnan(t[1]):
@@ -48,9 +90,22 @@ class InputProcessor:
 
             #aa=matplotlib.dates.date2num(dt)
             self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1]) #Qty,cost,sym
-            self._symbols.add(t[1])
+            self._buysymbols.add(t[1])
 
-    def process_ib(self):
+
+
+class InputProcessor(TransactionHandler):
+    def __init__(self,filename):
+        TransactionHandler.__init__(self,filename)
+        self._symbols_wanted=set()
+        self._fromdate=None
+        self._todate=None
+        if config.INPUTSOURCE==InputSourceType.IB:
+            self._inputsource : InputSource=IBSource()
+        else:
+            self._inputsource: InputSource = InvestPySource()
+
+    def process_history(self):
 
         def update_curholding():
             stock = cur_action[1][2]
@@ -80,6 +135,7 @@ class InputProcessor:
         _cur_avg_cost_bystock=defaultdict(lambda: 0)
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock=defaultdict(lambda: 0)
+        _cur_stock_price = defaultdict(lambda: numpy.NaN)
 
 
         b= collections.OrderedDict(sorted( self._buydic.items())) #ordered
@@ -92,42 +148,69 @@ class InputProcessor:
         if self.params.fromdate == None:
             self.params.fromdate=cur_action[0]
 
-        ll = datetime.datetime.now(config.TZINFO) - self.params.fromdate
+
 
         #update_profit = lambda y: y[0]
 
-        query_ib=True
+        query_source=True
         if self.params.use_cache!= UseCache.DONT :
             try:
                 hist_by_date, self._cache_date = pickle.load(open(config.HIST_F, 'rb'))
                 if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache== UseCache.FORCEUSE:
                     self._hist_by_date=hist_by_date
-                query_ib = False
+                self.update_usable_symbols()
+                if not self.params.use_cache==UseCache.FORCEUSE:
+                    query_source = not (set(self._symbols_wanted) <= set(self._usable_symbols)) #all the buy and required are in there
+                else:
+                    print('not enough symbols , using anyway')
+                    query_source=False
             except:
                 print('failed to use cache')
 
 
 
-        if query_ib:
+        if query_source:
+            self._usable_symbols=set()
             self._hist_by_date = collections.OrderedDict() #like all dates but by
 
-            for sym in self._symbols:
-                hist = get_symbol_history(sym, '%sd' % ll.days, '1d')  # should be rounded
+            for sym in list(self._symbols_wanted):
+                if self.params.todate is None:
+                    todate = datetime.datetime.now(config.TZINFO)
+                numdays= (todate-self.params.fromdate).days
+                hist = self._inputsource.get_symbol_history(sym, self.params.fromdate,todate)  # should be rounded
                 if hist==None:
+                    print('bad %s' % sym)
                     continue
-                for l in hist:
-                    if not l['t'] in self._hist_by_date:
-                        self._hist_by_date[l['t']]={}
-                    self._hist_by_date[l['t']][sym]= (l['c']+l['o'])/2 #should be =l
+                prec= sum([1 for d in hist.values() if not math.isnan(d['Open'])])
+                if prec/numdays < config.MINIMALPRECREQ and numdays>config.MINCHECKREQ:
+                    print('not enough days %s %f' % (sym,prec/numdays))
+                    continue
+                self._usable_symbols.add(sym)
+
+                for date,dic in hist.items():
+                    if not date in self._hist_by_date:
+                        self._hist_by_date[date]={}
+                    self._hist_by_date[date][sym] = dic  # should be =l
+
 
             pickle.dump( (self._hist_by_date,datetime.datetime.now()), open(config.HIST_F,'wb') )
 
+
+        self._simp_hist_by_date= collections.OrderedDict()
+        for date,symdic in self._hist_by_date.items():
+            for s,dic in symdic.items():
+                if not self._simp_hist_by_date[date]:
+                    self._simp_hist_by_date[date]={}
+                self._simp_hist_by_date[date][s] = (dic['Close'] + dic['Open']) / 2
+
+
+
         tz=datetime.timezone(datetime.timedelta(hours=0),'UTC')
-        self.mindate= datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
-        self.maxdate= datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
+        self.mindate= min(self._hist_by_date.keys())#datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
+        self.maxdate= max(self._hist_by_date.keys())#datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
         self._fset=set()
-        for tim,dic in sorted(self._hist_by_date.items()):
-            tim=datetime.datetime.fromtimestamp(tim/1000,tz)
+        for t,dic in sorted(self._simp_hist_by_date.items()):
+            tim = matplotlib.dates.date2num(t)
             while tim>cur_action[0]:
                 update_curholding()
                 if len(b)==0:
@@ -137,31 +220,37 @@ class InputProcessor:
                 if self.params.todate and tim>self.params.todate:
                     break
 
-            t=matplotlib.dates.date2num(tim)
+
 
             #even if no market data
-            for sym in _cur_holding_bystock:
-                self._holding_by_stock[sym][t] = _cur_holding_bystock[sym]
-                self._rel_profit_by_stock[sym][t]=_cur_relprofit_bystock[sym]
 
-            for sym,v in dic.items():
+
+
+            for sym in self._usable_symbols:
+
+                if sym in dic:
+                    v=dic[sym]
+                else:
+                    v=_cur_stock_price[sym]
+
+                self._holding_by_stock[sym][t] = _cur_holding_bystock[sym]
+                self._rel_profit_by_stock[sym][t] = _cur_relprofit_bystock[sym]
                 self._alldates[sym][t]=v
                 self._value[sym][t]=  v* _cur_holding_bystock[sym]
                 self._unrel_profit[sym][t]= v * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * _cur_avg_cost_bystock[sym]
                 self._tot_profit_by_stock[sym][t] = self._rel_profit_by_stock[sym][t] + self._unrel_profit[sym][t]
             self._fset.add(t)
 
-
-
-        #  #sorted(self._alldates[sym].keys()) #last sym hopefully
-        # for s in self._alldates.keys():
-        #     if len(self._fset)!=self._alldates[s]:
-        #         self._alldates.pop(s)
-
         if cur_action:
             update_curholding()
             print('after, should update rel_prof... ')
 
+    def update_usable_symbols(self):
+        self._usable_symbols = set()
+        for t, dic in self._hist_by_date.items():
+            self._usable_symbols += (set(dic.keys()))
+
     def process(self):
         self.populate_buydic()
-        self.process_ib()
+        self._symbols_wanted= self._buysymbols.union(set(self.params.selected_stocks)) #there are symbols to check...
+        self.process_history()

@@ -99,7 +99,7 @@ def get_updated_dict(w):
 
 @flaskapp.route("/get_account_data")
 def get_account_data():
-    return {'data': list(grep_positions_value(REGULAR_ACCOUNT))}
+    return {'data': list(grep_positions_value(config.REGULAR_ACCOUNT))}
 
 PREFERED_BORSA=['NASDAQ','ISLAND','IBIS']
 def test():
@@ -123,7 +123,7 @@ def main(runFalsk=True):
     if 0:
         test()
     else:
-        flaskapp.run(debug=True, port=PORT)
+        flaskapp.run(debug=True, port=config.PORT)
 
 def lookup_symbol(symb):
     try:

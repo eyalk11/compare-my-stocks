@@ -1,6 +1,8 @@
+from abc import abstractmethod
 from functools import partial
 
 import PySide6.QtCore
+import PySide6.QtWidgets
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton
 
 from common import UniteType, Types
@@ -11,10 +13,11 @@ class FormObserver:
         self._graphObj = None
         self.window=None
         self._toshow=True
+        self._initiated=False
         #self._toselectall=False
 
     def update_graph(self):
-        if self.window.findChild(QCheckBox, name="auto_update").isChecked():
+        if self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated:
             self._graphObj.update_graph()
 
     def type_unite_toggled(self, name, value):
@@ -100,11 +103,16 @@ class FormObserver:
 
     def selected_changed(self,*args,**kw):
         self._graphObj.params.selected_stocks=[self.window.orgstocks.item(x).text()  for x in range(self.window.orgstocks.count())]
-        #self.update_graph()
+        if not self.window.use_groups.isChecked():
+            self.update_graph()
 
     def refernced_changed(self,*args,**kw):
+        #befext=self._graphObj.params.ext
         self._graphObj.params.ext=[self.window.orgstocks.item(x).text()  for x in range(self.window.refstocks.count())]
-        #self.update_graph()
+        if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
+            self.update_graph()
+
+
 
     def setup_observers(self):
         genobs=lambda x:partial(self.attribute_move,x)
@@ -124,6 +132,9 @@ class FormObserver:
         self.window.comparebox.currentTextChanged.connect(self.compare_changed)
         self.window.orgstocks.model().rowsInserted.connect(self.selected_changed)
         self.window.orgstocks.model().rowsRemoved.connect(self.selected_changed)
+        self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
+        self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
+        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobs('use_ext'))
 
 
 
@@ -142,3 +153,76 @@ class FormObserver:
 
         for rad in self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,name="unite_ADDTOTAL")+ self.window.findChildren(QCheckBox, name="COMPARE"):
             rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
+
+        self._initiated=True
+
+    @abstractmethod
+    def update_stock_list(self):
+        pass
+
+
+class FormInitializer(FormObserver):
+    def set_all_toggled_value(self):
+        type= self._graphObj.params.type
+        unite = self._graphObj.params.unite_by_group
+        for rad in self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,
+                                                                                     name="unite_ADDTOTAL") + self.window.findChildren(
+                QCheckBox, name="COMPARE"):
+            name=rad.objectName()
+            #func= rad.setChecked if type(rad)==QCheckBox else rad.setCheckState
+            #x : QCheckBox
+            if name.startswith('unite'):
+                name = name[len('unite') + 1:]
+                rad.setChecked( bool(unite &  getattr(UniteType,name)))
+            else:
+                try:
+                    rad.setChecked(bool(type & getattr(Types, name)))
+                except:
+                    pass
+
+    def setup_init_values(self):
+
+        options=list(self._graphObj.Groups.keys())
+        value = self._graphObj.params.groups if self._graphObj.params.groups != None else list()
+
+
+        self.window.groups.addItems( options)
+        self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
+        #self.groups_changed()
+        self.update_stock_list()
+        self.select_rows(self.window.groups,[options.index(v) for v in value])
+        self.window.max_num.setRange(-1*abs(self._graphObj.params.maxnum*2),abs(self._graphObj.params.maxnum*2))
+        self.window.max_num.setRange(-1*abs(self._graphObj.params.mincrit * 2), abs(self._graphObj.params.mincrit * 2))
+        self.window.max_num.setValue(self._graphObj.params.maxnum)
+        self.window.min_crit.setValue(self._graphObj.params.mincrit)
+        self.window.daterangepicker.update_prop()
+        self.window.startdate.setDateTime(self._graphObj.mindate)
+        self.window.enddate.setDateTime(self._graphObj.maxdate)
+        self.window.daterangepicker.start=self._graphObj.mindate
+        self.window.daterangepicker.end = self._graphObj.maxdate
+        self.window.daterangepicker.update_obj()
+        self.window.daterangepicker.dateValueChanged.connect(self.date_changed)
+        self.window.use_groups.setChecked(self._graphObj.params.use_groups)
+        self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
+
+        #self.window.use_groups.setValue(self._graphObj.params.use_groups)
+        #self.selection_changed()
+        #self.refernced_changed()
+        self.set_all_toggled_value()
+
+    def update_stock_list(self):
+        alloptions= list(self._graphObj._usable_symbols) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
+        for comp in  [self.window.comparebox,self.window.addstock]:
+            comp.clear()
+            comp.addItems(alloptions)
+
+        gr=self._graphObj.params.groups
+        org: QListWidget = self.window.orgstocks  # type:
+        org.clear()
+        #org.addItems(self._graphObj.cols)
+        refs: QListWidget = self.window.refstocks  # type:
+        refs.clear()
+        refs.addItems(self._graphObj.params.ext)
+
+        if  self.window.unite_NONE.isChecked():
+            org.addItems(self._graphObj.cols)

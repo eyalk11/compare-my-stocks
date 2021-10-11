@@ -1,7 +1,7 @@
 import copy
 import math
 from collections import defaultdict
-
+aa
 import matplotlib
 import numpy
 import pandas as pd
@@ -24,6 +24,16 @@ class CompareEngine(GraphGenerator, InputProcessor):
             s = s.union(set(CompareEngine.Groups[g]))
         return list(s)
 
+    def params():
+        doc = "The params property."
+        def fget(self):
+            return self._params
+        def fset(self, value):
+            self._params = value
+        return locals()
+
+    params = property(**params())
+
     def __init__(self,filename):
         super(CompareEngine, self).__init__()
         InputProcessor.__init__(self, filename)
@@ -31,6 +41,8 @@ class CompareEngine(GraphGenerator, InputProcessor):
         self._fset=set()
         self._annotation=[]
         self._cache_date=None
+        self.params=None
+
         #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
         #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
 
@@ -43,17 +55,17 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
         if div & Types.PROFIT:
             dic=self._unrel_profit
-            self.use_ext = False
+            self.params.use_ext = False
         elif div & Types.RELPROFIT:
             dic=self._rel_profit_by_stock
-            self.use_ext=False
+            self.params.use_ext=False
         elif div & Types.PRICE:
             dic = self._alldates
         elif div & Types.TOTPROFIT:
             dic= self._tot_profit_by_stock
         elif div & Types.VALUE:
             dic=self._value
-            self.use_ext = False
+            self.params.use_ext = False
         elif div & Types.THEORTICAL_PROFIT:
             dic=self._tot_profit_by_stock
         else:
@@ -82,11 +94,11 @@ class CompareEngine(GraphGenerator, InputProcessor):
                     initialHold = firstnotNan(self._holding_by_stock[st])
                     intialCost=  firstnotNan(self._avg_cost_by_stock[st])
                     loc=firstKeynotNan(self._holding_by_stock[st])
-                    intialHoldComp= (initialHold* intialCost)/self._price[compare_with][loc]
-                    intialCostComp=  self._price[compare_with][loc]
+                    intialHoldComp= (initialHold* intialCost)/self._alldates[compare_with][loc]
+                    intialCostComp=  self._alldates[compare_with][loc]
                     holdcomp = lambda f :intialHoldComp *  self._holding_by_stock[st][f] / initialHold
                     costcomp = lambda f: intialCostComp * self._avg_cost_by_stock[st][f] / intialCost
-                    compit ={f:holdcomp[f]*costcomp[f] for f in self._curflist} #from here , either precentage or diff
+                    compit ={f:holdcomp(f)*costcomp(f) for f in self._curflist} #from here , either precentage or diff
 
 
                 if div& Types.PRECENTAGE:
@@ -159,7 +171,7 @@ class CompareEngine(GraphGenerator, InputProcessor):
         self.params._baseclass=self
 
         if self.params.selected_stocks and not self.params.use_groups:
-            if not ( set(self.params.selected_stocks)<=set(self._alldates.keys())):
+            if not ( set(self.params.selected_stocks)<=set(self._symbols_wanted)):
                 print('should add stocks')
                 reprocess=1
 
@@ -176,7 +188,7 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
 
     def generate_data(self):
-        self.use_ext=True #Will be changed by func
+        #self.params.use_ext=True #Will be changed by func
         data = list(self.get_data_by_type(self.params.mincrit, self.params.type, self.params.compare_with))
 
         data.sort(key=lambda x: x[2])
@@ -217,7 +229,7 @@ class CompareEngine(GraphGenerator, InputProcessor):
         except KeyError:
             raise ParameterError("groups")
 
-        if self.use_ext:
+        if self.params.use_ext:
             for sym in self.params.ext:
                 if not sym in cols:
                     m = [(k, x, y) for k, x, y in data if k == sym]

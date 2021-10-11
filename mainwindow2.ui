@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1568</width>
+    <width>1604</width>
     <height>945</height>
    </rect>
   </property>
@@ -175,7 +175,7 @@
                <layout class="QFormLayout" name="formLayout_2"/>
               </item>
               <item>
-               <widget class="QGroupBox" name="">
+               <widget class="QGroupBox" name="groupBox">
                 <property name="title">
                  <string>Lists</string>
                 </property>
@@ -758,6 +758,74 @@
                </widget>
               </item>
               <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="groupBox_2">
+                <property name="title">
+                 <string>Statistics</string>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_6">
+                 <item>
+                  <layout class="QFormLayout" name="formLayout">
+                   <item row="0" column="0">
+                    <widget class="QLabel" name="label_19">
+                     <property name="text">
+                      <string>Selected Value</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QProgressBar" name="progressBar_3">
+                     <property name="value">
+                      <number>24</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QLabel" name="label_20">
+                     <property name="text">
+                      <string>Total Profit</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1">
+                    <widget class="QProgressBar" name="progressBar_4">
+                     <property name="value">
+                      <number>24</number>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="0">
+                    <widget class="QLabel" name="label_3">
+                     <property name="text">
+                      <string>Corelation</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="2" column="1">
+                    <widget class="QProgressBar" name="progressBar">
+                     <property name="value">
+                      <number>24</number>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <spacer name="horizontalSpacer_4">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -803,8 +871,70 @@
                    </widget>
                    <widget class="QWidget" name="layoutWidget_2">
                     <layout class="QGridLayout" name="gridLayout_11">
+                     <item row="1" column="1">
+                      <spacer name="verticalSpacer_5">
+                       <property name="orientation">
+                        <enum>Qt::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>40</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                     <item row="0" column="1" colspan="2">
+                      <layout class="QFormLayout" name="formLayout_9">
+                       <item row="0" column="0">
+                        <widget class="QLabel" name="label_21">
+                         <property name="text">
+                          <string>Home Currency</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QComboBox" name="comboBox_6"/>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_22">
+                         <property name="text">
+                          <string>Compare With</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QComboBox" name="comparebox"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item row="0" column="0">
+                      <layout class="QVBoxLayout" name="verticalLayout_9">
+                       <item>
+                        <widget class="QPushButton" name="pushButton_17">
+                         <property name="text">
+                          <string>Edit Group</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QPushButton" name="pushButton_18">
+                         <property name="text">
+                          <string>Add Group</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
                      <item row="2" column="2">
                       <layout class="QVBoxLayout" name="checkboxeslay_2">
+                       <item>
+                        <widget class="QCheckBox" name="usereferncestock">
+                         <property name="text">
+                          <string>Use refernce stocks</string>
+                         </property>
+                        </widget>
+                       </item>
                        <item>
                         <widget class="QCheckBox" name="checkBox_8">
                          <property name="text">
@@ -831,127 +961,55 @@
                        </item>
                       </layout>
                      </item>
-                     <item row="0" column="0">
-                      <layout class="QVBoxLayout" name="verticalLayout_9">
-                       <item>
-                        <widget class="QPushButton" name="pushButton_17">
-                         <property name="text">
-                          <string>Edit Group</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="pushButton_18">
-                         <property name="text">
-                          <string>Add Group</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPushButton" name="pushButton_19">
-                         <property name="text">
-                          <string>Delete Group</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
                      <item row="2" column="0" colspan="2">
-                      <layout class="QGridLayout" name="gridLayout_12">
-                       <item row="0" column="0" colspan="2">
-                        <layout class="QFormLayout" name="summary_form_2">
-                         <item row="0" column="1">
-                          <widget class="QProgressBar" name="progressBar_3">
-                           <property name="value">
-                            <number>24</number>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="1">
-                          <widget class="QProgressBar" name="progressBar_4">
-                           <property name="value">
-                            <number>24</number>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="0">
-                          <widget class="QLabel" name="label_19">
-                           <property name="text">
-                            <string>Selected Value</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="1" column="0">
-                          <widget class="QLabel" name="label_20">
-                           <property name="text">
-                            <string>Total Profit</string>
-                           </property>
-                          </widget>
-                         </item>
-                        </layout>
-                       </item>
-                       <item row="1" column="0">
-                        <widget class="QPushButton" name="pushButton_20">
-                         <property name="text">
-                          <string>Load</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="1" column="1">
-                        <widget class="QPushButton" name="pushButton_21">
-                         <property name="text">
-                          <string>Save</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                     <item row="0" column="1" colspan="2">
-                      <layout class="QFormLayout" name="formLayout_9">
-                       <item row="0" column="0">
-                        <widget class="QLabel" name="label_21">
-                         <property name="text">
-                          <string>Home Currency</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="0" column="1">
-                        <widget class="QComboBox" name="comboBox_6"/>
-                       </item>
-                       <item row="1" column="1">
-                        <widget class="QComboBox" name="comparebox"/>
-                       </item>
-                       <item row="1" column="0">
-                        <widget class="QLabel" name="label_22">
-                         <property name="text">
-                          <string>Compare With</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="2" column="0">
-                        <widget class="QLabel" name="label_23">
-                         <property name="text">
-                          <string>Refernce Stock</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="2" column="1">
-                        <widget class="QComboBox" name="comboBox_8"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item row="1" column="1">
-                      <spacer name="verticalSpacer_5">
-                       <property name="orientation">
-                        <enum>Qt::Vertical</enum>
+                      <widget class="QGroupBox" name="">
+                       <property name="title">
+                        <string>Saved Graphs</string>
                        </property>
-                       <property name="sizeHint" stdset="0">
-                        <size>
-                         <width>20</width>
-                         <height>40</height>
-                        </size>
-                       </property>
-                      </spacer>
+                       <layout class="QGridLayout" name="gridLayout_12">
+                        <item row="1" column="1">
+                         <widget class="QPushButton" name="pushButton_21">
+                          <property name="text">
+                           <string>Save</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="1" column="0">
+                         <widget class="QPushButton" name="pushButton_20">
+                          <property name="text">
+                           <string>Load</string>
+                          </property>
+                         </widget>
+                        </item>
+                        <item row="0" column="0" colspan="2">
+                         <widget class="QFrame" name="">
+                          <layout class="QFormLayout" name="summary_form_2">
+                           <property name="horizontalSpacing">
+                            <number>0</number>
+                           </property>
+                           <property name="verticalSpacing">
+                            <number>0</number>
+                           </property>
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                           <item row="0" column="1">
+                            <widget class="QListWidget" name="listWidget"/>
+                           </item>
+                          </layout>
+                         </widget>
+                        </item>
+                       </layout>
+                      </widget>
                      </item>
                     </layout>
                    </widget>

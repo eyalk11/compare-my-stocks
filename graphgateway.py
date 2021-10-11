@@ -1,12 +1,12 @@
 import locale
 
-from common import Types, config
+from common import Types, InputSourceType
 from common import USEWX,USEWEB,USEQT
 from compareengine import CompareEngine
 #import mplfinance
 
 from ib.ibtest import main as ibmain
-
+import config
 locale.setlocale(locale.LC_ALL, 'C')
 
 
@@ -33,7 +33,8 @@ def initialize_graph_and_ib():
         matplotlib.use('QtAgg')
     else:
         matplotlib.use('TKAgg')
-    ibmain(False)
+    if config.INPUTSOURCE==InputSourceType.IB:
+        ibmain(False)
     gg = CompareEngine(config.FN)
     return  gg
 

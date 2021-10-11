@@ -26,9 +26,11 @@ def show_annotation(sel,cls=None, ax=None):
 
 class GraphGenerator:
     def __init__(self):
+        self.params = None
         self._linesandfig=[]
         self.last_stock_list=set()
         self.cur_shown_stock=set()
+        self.adjust_date=False
 
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         if not just_upd:
