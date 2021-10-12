@@ -22,8 +22,11 @@ The stocks historical prices are obtained from investpy (originally https://gith
 ## Additional Features 
 
 * Compare performance with any stock
-* Unite stocks into groups
-* Compare with entire protofolio 
+* Selct stocks and graphs by groups
+* Unite groups by avg price/performance and see as one line.
+* Compare performance of stocks with entire protofolio 
+
+
 * Get price history from Investpy (uses inversting.com) 
 * Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
 * Combined protofolio from any broker/investments
