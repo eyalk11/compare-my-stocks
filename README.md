@@ -21,6 +21,7 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 ## Additional Features 
 
+* 
 * Get price history from Investpy (uses inversting.com) 
 * Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
 * Combined protofolio from any broker/investments
@@ -47,3 +48,7 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
  3. Depends on inverstpy. Please use https://github.com/eyalk11/investpy for it to work.
  4. Run mainwindow.py
+
+## Contact Me
+
+Feel free to contact me at eyalk5@gmail.com 
