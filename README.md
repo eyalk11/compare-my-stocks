@@ -1,22 +1,37 @@
-# stocks-visualizer-jupyter
+# Compare My Stocks
 
 ## General 
-Visualize Stocks in your portfolio using matplotlib and jupyter. 
+Visualize the performance of stocks in your portfolio or that  you are interested in.
+You can use a variaty of comparision options. 
 
-The idea is to provide commands for generating useful portfolio graphs inline in jupyter. 
-For instance, to compare the performance of the FANG stocks in your portfolioto a stock of your choice (i.e. QQQ) in a single command, that you could execute when you want.
+For instance: 
+
+* Divide the stocks into sectors, and compare the performance of different sector
+* See a chart of stocks divided to groups/sectors - 
+    * chart of average price change of  FANG vs interesting stock in  China) 
+    * chart of profit of each section 
+* Compare your profit with a theoritical situation in which you have bought the index!
 
 
-![image](https://user-images.githubusercontent.com/72234965/134824596-3660e4e0-9d73-4dac-82c8-60a21730fced.png)
 
 
-It also opens a UI to generate this command easily. 
+![comparestockscreen](https://user-images.githubusercontent.com/72234965/137033857-71283f52-59d7-4356-8f5c-8d43037ebf15.png)
 
 The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later  Interactive brokers account's positions. 
 The additional input data is account in Interactive Brokers as it works with IB gateway to obtain price history for all relevant stocks. 
 
 **Having said that, it is in preliminary condition and not guaranteed to work, currently.**
 
+## Additional Features 
+
+* Get transactions from My Stocks Protofolio 
+* Maximal control over comparisions 
+* Use jupyter to quickly change paramters of the graph! 
+ 
+* Find corelations between sectors  (planned)
+* Suited for your protoflio (no manual comparision)
+* Interacts with IB to get transaction (planned)
+* Exporting dataframes to  jupyter (planned)
 
 
 
@@ -27,8 +42,6 @@ The additional input data is account in Interactive Brokers as it works with IB 
 
     Notice that you should provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
 
-![image](https://user-images.githubusercontent.com/72234965/134824863-f0d174e3-4123-47c4-b6c1-d9ee2fb92113.png)
-   
 
- 3. If you want to use the provided cache, increase the MAXCACHETIMESPAN siginificantly. Otherwise, provide IB data and run client portal gateway.
- 4. Run the provided sample.ipynb in jupyter (using TK with getpositionsgraph.py is supported too, but doesn't include a dialog).
+ 3. Use Inverstpy from my branch
+ 4. Run mainwindow.py
