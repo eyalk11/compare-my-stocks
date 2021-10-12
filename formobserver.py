@@ -189,7 +189,7 @@ class FormInitializer(FormObserver):
         self.window.groups.addItems( options)
         self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
         #self.groups_changed()
-        self.update_stock_list()
+        self.update_stock_list(1)
         self.select_rows(self.window.groups,[options.index(v) for v in value])
         self.window.max_num.setRange(-1*abs(self._graphObj.params.maxnum*2),abs(self._graphObj.params.maxnum*2))
         self.window.max_num.setRange(-1*abs(self._graphObj.params.mincrit * 2), abs(self._graphObj.params.mincrit * 2))
@@ -210,7 +210,7 @@ class FormInitializer(FormObserver):
         #self.refernced_changed()
         self.set_all_toggled_value()
 
-    def update_stock_list(self):
+    def update_stock_list(self,isinital=0):
         alloptions= list(self._graphObj._usable_symbols) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
         for comp in  [self.window.comparebox,self.window.addstock]:
             comp.clear()
@@ -218,11 +218,15 @@ class FormInitializer(FormObserver):
 
         gr=self._graphObj.params.groups
         org: QListWidget = self.window.orgstocks  # type:
-        org.clear()
         #org.addItems(self._graphObj.cols)
         refs: QListWidget = self.window.refstocks  # type:
         refs.clear()
         refs.addItems(self._graphObj.params.ext)
 
         if  self.window.unite_NONE.isChecked():
-            org.addItems(self._graphObj.cols)
+            if self._graphObj.params.use_groups:
+                org.clear()
+                org.addItems(self._graphObj.get_options_from_groups(self._graphObj.params.groups))
+            elif isinital:
+                org.clear()
+                org.addItems(self._graphObj.params.selected_stocks)

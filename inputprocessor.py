@@ -13,51 +13,8 @@ from dateutil import parser
 import config
 from common import UseCache, InputSourceType
 
-from abc import ABC, abstractmethod
-
+from inputsource import InputSource, IBSource, InvestPySource
 from parameters import HasParams
-
-
-class InputSource(ABC):
-    @abstractmethod
-    def get_symbol_history(self,sym,startdate,enddate):
-        pass
-
-class IBSource(InputSource):
-
-    def get_symbol_history(self,sym,startdate,enddate):
-        ll = datetime.datetime.now(config.TZINFO) - startdate
-        from ib.ibtest import get_symbol_history
-        return get_symbol_history(sym, '%sd' % ll.days, '1d')
-
-class InvestPySource(InputSource):
-
-    def get_symbol_history(self, sym, startdate, enddate):
-        try:
-            import investpy
-            l=None
-            for l in investpy.search_quotes(text=sym,n_results=10):
-                l=l.__dict__
-                if l['exchange'].lower() in  config.EXCHANGES:
-                    break
-            else:
-                if l:
-                    print(f'not  right exchange {sym}, picking {l}' )
-                else:
-                    print('nothing for %s ' % sym )
-            if 1:
-                df = investpy.get_etf_historical_data(etf=l['symbol'], country=l['country'],id=l['id_'],
-                                                        from_date=startdate.strftime('%d/%m/%Y'),
-                                                        to_date=enddate.strftime('%d/%m/%Y'))
-            elif l['pair_type']=='stock':
-                df = investpy.get_stock_historical_data(stock=l['symbol'],country= l['country'] ,from_date=startdate.strftime('%d/%m/%Y') ,to_date= enddate.strftime('%d/%m/%Y'))
-            else:
-                print(l['pair_type'])
-                return None
-            return { row[0].to_pydatetime():{j:row[1][j] for j in df} for row in df.iterrows()}
-        except Exception as  r:
-            print(f'{l if l else ""} is  {r}')
-            return None
 
 
 class TransactionHandler(HasParams):
@@ -105,7 +62,7 @@ class InputProcessor(TransactionHandler):
         self._fromdate=None
         self._todate=None
         if config.INPUTSOURCE==InputSourceType.IB:
-            self._inputsource : InputSource=IBSource()
+            self._inputsource : InputSource = IBSource()
         else:
             self._inputsource: InputSource = InvestPySource()
 
@@ -167,7 +124,7 @@ class InputProcessor(TransactionHandler):
                 if not self.params.use_cache==UseCache.FORCEUSE:
                     query_source = not (set(self._symbols_wanted) <= set(self._usable_symbols)) #all the buy and required are in there
                 else:
-                    print('not enough symbols , using anyway')
+                    print('using cache anyway',not (set(self._symbols_wanted) <= set(self._usable_symbols)) )
                     query_source=False
             except Exception as e :
                 e=e
@@ -251,6 +208,7 @@ class InputProcessor(TransactionHandler):
         if cur_action:
             update_curholding()
             print('after, should update rel_prof... ')
+            #cur_action[0]
 
     def update_usable_symbols(self):
         self._usable_symbols = set()

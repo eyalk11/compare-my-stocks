@@ -80,7 +80,11 @@ class CompareEngine(GraphGenerator, InputProcessor):
         firstKeynotNan = lambda x: next((k for k,l in x.items() if not math.isnan(l)))
 
         if div & Types.COMPARE:
-            compit = dic[compare_with]
+            if not compare_with in dic:
+                print('to bad, no comp')
+                div=div& ~Types.COMPARE
+            else:
+                compit = dic[compare_with]
 
         for st, v in dic.items():
             v= defaultdict(lambda: numpy.NaN,  dict(filter(lambda x: x[0] in self._curflist,  v.items())))
@@ -189,14 +193,15 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
     def generate_data(self):
         #self.params.use_ext=True #Will be changed by func
-        data = list(self.get_data_by_type(self.params.mincrit, self.params.type, self.params.compare_with))
+        tabledata = list(self.get_data_by_type(self.params.mincrit, self.params.type, self.params.compare_with))
 
-        data.sort(key=lambda x: x[2])
+        tabledata.sort(key=lambda x: x[2])
         if (not (self.params.unite_by_group & (UniteType.SUM | UniteType.AVG))):
-            data = self.adjust_cols_by_selection(data)
-
-        data = data[(-1) * self.params.maxnum:]
-        self.data = self.filter_dates(data)
+            tabledata = tabledata[(-1) * self.params.maxnum:]
+            tabledata = self.adjust_cols_by_selection(tabledata)
+        else:
+            self.cols = list([x[0] for x in tabledata])
+        self.filter_dates(tabledata)
 
         dt = pd.DataFrame(self.data, columns=self.cols, index=[matplotlib.dates.num2date(y) for y in self._curflist])
         return  dt
@@ -210,8 +215,9 @@ class CompareEngine(GraphGenerator, InputProcessor):
                     useful.add(j)
         indexfilt = lambda y: filter(lambda m: m != None, [y[k] if k in useful else None for k in range(len(y))])
         self._curflist = indexfilt(self._curflist)
-        data = {x: indexfilt(y) for (x, y) in data.items()}
-        return data
+        self.data = {x: indexfilt(y) for (x, y) in data.items()}
+
+
 
     def adjust_cols_by_selection(self,  data):
         ll = [x[0] for x in data]
