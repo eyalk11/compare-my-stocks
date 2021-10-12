@@ -67,7 +67,7 @@ I wanted this product to be used inline in jupyter notebook. This is not possibl
 I am not sure about the right level of exposure to code. 
 
 Should I allow for customized, code-based operations between stocks? I am not a fun of GUI, and it is a lot of work. 
-Include notebook inside QT? What kind of statisitics to incorperate? 
+Include notebook inside QT? What kind of statisitics to incorporate? 
 
 
 Feel free to contact me at eyalk5@gmail.com.
