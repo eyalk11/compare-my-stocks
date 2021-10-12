@@ -37,7 +37,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 * Completely free and open source. 
 
 ## Planned
-* Adjusted performance based on cash transactions / currency adjusted performace. 
+* Adjusted performance based on cash transactions / inflation. 
 * Introducing advanced features like P/E and price to sells, with all possible comparisions.  
 * Find corelations between sectors  
 * Interacts with IB to get transaction 
