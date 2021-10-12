@@ -17,6 +17,8 @@ You can compare your profit at any time to a theoretical situation in which you 
 
 
 This was devloped in QT with matplotlib. 
+I used advance features of python, numpy and pandas for fast calcuation. 
+
 The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later Interactive brokers account's positions. 
 The stocks historical prices are obtained from investpy (originally https://github.com/alvarobartt/investpy) .
 
@@ -39,6 +41,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 * Completely free and open source. 
 
 ## Planned
+* Bar graphs
 * Adjusted performance based on cash transactions / inflation. 
 * Introducing advanced features like P/E and price to sells, with all possible comparisions.  
 * Find corelations between sectors  
