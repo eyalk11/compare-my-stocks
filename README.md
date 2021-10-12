@@ -2,18 +2,16 @@
 
 ## General 
 Visualize the performance of stocks in your portfolio or that  you are interested in.
-You can use a variaty of comparision options. 
+There is maximal control over charts, and a variaty of comparision options. 
 
 For instance: 
 
-Yo can divide the stocks into sectors, and compare the performance of different sector! 
+You can divide the stocks into sectors, and compare the performance of different sector! 
 
 * chart of average price change of  FANG vs interesting stock in  China) 
 * chart of profit of each section 
 
 You can compare your profit at any time to a theoritical situation in which you have bought the index(the exact same time)!
-
-
 
 ![comparestockscreen](https://user-images.githubusercontent.com/72234965/137033857-71283f52-59d7-4356-8f5c-8d43037ebf15.png)
 
@@ -23,15 +21,18 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 ## Additional Features 
 
-* Get transactions from My Stocks Protofolio 
-* Maximal control over comparisions 
+* Get price history from Investpy (uses inversting.com) 
+* Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
+* Combined protofolio from any broker/investments
+* Suited for your protoflio (no manual selection of stocks like in yahoo)
 * Use jupyter to quickly change paramters of the graph! 
  
+
+* Introducing advanced features like P/E and price to sells (planned). 
 * Find corelations between sectors  (planned)
-* Suited for your protoflio (no manual comparision)
 * Interacts with IB to get transaction (planned)
 * Exporting dataframes to  jupyter (planned)
-
+* Crypto (planned - should be easy)
 
 
 ## Running Instructions
