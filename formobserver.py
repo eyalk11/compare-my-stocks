@@ -108,7 +108,7 @@ class FormObserver:
 
     def refernced_changed(self,*args,**kw):
         #befext=self._graphObj.params.ext
-        self._graphObj.params.ext=[self.window.orgstocks.item(x).text()  for x in range(self.window.refstocks.count())]
+        self._graphObj.params.ext=[self.window.refstocks.item(x).text()  for x in range(self.window.refstocks.count())]
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
             self.update_graph()
 

@@ -7,6 +7,7 @@ import datetime
 import matplotlib
 import numpy
 import pandas as pd
+import pytz
 from dateutil import parser
 
 import config
@@ -44,8 +45,8 @@ class InvestPySource(InputSource):
                     print(f'not  right exchange {sym}, picking {l}' )
                 else:
                     print('nothing for %s ' % sym )
-            if l['pair_type']=='etfs':
-                df = investpy.get_etf_historical_data(etf=l['symbol'], country=l['country'],
+            if 1:
+                df = investpy.get_etf_historical_data(etf=l['symbol'], country=l['country'],id=l['id_'],
                                                         from_date=startdate.strftime('%d/%m/%Y'),
                                                         to_date=enddate.strftime('%d/%m/%Y'))
             elif l['pair_type']=='stock':
@@ -89,6 +90,9 @@ class TransactionHandler(HasParams):
                 dt+=datetime.timedelta(milliseconds=10)
 
             #aa=matplotlib.dates.date2num(dt)
+            #timezone = pytz.timezone("UTC")
+            #dt=timezone.normalize(dt)
+            #dt=dt.replace(tzinfo=None)
             self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1]) #Qty,cost,sym
             self._buysymbols.add(t[1])
 
@@ -113,8 +117,7 @@ class InputProcessor(TransactionHandler):
 
 
             old_holding= _cur_holding_bystock[stock]
-            if old_holding<0:
-                print('warning sell below zero',stock)
+
             if cur_action[1][0]>0:
                 _cur_avg_cost_bystock[stock] = (old_holding * old_cost + cur_action[1][0] * cur_action[1][1]) / (old_holding + cur_action[1][0])
                 #self._avg_cost_by_stock[stock][cur_action[0]] = nv
@@ -123,6 +126,8 @@ class InputProcessor(TransactionHandler):
                 #self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += cur_action[1][0]
+            if _cur_holding_bystock[stock] < 0:
+                print('warning sell below zero', stock,cur_action[0])
 
         self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
@@ -164,7 +169,8 @@ class InputProcessor(TransactionHandler):
                 else:
                     print('not enough symbols , using anyway')
                     query_source=False
-            except:
+            except Exception as e :
+                e=e
                 print('failed to use cache')
 
 
@@ -175,7 +181,7 @@ class InputProcessor(TransactionHandler):
 
             for sym in list(self._symbols_wanted):
                 if self.params.todate is None:
-                    todate = datetime.datetime.now(config.TZINFO)
+                    todate = datetime.datetime.now()
                 numdays= (todate-self.params.fromdate).days
                 hist = self._inputsource.get_symbol_history(sym, self.params.fromdate,todate)  # should be rounded
                 if hist==None:
@@ -199,32 +205,34 @@ class InputProcessor(TransactionHandler):
         self._simp_hist_by_date= collections.OrderedDict()
         for date,symdic in self._hist_by_date.items():
             for s,dic in symdic.items():
-                if not self._simp_hist_by_date[date]:
+                if not date in self._simp_hist_by_date:
                     self._simp_hist_by_date[date]={}
                 self._simp_hist_by_date[date][s] = (dic['Close'] + dic['Open']) / 2
-
 
 
         tz=datetime.timezone(datetime.timedelta(hours=0),'UTC')
         self.mindate= min(self._hist_by_date.keys())#datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate= max(self._hist_by_date.keys())#datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
         self._fset=set()
+        hh = pytz.UTC #timezone('Israel')
         for t,dic in sorted(self._simp_hist_by_date.items()):
-            tim = matplotlib.dates.date2num(t)
-            while tim>cur_action[0]:
+
+            t=hh.localize(t,True)
+            #t=pytz.normalize(t,cur_action[0].tzinfo())#t.replace(tzinfo=pytz.UTC)
+            if self.params.todate and t > self.params.todate:
+                break
+            while cur_action and t>cur_action[0]:
                 update_curholding()
                 if len(b)==0:
                     cur_action=None
                     break
                 cur_action = b.popitem(False)
-                if self.params.todate and tim>self.params.todate:
-                    break
 
+            tim = matplotlib.dates.date2num(t)
 
-
-            #even if no market data
-
-
+            for sym in _cur_holding_bystock:
+                self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
+                self._rel_profit_by_stock[sym][tim]=_cur_relprofit_bystock[sym]
 
             for sym in self._usable_symbols:
 
@@ -233,13 +241,12 @@ class InputProcessor(TransactionHandler):
                 else:
                     v=_cur_stock_price[sym]
 
-                self._holding_by_stock[sym][t] = _cur_holding_bystock[sym]
-                self._rel_profit_by_stock[sym][t] = _cur_relprofit_bystock[sym]
-                self._alldates[sym][t]=v
-                self._value[sym][t]=  v* _cur_holding_bystock[sym]
-                self._unrel_profit[sym][t]= v * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * _cur_avg_cost_bystock[sym]
-                self._tot_profit_by_stock[sym][t] = self._rel_profit_by_stock[sym][t] + self._unrel_profit[sym][t]
-            self._fset.add(t)
+
+                self._alldates[sym][tim]=v
+                self._value[sym][tim]=  v* _cur_holding_bystock[sym]
+                self._unrel_profit[sym][tim]= v * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * _cur_avg_cost_bystock[sym]
+                self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
+            self._fset.add(tim)
 
         if cur_action:
             update_curholding()
@@ -248,7 +255,7 @@ class InputProcessor(TransactionHandler):
     def update_usable_symbols(self):
         self._usable_symbols = set()
         for t, dic in self._hist_by_date.items():
-            self._usable_symbols += (set(dic.keys()))
+            self._usable_symbols.update (set(dic.keys()))
 
     def process(self):
         self.populate_buydic()
