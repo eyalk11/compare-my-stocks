@@ -11,14 +11,18 @@ from enum import Flag, auto, Enum
 
 
 class Types(Flag):
-    PRICE=1
+    ABS = 0
+    PRICE=auto()
     VALUE=auto()
     PROFIT = auto()
     TOTPROFIT = auto()
     RELPROFIT = auto()
     THEORTICAL_PROFIT=auto()
-    ABS= auto()
+
     RELTOMAX=auto()
+    RELTOMIN=auto()
+    RELTOSTART=auto()
+    RELTOEND=auto()
     PRECENTAGE=auto()
     DIFF=auto()
     COMPARE=auto()

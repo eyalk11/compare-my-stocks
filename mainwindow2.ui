@@ -37,7 +37,7 @@
            <property name="minimumSize">
             <size>
              <width>1300</width>
-             <height>600</height>
+             <height>500</height>
             </size>
            </property>
            <widget class="QWidget" name="tabWidget_8Page1">
@@ -335,6 +335,12 @@
              <height>91</height>
             </size>
            </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>350</height>
+            </size>
+           </property>
            <layout class="QHBoxLayout" name="horizontalLayout_10">
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_11">
@@ -345,367 +351,402 @@
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_8">
                  <item>
-                  <widget class="QFrame" name="frame_7">
-                   <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                  <widget class="QSplitter" name="splitter_7">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
                    </property>
-                   <property name="frameShadow">
-                    <enum>QFrame::Raised</enum>
-                   </property>
-                   <layout class="QHBoxLayout" name="horizontalLayout_12">
-                    <item>
-                     <widget class="QSplitter" name="splitter_7">
-                      <property name="orientation">
-                       <enum>Qt::Vertical</enum>
-                      </property>
-                      <widget class="QSplitter" name="splitter_8">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                   <widget class="QSplitter" name="splitter_8">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                   </widget>
+                   <widget class="QWidget" name="layoutWidget_5">
+                    <layout class="QGridLayout" name="gridLayout_9">
+                     <item row="1" column="1">
+                      <layout class="QFormLayout" name="formLayout_8">
+                       <item row="0" column="0">
+                        <widget class="QLabel" name="label_16">
+                         <property name="text">
+                          <string>Minimum items</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QLabeledSlider" name="max_num">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="tickPosition">
+                          <enum>QSlider::TicksBelow</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <widget class="QLabel" name="label_17">
+                         <property name="text">
+                          <string>Min Crit</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QLabeledSlider" name="min_crit">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="tickPosition">
+                          <enum>QSlider::TicksBelow</enum>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item row="2" column="1">
+                      <layout class="QGridLayout" name="gridLayout_10">
+                       <item row="1" column="0">
+                        <widget class="QPushButton" name="selectallnone">
+                         <property name="text">
+                          <string>Select All/None</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="0">
+                        <widget class="QPushButton" name="showhide">
+                         <property name="text">
+                          <string>Show / Hide</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="0" column="1">
+                        <widget class="QPushButton" name="update_btn">
+                         <property name="text">
+                          <string>Update</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="1">
+                        <widget class="QPushButton" name="pushButton_16">
+                         <property name="text">
+                          <string>PushButton</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item row="1" column="0" rowspan="2">
+                      <layout class="QHBoxLayout" name="horizontalLayout_15">
+                       <item>
+                        <widget class="QGroupBox" name="groupBox">
+                         <property name="title">
+                          <string>Main Graph Type </string>
+                         </property>
+                         <layout class="QHBoxLayout" name="horizontalLayout_2">
+                          <item>
+                           <layout class="QHBoxLayout" name="horizontalLayout">
+                            <item>
+                             <layout class="QVBoxLayout" name="verticalLayout_3">
+                              <item>
+                               <widget class="QRadioButton" name="PRICE">
+                                <property name="text">
+                                 <string>Price</string>
+                                </property>
+                                <property name="checked">
+                                 <bool>true</bool>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QRadioButton" name="radioButton">
+                                <property name="enabled">
+                                 <bool>false</bool>
+                                </property>
+                                <property name="text">
+                                 <string>P/E</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QRadioButton" name="VALUE">
+                                <property name="text">
+                                 <string>Value</string>
+                                </property>
+                               </widget>
+                              </item>
+                             </layout>
+                            </item>
+                            <item>
+                             <layout class="QVBoxLayout" name="verticalLayout">
+                              <item>
+                               <widget class="QRadioButton" name="TOTPROFIT">
+                                <property name="text">
+                                 <string>Total Profit</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QRadioButton" name="PROFIT">
+                                <property name="text">
+                                 <string>Profit</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item>
+                               <widget class="QRadioButton" name="THEORTICAL_PROFIT">
+                                <property name="text">
+                                 <string>Theortical Profit</string>
+                                </property>
+                               </widget>
+                              </item>
+                             </layout>
+                            </item>
+                           </layout>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QGroupBox" name="groupBox">
+                         <property name="title">
+                          <string>Operation</string>
+                         </property>
+                         <layout class="QVBoxLayout" name="verticalLayout_6">
+                          <item>
+                           <widget class="QRadioButton" name="ABS">
+                            <property name="text">
+                             <string>Absolute</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="PRECENTAGE">
+                            <property name="text">
+                             <string>Precentage</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="DIFF">
+                            <property name="text">
+                             <string>Diff</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QGroupBox" name="groupBox_3">
+                         <property name="title">
+                          <string>Relative to </string>
+                         </property>
+                         <layout class="QGridLayout" name="gridLayout_5">
+                          <item row="0" column="0">
+                           <layout class="QVBoxLayout" name="verticalLayout_4">
+                            <item>
+                             <widget class="QRadioButton" name="RELTOSTART">
+                              <property name="text">
+                               <string>Start Time</string>
+                              </property>
+                              <property name="checked">
+                               <bool>true</bool>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="QRadioButton" name="RELTOEND">
+                              <property name="text">
+                               <string>End Time</string>
+                              </property>
+                              <property name="checked">
+                               <bool>false</bool>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="QRadioButton" name="RELTOMAX">
+                              <property name="text">
+                               <string>Max</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item>
+                             <widget class="QRadioButton" name="RELTOMIN">
+                              <property name="text">
+                               <string>Min</string>
+                              </property>
+                             </widget>
+                            </item>
+                           </layout>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QGroupBox" name="verticalGroupBox">
+                         <property name="title">
+                          <string>Way to unite</string>
+                         </property>
+                         <layout class="QVBoxLayout" name="verticalLayout_11">
+                          <item>
+                           <widget class="QRadioButton" name="unite_NONE">
+                            <property name="text">
+                             <string>None</string>
+                            </property>
+                            <property name="checked">
+                             <bool>true</bool>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="radioButton_2">
+                            <property name="text">
+                             <string>Max</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="radioButton_3">
+                            <property name="text">
+                             <string>Min</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="unite_SUM">
+                            <property name="text">
+                             <string>Sum</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="unite_AVG">
+                            <property name="text">
+                             <string>Average</string>
+                            </property>
+                           </widget>
+                          </item>
+                         </layout>
+                        </widget>
+                       </item>
+                       <item>
+                        <spacer name="horizontalSpacer_5">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>40</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                       <item>
+                        <spacer name="horizontalSpacer_3">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>40</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
+                     </item>
+                     <item row="0" column="0" colspan="2">
+                      <widget class="QGroupBox" name="groupBox">
+                       <property name="minimumSize">
+                        <size>
+                         <width>0</width>
+                         <height>70</height>
+                        </size>
                        </property>
-                      </widget>
-                      <widget class="QWidget" name="layoutWidget_5">
-                       <layout class="QGridLayout" name="gridLayout_9">
-                        <item row="1" column="1">
-                         <layout class="QFormLayout" name="formLayout_8">
-                          <item row="0" column="0">
-                           <widget class="QLabel" name="label_16">
-                            <property name="text">
-                             <string>Minimum items</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="1">
-                           <widget class="QLabeledSlider" name="max_num">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="tickPosition">
-                             <enum>QSlider::TicksBelow</enum>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="1" column="0">
-                           <widget class="QLabel" name="label_17">
-                            <property name="text">
-                             <string>Min Crit</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="1" column="1">
-                           <widget class="QLabeledSlider" name="min_crit">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="tickPosition">
-                             <enum>QSlider::TicksBelow</enum>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
-                        <item row="2" column="1">
-                         <layout class="QGridLayout" name="gridLayout_10">
-                          <item row="1" column="0">
-                           <widget class="QPushButton" name="selectallnone">
-                            <property name="text">
-                             <string>Select All/None</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="0">
-                           <widget class="QPushButton" name="showhide">
-                            <property name="text">
-                             <string>Show / Hide</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="0" column="1">
-                           <widget class="QPushButton" name="update_btn">
-                            <property name="text">
-                             <string>Update</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item row="1" column="1">
-                           <widget class="QPushButton" name="pushButton_16">
-                            <property name="text">
-                             <string>PushButton</string>
-                            </property>
-                           </widget>
-                          </item>
-                         </layout>
-                        </item>
-                        <item row="0" column="0" colspan="2">
-                         <widget class="QFrame" name="frame">
-                          <property name="frameShape">
-                           <enum>QFrame::StyledPanel</enum>
-                          </property>
-                          <property name="frameShadow">
-                           <enum>QFrame::Raised</enum>
-                          </property>
-                          <layout class="QHBoxLayout" name="horizontalLayout_14">
-                           <item>
-                            <layout class="QHBoxLayout" name="horizontalLayout_13">
-                             <item>
-                              <widget class="QLabel" name="label_14">
-                               <property name="text">
-                                <string>Date Picker</string>
-                               </property>
-                               <property name="alignment">
-                                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <layout class="QGridLayout" name="gridLayout">
-                               <item row="0" column="0" colspan="2">
-                                <widget class="QDateRangeSlider" name="daterangepicker">
-                                 <property name="orientation">
-                                  <enum>Qt::Horizontal</enum>
-                                 </property>
-                                 <property name="tickPosition">
-                                  <enum>QSlider::TicksAbove</enum>
-                                 </property>
-                                 <property name="start" stdset="0">
-                                  <datetime>
-                                   <hour>0</hour>
-                                   <minute>0</minute>
-                                   <second>0</second>
-                                   <year>2020</year>
-                                   <month>1</month>
-                                   <day>1</day>
-                                  </datetime>
-                                 </property>
-                                 <property name="end" stdset="0">
-                                  <datetime>
-                                   <hour>1</hour>
-                                   <minute>0</minute>
-                                   <second>0</second>
-                                   <year>2021</year>
-                                   <month>1</month>
-                                   <day>2</day>
-                                  </datetime>
-                                 </property>
-                                 <property name="freq" stdset="0">
-                                  <string>D</string>
-                                 </property>
-                                 <property name="fmt" stdset="0">
-                                  <string>%Y-%m-%d</string>
-                                 </property>
-                                </widget>
-                               </item>
-                               <item row="1" column="0">
-                                <layout class="QFormLayout" name="formLayout_14">
-                                 <item row="0" column="0">
-                                  <widget class="QLabel" name="label_30">
-                                   <property name="text">
-                                    <string>Start</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item row="0" column="1">
-                                  <widget class="QDateEdit" name="startdate"/>
-                                 </item>
-                                </layout>
-                               </item>
-                               <item row="1" column="1">
-                                <layout class="QFormLayout" name="formLayout_13">
-                                 <item row="0" column="0">
-                                  <widget class="QLabel" name="label_29">
-                                   <property name="text">
-                                    <string>End</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item row="0" column="1">
-                                  <widget class="QDateEdit" name="enddate"/>
-                                 </item>
-                                </layout>
-                               </item>
-                              </layout>
-                             </item>
-                            </layout>
-                           </item>
-                          </layout>
-                         </widget>
-                        </item>
-                        <item row="1" column="0" rowspan="2">
-                         <layout class="QHBoxLayout" name="horizontalLayout_15">
+                       <property name="title">
+                        <string>DatePicker</string>
+                       </property>
+                       <layout class="QHBoxLayout" name="horizontalLayout_14">
+                        <item>
+                         <layout class="QHBoxLayout" name="horizontalLayout_13">
                           <item>
-                           <widget class="QGroupBox" name="groupBox">
-                            <property name="title">
-                             <string>Main Graph Type </string>
-                            </property>
-                            <layout class="QHBoxLayout" name="horizontalLayout_2">
-                             <item>
-                              <layout class="QHBoxLayout" name="horizontalLayout">
-                               <item>
-                                <layout class="QVBoxLayout" name="verticalLayout_3">
-                                 <item>
-                                  <widget class="QRadioButton" name="PRICE">
-                                   <property name="text">
-                                    <string>Price</string>
-                                   </property>
-                                   <property name="checked">
-                                    <bool>true</bool>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item>
-                                  <widget class="QRadioButton" name="radioButton">
-                                   <property name="enabled">
-                                    <bool>false</bool>
-                                   </property>
-                                   <property name="text">
-                                    <string>P/E</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item>
-                                  <widget class="QRadioButton" name="VALUE">
-                                   <property name="text">
-                                    <string>Value</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                </layout>
-                               </item>
-                               <item>
-                                <layout class="QVBoxLayout" name="verticalLayout">
-                                 <item>
-                                  <widget class="QRadioButton" name="TOTPROFIT">
-                                   <property name="text">
-                                    <string>Total Profit</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item>
-                                  <widget class="QRadioButton" name="PROFIT">
-                                   <property name="text">
-                                    <string>Profit</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                 <item>
-                                  <widget class="QRadioButton" name="THEORTICAL_PROFIT">
-                                   <property name="text">
-                                    <string>Theortical Profit</string>
-                                   </property>
-                                  </widget>
-                                 </item>
-                                </layout>
-                               </item>
-                              </layout>
-                             </item>
-                            </layout>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QGroupBox" name="groupBox">
-                            <property name="title">
-                             <string>Operation</string>
-                            </property>
-                            <layout class="QVBoxLayout" name="verticalLayout_6">
-                             <item>
-                              <widget class="QRadioButton" name="ABS">
-                               <property name="text">
-                                <string>Absolute</string>
-                               </property>
-                               <property name="checked">
-                                <bool>true</bool>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QRadioButton" name="PRECENTAGE">
-                               <property name="text">
-                                <string>Precentage</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QRadioButton" name="RELTOMAX">
-                               <property name="text">
-                                <string>Relative to max</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QRadioButton" name="DIFF">
-                               <property name="text">
-                                <string>Diff</string>
-                               </property>
-                              </widget>
-                             </item>
-                            </layout>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QGroupBox" name="verticalGroupBox">
-                            <property name="title">
-                             <string>Way to unite</string>
-                            </property>
-                            <layout class="QVBoxLayout" name="verticalLayout_11">
-                             <item>
-                              <widget class="QRadioButton" name="unite_NONE">
-                               <property name="text">
-                                <string>None</string>
-                               </property>
-                               <property name="checked">
-                                <bool>true</bool>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QRadioButton" name="unite_SUM">
-                               <property name="text">
-                                <string>Sum</string>
-                               </property>
-                              </widget>
-                             </item>
-                             <item>
-                              <widget class="QRadioButton" name="unite_AVG">
-                               <property name="text">
-                                <string>Average</string>
-                               </property>
-                              </widget>
-                             </item>
-                            </layout>
-                           </widget>
-                          </item>
-                          <item>
-                           <spacer name="horizontalSpacer_5">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>40</width>
-                              <height>20</height>
-                             </size>
-                            </property>
-                           </spacer>
-                          </item>
-                          <item>
-                           <spacer name="horizontalSpacer_3">
-                            <property name="orientation">
-                             <enum>Qt::Horizontal</enum>
-                            </property>
-                            <property name="sizeHint" stdset="0">
-                             <size>
-                              <width>40</width>
-                              <height>20</height>
-                             </size>
-                            </property>
-                           </spacer>
+                           <layout class="QGridLayout" name="gridLayout">
+                            <item row="0" column="0" colspan="2">
+                             <widget class="QDateRangeSlider" name="daterangepicker">
+                              <property name="orientation">
+                               <enum>Qt::Horizontal</enum>
+                              </property>
+                              <property name="tickPosition">
+                               <enum>QSlider::TicksAbove</enum>
+                              </property>
+                              <property name="start" stdset="0">
+                               <datetime>
+                                <hour>0</hour>
+                                <minute>0</minute>
+                                <second>0</second>
+                                <year>2020</year>
+                                <month>1</month>
+                                <day>1</day>
+                               </datetime>
+                              </property>
+                              <property name="end" stdset="0">
+                               <datetime>
+                                <hour>1</hour>
+                                <minute>0</minute>
+                                <second>0</second>
+                                <year>2021</year>
+                                <month>1</month>
+                                <day>2</day>
+                               </datetime>
+                              </property>
+                              <property name="freq" stdset="0">
+                               <string>D</string>
+                              </property>
+                              <property name="fmt" stdset="0">
+                               <string>%Y-%m-%d</string>
+                              </property>
+                             </widget>
+                            </item>
+                            <item row="1" column="0">
+                             <layout class="QFormLayout" name="formLayout_14">
+                              <item row="0" column="0">
+                               <widget class="QLabel" name="label_30">
+                                <property name="text">
+                                 <string>Start</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="0" column="1">
+                               <widget class="QDateEdit" name="startdate"/>
+                              </item>
+                             </layout>
+                            </item>
+                            <item row="1" column="1">
+                             <layout class="QFormLayout" name="formLayout_13">
+                              <item row="0" column="0">
+                               <widget class="QLabel" name="label_29">
+                                <property name="text">
+                                 <string>End</string>
+                                </property>
+                               </widget>
+                              </item>
+                              <item row="0" column="1">
+                               <widget class="QDateEdit" name="enddate"/>
+                              </item>
+                             </layout>
+                            </item>
+                           </layout>
                           </item>
                          </layout>
                         </item>
                        </layout>
                       </widget>
-                     </widget>
-                    </item>
-                   </layout>
+                     </item>
+                    </layout>
+                   </widget>
                   </widget>
                  </item>
                  <item>
@@ -904,7 +945,17 @@
                         </widget>
                        </item>
                        <item row="1" column="1">
-                        <widget class="QComboBox" name="comparebox"/>
+                        <widget class="QComboBox" name="comparebox">
+                         <property name="editable">
+                          <bool>true</bool>
+                         </property>
+                         <property name="insertPolicy">
+                          <enum>QComboBox::InsertAlphabetically</enum>
+                         </property>
+                         <property name="sizeAdjustPolicy">
+                          <enum>QComboBox::AdjustToContents</enum>
+                         </property>
+                        </widget>
                        </item>
                       </layout>
                      </item>

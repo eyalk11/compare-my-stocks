@@ -94,10 +94,10 @@ class FormObserver:
         org.addItem(self.window.addstock.currentText())
         self.update_graph()
 
-    def compare_changed(self,text):
+    def compare_changed(self,num):
 
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
-        self._graphObj.params.compare_with=text
+        self._graphObj.params.compare_with=self.window.comparebox.itemText(num)
         self._graphObj.params.type=self._graphObj.params.type | Types.COMPARE
         self.update_graph()
 
@@ -129,7 +129,7 @@ class FormObserver:
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
         self.window.findChild(QPushButton,name="update_btn").pressed.connect(self._graphObj.update_graph)
        # self.window.findChildd(QCheckBox, name="COMPARE").toggled.connect()
-        self.window.comparebox.currentTextChanged.connect(self.compare_changed)
+        self.window.comparebox.currentIndexChanged.connect(self.compare_changed)
         self.window.orgstocks.model().rowsInserted.connect(self.selected_changed)
         self.window.orgstocks.model().rowsRemoved.connect(self.selected_changed)
         self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)

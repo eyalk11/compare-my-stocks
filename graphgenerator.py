@@ -50,16 +50,16 @@ class GraphGenerator:
                 self.cursor.disconnect('add',cb=self.cb)
                 del self.cursor
             #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
-            dt.plot.line(figsize=self.params.def_fig_size, reuse_plot=True,ax=ar)
+            dt.plot.line(figsize=config.DEF_FIG_SIZE, reuse_plot=True,ax=ar)
             #ar.legend_.figure.canvas.clear()
             #ar.legend_.figure.canvas.draw()
         else:
 
             if not isline:
-                ar = dt.plot.area(figsize=(15.1,6.46), stacked=False)
+                ar = dt.plot.area(figsize=config.DEF_FIG_SIZE, stacked=False)
             else:
                 #mplfinance.plot(dt, figsize=(16, 10), type='candle')
-                ar = dt.plot.line(figsize=self.params.def_fig_size)
+                ar = dt.plot.line(figsize=config.DEF_FIG_SIZE)
         FACy = 1.2
         FACx = 2.4
         box = ar.get_position()
@@ -98,11 +98,11 @@ class GraphGenerator:
         #ar.set_title(st)
 
 
-        mfig.set_size_inches(self.params.def_fig_size)
+        mfig.set_size_inches(config.DEF_FIG_SIZE)
         #nice hack
         def set_fig_size(my,def_fig_size,*args,**kwargs):
             my.figsize= def_fig_size  #if anyone asks
-        mfig.set_size_inches=partial(set_fig_size,mfig,self.params.def_fig_size)
+        mfig.set_size_inches=partial(set_fig_size,mfig,config.DEF_FIG_SIZE)
 
 
         #ar.set_size_inches(15.1,6.46)#(7*FACx, hi * 0.6*FACy)

@@ -4,6 +4,8 @@ from collections import defaultdict
 
 import matplotlib
 import numpy
+import numpy as np
+import pandas
 import pandas as pd
 
 import config
@@ -11,10 +13,21 @@ from common import Types, UniteType
 from graphgenerator import GraphGenerator
 from inputprocessor import InputProcessor
 from orederedset import MyOrderedSet
-from parameters import Parameters,ParameterError
+from parameters import Parameters, ParameterError, HasParams
 
 
-class CompareEngine(GraphGenerator, InputProcessor):
+def params():
+    doc = "The params property."
+
+    def fget(self):
+        return self._params
+
+    def fset(self, value):
+        self._params = value
+
+    return locals()
+
+class CompareEngine(GraphGenerator, InputProcessor,HasParams):
     Groups = config.GROUPS
 
     @staticmethod
@@ -24,13 +37,7 @@ class CompareEngine(GraphGenerator, InputProcessor):
             s = s.union(set(CompareEngine.Groups[g]))
         return list(s)
 
-    def params():
-        doc = "The params property."
-        def fget(self):
-            return self._params
-        def fset(self, value):
-            self._params = value
-        return locals()
+
 
     params = property(**params())
 
@@ -45,103 +52,143 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
         #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
         #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
+    @staticmethod
+    def get_first_where_all_are_good(arr):
+        getnan = np.any(np.isnan(arr), axis=0)
+        return (list(getnan).index(False))
 
-
-    def get_data_by_type(self, mincrit, div= Types.RELTOMAX, compare_with=None):
+    def get_data_by_type(self, div= Types.RELTOMAX, compare_with=None):
         fromdateNum=matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate)  if self.params.todate else float('inf')
-        self._curflist = list(filter(lambda x: (x >= fromdateNum and x <= todateNum),sorted(self._fset)))
+        curflist = list(filter(lambda x: (x >= fromdateNum and x <= todateNum), sorted(self._fset)))
 
+        dic = self.get_dict_by_type(div)
+        df = pandas.DataFrame.from_dict(dic)
+        if (self.params.unite_by_group & UniteType.NONE!=UniteType.NONE):
+            dic  = self.unite_groups(dic.deepcopy(),df)
+            df = pandas.DataFrame.from_dict(dic)
 
-        if div & Types.PROFIT:
-            dic=self._unrel_profit
-            self.params.use_ext = False
-        elif div & Types.RELPROFIT:
-            dic=self._rel_profit_by_stock
-            self.params.use_ext=False
-        elif div & Types.PRICE:
-            dic = self._alldates
-        elif div & Types.TOTPROFIT:
-            dic= self._tot_profit_by_stock
-        elif div & Types.VALUE:
-            dic=self._value
-            self.params.use_ext = False
-        elif div & Types.THEORTICAL_PROFIT:
-            dic=self._tot_profit_by_stock
-        else:
-            dic= self._alldates
+        df=df[(df.index >=fromdateNum) * (df.index <=todateNum)]
 
-
-
-        if self.params.unite_by_group != UniteType.NONE:
-            dic = self.unite_groups(copy.deepcopy(dic), self._curflist)
-
-        firstnotNan = lambda x: next((l for l in x.values() if not math.isnan(l)))
-        firstKeynotNan = lambda x: next((k for k,l in x.items() if not math.isnan(l)))
 
         if div & Types.COMPARE:
             if not compare_with in dic:
                 print('to bad, no comp')
                 div=div& ~Types.COMPARE
             else:
-                compit = dic[compare_with]
+                compit_arr=np.array(df[compare_with])
 
-        for st, v in dic.items():
-            v= defaultdict(lambda: numpy.NaN,  dict(filter(lambda x: x[0] in self._curflist,  v.items())))
 
-            if div& Types.COMPARE and st==compare_with:
-                continue
 
+        if self.params.unite_by_group == UniteType.NONE:
+            cols = self.cols_by_selection(df)
+            df = df[list(cols)]#else we need everything...
+
+        arr = np.array(df).transpose()  # will just work with arr
+        df=df.drop(df.index[(np.all(np.isnan(arr),axis=0))]) # to check drop dates in which all stocks are none.
+        arr = np.array(df).transpose()  # will just work with arr
+
+        if div & (Types.COMPARE |Types.PRECENTAGE | Types.DIFF):
+            df = df.iloc[self.get_first_where_all_are_good(arr):]
+            arr = np.array(df).transpose()
+
+        self.org_data=df.copy()
+
+
+        if div & (Types.COMPARE | Types.THEORTICAL_PROFIT)==(Types.COMPARE | Types.THEORTICAL_PROFIT):
+            df = df[[c for c in df if c != compare_with]]  # remove col
             ign = False
-            if div & Types.COMPARE:
-                if div & Types.THEORTICAL_PROFIT:  # if we hold the same value as we hold for QQQ what is the difference
-                    initialHold = firstnotNan(self._holding_by_stock[st])
-                    intialCost=  firstnotNan(self._avg_cost_by_stock[st])
-                    loc=firstKeynotNan(self._holding_by_stock[st])
-                    intialHoldComp= (initialHold* intialCost)/self._alldates[compare_with][loc]
-                    intialCostComp=  self._alldates[compare_with][loc]
-                    holdcomp = lambda f :intialHoldComp *  self._holding_by_stock[st][f] / initialHold
-                    costcomp = lambda f: intialCostComp * self._avg_cost_by_stock[st][f] / intialCost
-                    compit ={f:holdcomp(f)*costcomp(f) for f in self._curflist} #from here , either precentage or diff
+            df = self.calc_theoritical_profit(compare_with, df)
 
+        initialarr = arr[:, 0]
 
-                if div& Types.PRECENTAGE:
-                    fr=firstnotNan(v)
-                    frcom=firstnotNan(compit)
-                    #zfactor= v[]
-                    v = {f : 100*((v[f]/fr) - compit[f]/frcom) for f in self._curflist}
-                    ign=True
-                #el
-                else:
-                    v= {f: v[f]- compit[f] for f in self._curflist}
+        ign=False
+        if div & Types.COMPARE:
+            compit_initial = compit_arr[0]  # at f=0
+            compit = np.vstack([compit_arr] * len(df.index))
 
-            maxon=[l for l in v.values() if not math.isnan(l)]
+            if div& (Types.PRECENTAGE |Types.DIFF):
+                newarr= ((arr/initialarr - compit/compit_initial))*100
+                ign=True
 
-            if len(maxon)==0:
-                return
-            M = max(maxon)
+            elif div & Types.PRECENTAGE: #by what factor was it better...
+                newarr = ((arr / initialarr) / (compit/compit_initial) -1 )*100
+            else:
+                newarr= arr-compit
+        Marr= np.nanmax(arr, axis=1)
+        M = np.vstack([Marr] * len(df.index))
 
-            if div & Types.RELTOMAX:
-                values = [(v[f] / M) * 100 for f in self._curflist]
-            elif div & Types.ABS:
-                values = [v[f] for f in self._curflist]
-            elif div & Types.PRECENTAGE and not ign:
-                t=firstnotNan(v)
-                values = [(v[f] / t - 1) * 100 for f in self._curflist]
-                #t= self._curflist[0]
-                #values= [(v[f]/v[t]-1) * 100 for f in self._curflist]
+        if div & Types.RELTOMAX:
+            refarr = Marr
+        elif div & Types.RELTOMIN:
+            refarr = np.nanmin(arr, axis=1)
+
+        elif div & Types.RELTOEND:
+            refarr=arr[:,-1]
+        else: #if div & Types.RELTOSTART:TODO:: the rel things should be another type like unite.. some messy code...
+            refarr= initialarr
+            
+        if not ign:
+            if div & Types.PRECENTAGE and not ign:
+                newarr= (arr.transpose()/ refarr -(1 if div & Types.RELTOSTART|Types.RELTOMIN else 0)   )*100
+
             elif div & Types.DIFF:
-                t= self._curflist[0]
-                values= [(v[f]-v[t]) for f in self._curflist]
-            else:
-                values = [v[f] for f in self._curflist] #ABS is the default
+                newarr= arr.transpose()-refarr
+            else: #if div & Types.ABS == Types.ABS:
+                newarr = arr.transpose()
 
-            if M > mincrit:
-                yield st, values, M
-            else:
-                pass #print('ignoring ', st)
+            #we want to transpose the array anyway to get it fit to df...
+        df[df.columns] = newarr
 
-    def unite_groups(self, dic, flist):
+
+        return  df,Marr
+
+    def get_dict_by_type(self, div):
+        if div & Types.PROFIT:
+            dic = self._unrel_profit
+            self.params.use_ext = False
+        elif div & Types.RELPROFIT:
+            dic = self._rel_profit_by_stock
+            self.params.use_ext = False
+        elif div & Types.PRICE:
+            dic = self._alldates
+        elif div & Types.TOTPROFIT:
+            dic = self._tot_profit_by_stock
+        elif div & Types.VALUE:
+            dic = self._value
+            self.params.use_ext = False
+        elif div & Types.THEORTICAL_PROFIT:
+            dic = self._tot_profit_by_stock
+        else:
+            dic = self._alldates
+        return dic
+
+    def calc_theoritical_profit(self, compare_with, df):
+        firstnotNan = lambda x: next((l for l in x.values() if not math.isnan(l)))
+        firstKeynotNan = lambda x: next((k for k,l in x.items() if not math.isnan(l)))
+        holdDF= self._holding_by_stockDF[[x for x in df] + [compare_with]]
+        holdArr= np.array(holdDF).transpose()
+        ind= self.get_first_where_all_are_good(holdArr)
+
+        holdArr= holdArr.iloc[ind:] #we assume avg cost is valid if hold is
+        minkey = firstKeynotNan(self._alldates[compare_with])
+        holdArr=holdArr[(holdArr.index >= minkey) ]
+        df = df[(df.index >= max(minkey,holdArr.index[0]) ) ]
+
+        for st in df: #if we query on the df. we must be after hold and that is enough...
+            # if we hold the same value as we hold for QQQ what is the difference
+            initialHold = firstnotNan(self._holding_by_stock[st])
+            intialCost = firstnotNan(self._avg_cost_by_stock[st])
+            loc = firstKeynotNan(self._holding_by_stock[st])
+            intialHoldComp = (initialHold * intialCost) / self._alldates[compare_with][loc]
+            intialCostComp = self._alldates[compare_with][loc]
+            holdcomp = lambda f: intialHoldComp * self._holding_by_stock[st][f] / initialHold
+            costcomp = lambda f: intialCostComp * self._avg_cost_by_stock[st][f] / intialCost
+
+            yield [holdcomp(f) * costcomp(f) for f in self._curflist]
+                # compit_arr ={f:} #from here , either precentage or diff
+
+    def unite_groups(self, dic,df):
         ndic = {}
         items = [(g, CompareEngine.Groups[g]) for g in self.params.groups]
         if self.params.unite_by_group & UniteType.ADDTOTAL:
@@ -150,19 +197,16 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
 
         for gr, stocks in items:
-            n = numpy.empty([len(stocks), len(self._curflist)])
-            for st in range(len(stocks)):
-                for f in range(len(self._curflist)):
-                    n[st][f]=dic[stocks[st]][self._curflist[f]]
+            arr = np.array(df[stocks]).transpose()
 
             #curdat = {st:{f: dic[stocks[st]][self._curflist[f]]}  for st in range(len(stocks)) for f in range(len(self._curflist))} #should have default args
             #A=numpy.array(curdat)
             # = n[~numpy.isnan(n)]
 
             if self.params.unite_by_group & UniteType.SUM or gr=='All':
-                ndic[gr] = dict(zip(flist, numpy.sum(n, axis=0 )))
+                ndic[gr] =  numpy.nansum(arr, axis=0)
             elif self.params.unite_by_group & UniteType.AVG:
-                ndic[gr] = dict(zip(flist,numpy.mean(n, axis=0 )))
+                ndic[gr] = numpy.nanmean(arr, axis=0 )
 
         return ndic
 
@@ -183,6 +227,7 @@ class CompareEngine(GraphGenerator, InputProcessor):
         if reprocess:
             self.process()
         self.dt = self.generate_data()
+        self.cols = list(self.dt)
 
         try:
             self.gen_actual_graph(B, self.cols, self.dt,  self.params.isline, self.params.starthidden,just_upd,self.params.type)
@@ -193,35 +238,20 @@ class CompareEngine(GraphGenerator, InputProcessor):
 
     def generate_data(self):
         #self.params.use_ext=True #Will be changed by func
-        tabledata = list(self.get_data_by_type(self.params.mincrit, self.params.type, self.params.compare_with))
-
-        tabledata.sort(key=lambda x: x[2])
-        if (not (self.params.unite_by_group & (UniteType.SUM | UniteType.AVG))):
-            tabledata = tabledata[(-1) * self.params.maxnum:]
-            tabledata = self.adjust_cols_by_selection(tabledata)
-        else:
-            self.cols = list([x[0] for x in tabledata])
-        self.filter_dates(tabledata)
-
-        dt = pd.DataFrame(self.data, columns=self.cols, index=[matplotlib.dates.num2date(y) for y in self._curflist])
-        return  dt
-
-    def filter_dates(self, data):
-        useful = set()
-        data = {x: y for (x, y, z) in data}
-        for i in self.cols:
-            for j in range(len(data[i])):
-                if not math.isnan(data[i][j]):
-                    useful.add(j)
-        indexfilt = lambda y: filter(lambda m: m != None, [y[k] if k in useful else None for k in range(len(y))])
-        self._curflist = indexfilt(self._curflist)
-        self.data = {x: indexfilt(y) for (x, y) in data.items()}
+        df, Marr= self.get_data_by_type(self.params.type, self.params.compare_with)
+        sordlist = [stock for (max, stock) in sorted(list(zip(Marr, df)), key=lambda x: x[0], reverse=True) if
+                    max >= self.params.mincrit]
+        df = df[sordlist[:self.params.maxnum]]  # rearrange columns by max
+        df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1)
+        return df
+        
 
 
 
-    def adjust_cols_by_selection(self,  data):
-        ll = [x[0] for x in data]
-        cols = MyOrderedSet(ll)
+
+
+    def cols_by_selection(self,  data):
+        cols = set([x for x in data])
         try:
             if self.params.use_groups:
                 if self.params.groups:
@@ -236,14 +266,9 @@ class CompareEngine(GraphGenerator, InputProcessor):
             raise ParameterError("groups")
 
         if self.params.use_ext:
-            for sym in self.params.ext:
-                if not sym in cols:
-                    m = [(k, x, y) for k, x, y in data if k == sym]
-                    if len(m) > 0:  # odata contains it, could be filter out by compar
-                        data += m
-                        cols.add(sym)
-        self.cols=cols
-        return data
+            cols.update(set(self.params.ext))
+
+        return cols
 
     # makes the entire graph from the default attributes.
     def update_graph(self, params: Parameters = Parameters()):
