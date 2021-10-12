@@ -7,10 +7,11 @@ You can use a variaty of comparision options.
 For instance: 
 
 Yo can divide the stocks into sectors, and compare the performance of different sector! 
-    * chart of average price change of  FANG vs interesting stock in  China) 
-    * chart of profit of each section 
 
-You can compare your profit with a theoritical situation in which you have bought the index!
+* chart of average price change of  FANG vs interesting stock in  China) 
+* chart of profit of each section 
+
+You can compare your profit at any time to a theoritical situation in which you have bought the index(the exact same time)!
 
 
 
@@ -34,6 +35,8 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 
 ## Running Instructions
+
+** Preliminary version, many features are not working yet ** 
 
  1. Copy exampleconfig.py to config.py
  2. Change according to instructions there.
