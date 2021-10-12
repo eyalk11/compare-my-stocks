@@ -29,8 +29,11 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 * Get price history from Investpy (uses inversting.com) 
 * Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
-* Combined protofolio from any broker/investments
-* Use jupyter to quickly change paramters of the graph! 
+(Independent  from any broker/investments product)
+* Use jupyter to quickly change paramters of the graph! i.e. 
+```
+gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
+```
 * Completely free and open source. 
 
 ## Planned
