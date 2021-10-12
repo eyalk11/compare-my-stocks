@@ -15,6 +15,8 @@ You can compare your profit at any time to a theoretical situation in which you 
 
 ![comparestockscreen](https://user-images.githubusercontent.com/72234965/137033857-71283f52-59d7-4356-8f5c-8d43037ebf15.png)
 
+
+This was devloped in QT with matplotlib. 
 The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later Interactive brokers account's positions. 
 The stocks historical prices are obtained from investpy (originally https://github.com/alvarobartt/investpy) .
 
@@ -58,6 +60,15 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
  3. Depends on inverstpy. Please use https://github.com/eyalk11/investpy for it to work.
  4. Run mainwindow.py
 
-## Contact Me
+## Final words
 
-Feel free to contact me at eyalk5@gmail.com 
+I wanted this product to be used inline in jupyter notebook. This is not possible with the way it is currently QT (having full features). 
+
+I am not sure about the right level of exposure to code. 
+
+Should I allow for customized, code-based operations between stocks? I am not a fun of GUI, and it is a lot of work. 
+Include notebook inside QT? What kind of statisitics to incorperate? 
+
+
+Feel free to contact me at eyalk5@gmail.com.
+
