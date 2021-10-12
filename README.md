@@ -21,19 +21,21 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 ## Additional Features 
 
-* 
+* Compare performance with any stock
+* Unite stocks into groups
+* Compare with entire protofolio 
 * Get price history from Investpy (uses inversting.com) 
 * Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
 * Combined protofolio from any broker/investments
-* Suited for your protoflio (no manual selection of stocks like in yahoo)
 * Use jupyter to quickly change paramters of the graph! 
- 
+* Completely free and open source. 
 
-* Introducing advanced features like P/E and price to sells (planned). 
-* Find corelations between sectors  (planned)
-* Interacts with IB to get transaction (planned)
-* Exporting dataframes to  jupyter (planned)
-* Crypto (planned - should be easy)
+## Planned
+* Introducing advanced features like P/E and price to sells . 
+* Find corelations between sectors  
+* Interacts with IB to get transaction 
+* Exporting dataframes to jupyter (should be easy)
+* Crypto support(should be easy)
 
 
 ## Running Instructions
