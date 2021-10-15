@@ -2,9 +2,9 @@ import math
 
 import numpy as np
 
-from common import Types, get_first_where_all_are_good
+from common.common import Types, get_first_where_all_are_good
 
-from inputdata import InputData
+from input.inputdata import InputData
 
 class ActOnData:
     def __init__(self, arr, df, type, fulldf, compare_with, inputData: InputData):

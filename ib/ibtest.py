@@ -11,9 +11,9 @@ from flask import Flask
 
 from ibw.client import IBClient
 import importlib
-CONFIGFILE='\..\config.py'
+CONFIGFILE='\..\config\config.py'
 try:
-    config=importlib.import_module('config',CONFIGFILE)
+    config=importlib.import_module('config',CONFIGFILE).config
 except:
     print('please create a valid config file (rename exampleconf to config.py)')
 

@@ -11,11 +11,11 @@ import pandas as pd
 import pytz
 from dateutil import parser
 
-import config
-from common import UseCache, InputSourceType, addAttrs
+from config import config
+from common.common import UseCache, InputSourceType, addAttrs
 
-from inputsource import InputSource, IBSource, InvestPySource
-from parameters import HasParamsAndGroups
+from input.inputsource import InputSource, IBSource, InvestPySource
+from engine.parameters import HasParamsAndGroups
 
 
 class TransactionHandler(HasParamsAndGroups):
@@ -24,7 +24,7 @@ class TransactionHandler(HasParamsAndGroups):
 
     def try_to_use_cache(self):
         try:
-            (self._buydic,self._buysymbols)=pickle.load(open(config.BUYDICTCACHE,'rb'))
+            (self._buydic,self._buysymbols)=pickle.load(open(config.BUYDICTCACHE, 'rb'))
             return 1
         except Exception as e :
             print(e)
@@ -65,7 +65,7 @@ class TransactionHandler(HasParamsAndGroups):
 
         if config.BUYDICTCACHE:
             try:
-                pickle.dump((self._buydic,self._buysymbols),open(config.BUYDICTCACHE,'wb'))
+                pickle.dump((self._buydic,self._buysymbols), open(config.BUYDICTCACHE, 'wb'))
                 print('dumpted')
             except Exception as e:
                 print(e)
@@ -158,7 +158,7 @@ class InputProcessor(TransactionHandler):
                     print('bad %s' % sym)
                     continue
                 prec= sum([1 for d in hist.values() if not math.isnan(d['Open'])])
-                if prec/numdays < config.MINIMALPRECREQ and numdays>config.MINCHECKREQ:
+                if prec/numdays < config.MINIMALPRECREQ and numdays> config.MINCHECKREQ:
                     print('not enough days %s %f' % (sym,prec/numdays))
                     continue
                 self._usable_symbols.add(sym)
@@ -169,7 +169,7 @@ class InputProcessor(TransactionHandler):
                     self._hist_by_date[date][sym] = dic  # should be =l
 
 
-            pickle.dump( (self._hist_by_date,datetime.datetime.now()), open(config.HIST_F,'wb') )
+            pickle.dump((self._hist_by_date,datetime.datetime.now()), open(config.HIST_F, 'wb'))
 
 
         self._simp_hist_by_date= collections.OrderedDict()

@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from ipywidgets import interact, interactive, fixed, interact_manual, SelectMultiple, Combobox, HBox, VBox
+from ipywidgets import SelectMultiple, Combobox, HBox, VBox
 import ipywidgets as widgets
-from common import Types
+from common.common import Types
 from IPython.core.display import display
-from ipywidgets import Layout, Button, Box, FloatText, Textarea, Dropdown, Label, IntSlider
-from widgets import DateRangePicker
+from ipywidgets import Layout, Button, Box, Label, IntSlider
+from jupyter.widgets import DateRangePicker
 
-from compareengine import CompareEngine
+from engine.compareengine import CompareEngine
 
 SELECT_BY_STOCKS = 'Select by stocks'
 

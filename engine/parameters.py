@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 
-import config
-from common import Types, UseCache, UniteType
+from config import config
+from common.common import Types, UseCache, UniteType
 
 
 def paramaware(klass):
@@ -36,8 +36,8 @@ def paramaware(klass):
 @dataclass
 class Parameters:
     groups : list =field(default_factory=list)
-    mincrit : int =config.MIN
-    maxnum : int =config.MAXCOLS
+    mincrit : int = config.MIN
+    maxnum : int = config.MAXCOLS
     type : Types =Types.VALUE
     ext : list =field(default_factory=config.EXT.copy)
     increase_fig: bool =1
@@ -46,9 +46,9 @@ class Parameters:
     isline: bool =True
     starthidden : bool =0
     compare_with: str =None
-    portfolio: str  =config.DEF_PORTFOLIO
+    portfolio: str  = config.DEF_PORTFOLIO
     use_cache : UseCache =UseCache.USEIFAVALIABLE
-    def_fig_size : tuple =config.DEF_FIG_SIZE
+    def_fig_size : tuple = config.DEF_FIG_SIZE
     unite_by_group : UniteType =UniteType.NONE
     show_graph : bool =False
     use_groups: bool =True

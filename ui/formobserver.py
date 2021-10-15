@@ -5,7 +5,7 @@ import PySide6.QtCore
 import PySide6.QtWidgets
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton
 
-from common import UniteType, Types
+from common.common import UniteType, Types
 
 
 class ListsObserver:

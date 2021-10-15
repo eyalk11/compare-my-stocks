@@ -3,11 +3,11 @@ import numpy
 import numpy as np
 import pandas
 
-from common import Types, UniteType, NoDataException, get_first_where_all_are_good
+from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good
 #from compareengine import CompareEngine
-from actondata import ActOnData
-from inputdata import InputData
-from parameters import HasParamsAndGroups, ParameterError
+from processing.actondata import ActOnData
+from input.inputdata import InputData
+from engine.parameters import HasParamsAndGroups, ParameterError
 
 
 class DataGenerator(HasParamsAndGroups, InputData):

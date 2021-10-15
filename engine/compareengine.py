@@ -1,9 +1,9 @@
-import config
-from common import NoDataException
-from datagenerator import DataGenerator
-from graphgenerator import GraphGenerator
-from inputprocessor import InputProcessor
-from parameters import Parameters
+from config import config
+from common.common import NoDataException
+from processing.datagenerator import DataGenerator
+from graph.graphgenerator import GraphGenerator
+from input.inputprocessor import InputProcessor
+from engine.parameters import Parameters
 
 
 def params():

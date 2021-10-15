@@ -5,9 +5,9 @@ import matplotlib
 import mplcursors
 from matplotlib import pyplot as plt
 import numpy
-import config
-from common import USEQT
-from common import Types
+from config import config
+from common.common import USEQT
+from common.common import Types
 plt.rcParams["figure.autolayout"] = False
 
 
@@ -50,7 +50,7 @@ class GraphGenerator:
                 self.cursor.disconnect('add',cb=self.cb)
                 del self.cursor
             #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
-            dt.plot.line(figsize=config.DEF_FIG_SIZE, reuse_plot=True,ax=ar)
+            dt.plot.line(figsize=config.DEF_FIG_SIZE, reuse_plot=True, ax=ar)
             #ar.legend_.figure.canvas.clear()
             #ar.legend_.figure.canvas.draw()
         else:
@@ -102,7 +102,7 @@ class GraphGenerator:
         #nice hack
         def set_fig_size(my,def_fig_size,*args,**kwargs):
             my.figsize= def_fig_size  #if anyone asks
-        mfig.set_size_inches=partial(set_fig_size,mfig,config.DEF_FIG_SIZE)
+        mfig.set_size_inches=partial(set_fig_size, mfig, config.DEF_FIG_SIZE)
 
 
         #ar.set_size_inches(15.1,6.46)#(7*FACx, hi * 0.6*FACy)
@@ -110,7 +110,7 @@ class GraphGenerator:
         # Put a legend to the right of the current aris
         if len(cols) >= config.MINCOLFORCOLUMS:
 
-            ar.legend(loc='center left', bbox_to_anchor=B, ncol=len(cols) // config.MINCOLFORCOLUMS,handleheight=2.4, labelspacing=0.05)
+            ar.legend(loc='center left', bbox_to_anchor=B, ncol=len(cols) // config.MINCOLFORCOLUMS, handleheight=2.4, labelspacing=0.05)
         else:
             ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
         if isline:

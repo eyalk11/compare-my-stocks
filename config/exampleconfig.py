@@ -1,6 +1,6 @@
 import datetime
 
-from common import InputSourceType, UseCache
+from common.common import InputSourceType, UseCache
 
 TZINFO=datetime.timezone(datetime.timedelta(hours=-3),'GMT3')
 MAXCACHETIMESPAN=datetime.timedelta(days=1)

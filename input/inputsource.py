@@ -1,7 +1,7 @@
 import datetime
 from abc import ABC, abstractmethod
 
-import config
+from config import config
 
 
 class InputSource(ABC):

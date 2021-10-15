@@ -61,7 +61,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 
  3. Depends on inverstpy. Please use https://github.com/eyalk11/investpy for it to work.
- 4. Run mainwindow.py
+ 4. Run main.py
 
 ## Final words
 
