@@ -12,13 +12,13 @@ import pytz
 from dateutil import parser
 
 import config
-from common import UseCache, InputSourceType
+from common import UseCache, InputSourceType, addAttrs
 
 from inputsource import InputSource, IBSource, InvestPySource
-from parameters import HasParams
+from parameters import HasParamsAndGroups
 
 
-class TransactionHandler(HasParams):
+class TransactionHandler(HasParamsAndGroups):
     def __init__(self,filename):
         self._fn=filename
 
@@ -71,8 +71,7 @@ class TransactionHandler(HasParams):
                 print(e)
 
 
-
-
+@addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit', 'avg_cost_by_stock'])
 class InputProcessor(TransactionHandler):
     def __init__(self,filename):
         TransactionHandler.__init__(self,filename)
@@ -83,6 +82,8 @@ class InputProcessor(TransactionHandler):
             self._inputsource : InputSource = IBSource()
         else:
             self._inputsource: InputSource = InvestPySource()
+
+        self.init_input()
 
     def process_history(self):
 
@@ -105,13 +106,7 @@ class InputProcessor(TransactionHandler):
             if _cur_holding_bystock[stock] < 0:
                 print('warning sell below zero', stock,cur_action[0])
 
-        self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN)) #how much we hold
-        self._avg_cost_by_stock=defaultdict(lambda: defaultdict(lambda: numpy.NaN)) #cost per unit
-        self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  #re
-        self._tot_profit_by_stock  = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self.init_input()
 
         _cur_avg_cost_bystock=defaultdict(lambda: 0)
         _cur_holding_bystock = defaultdict(lambda: 0)
@@ -156,8 +151,7 @@ class InputProcessor(TransactionHandler):
             self._hist_by_date = collections.OrderedDict() #like all dates but by
 
             for sym in list(self._symbols_wanted):
-                if self.params.todate is None:
-                    todate = datetime.datetime.now()
+                todate=self.params.todate if  self.params.todate is not None else datetime.datetime.now()
                 numdays= (todate-self.params.fromdate).days
                 hist = self._inputsource.get_symbol_history(sym, self.params.fromdate,todate)  # should be rounded
                 if hist==None:
@@ -228,6 +222,15 @@ class InputProcessor(TransactionHandler):
             update_curholding()
             print('after, should update rel_prof... ')
             #cur_action[0]
+
+    def init_input(self):
+        self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # how much we hold
+        self._avg_cost_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # cost per unit
+        self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # re
+        self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
 
     def update_usable_symbols(self):
         self._usable_symbols = set()

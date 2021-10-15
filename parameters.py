@@ -90,8 +90,12 @@ class ParameterError(Exception):
 
 
 
-class HasParams(ABC):
+class HasParamsAndGroups(ABC):
     @property
     @abstractmethod
     def params(self) -> Parameters:
+        ...
+    @classmethod
+    @property
+    def Groups(self) -> dict:
         ...

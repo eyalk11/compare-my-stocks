@@ -185,6 +185,9 @@
                    <property name="text">
                     <string>Selected</string>
                    </property>
+                   <property name="alignment">
+                    <set>Qt::AlignHCenter|Qt::AlignTop</set>
+                   </property>
                   </widget>
                  </item>
                  <item row="1" column="0" rowspan="2">
@@ -310,6 +313,9 @@
                   <widget class="QLabel" name="label_2">
                    <property name="text">
                     <string>Refernce</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignHCenter|Qt::AlignTop</set>
                    </property>
                   </widget>
                  </item>

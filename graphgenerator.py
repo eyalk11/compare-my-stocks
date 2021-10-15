@@ -67,11 +67,11 @@ class GraphGenerator:
         mfig = ar.figure
         st=''
         if type & Types.RELTOMAX:
-            st = 'Precentage Down from Max of '
+            st = 'Precentage Down from Max Of '
         if type & Types.PRECENTAGE:
-            st = 'Precentage Change of '
+            st = 'Precentage Change In '
         if type & Types.DIFF:
-            st = 'Change of '
+            st = 'Change In '
         if type & Types.PROFIT:
             st += 'Profit'
         if type & Types.VALUE:
@@ -136,7 +136,7 @@ class GraphGenerator:
 
             self.cursor = mplcursors.cursor(hover=True)
             self.cb= self.cursor.connect('add', partial(show_annotation,cls=self,ax=ar))
-            plt.grid(b=True)
+            plt.grid(visible=True)
             #self._ax=ax
             if just_upd:
                 #with self._out:

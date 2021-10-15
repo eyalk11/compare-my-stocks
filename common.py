@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 USEWX=0
 USEWEB=0
 USEQT=1
@@ -49,3 +51,23 @@ class InputSourceType(Flag):
     InvestPy=auto()
 
 
+def addAttrs(attr_names):
+  def deco(cls):
+    for attr_name in attr_names:
+      def getAttr(self, attr_name=attr_name):
+        return getattr(self, "_" + attr_name)
+      def setAttr(self, value, attr_name=attr_name):
+        setattr(self, "_" + attr_name, value)
+      prop = property(getAttr, setAttr)
+      setattr(cls, attr_name, prop)
+      #setattr(cls, "_" + attr_name, None) # Default value for that attribute
+    return cls
+  return deco
+
+
+def get_first_where_all_are_good(arr):
+    getnan = np.any(np.isnan(arr), axis=0)
+    return (list(getnan).index(False))
+
+class NoDataException(Exception):
+    pass

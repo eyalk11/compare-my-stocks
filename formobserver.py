@@ -8,38 +8,49 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton
 from common import UniteType, Types
 
 
-class FormObserver:
+class ListsObserver:
+    @staticmethod
+    def del_selected(z):
+        listItems = z.selectedItems()
+        if not listItems: return
+        for item in listItems:
+            z.takeItem(z.row(item))
+
+    def del_in_lists(self):
+        for z in [self.window.orgstocks,self.window.refstocks]:
+            self.del_selected(z)
+
+    @staticmethod
+    def generic_add_lists(org, dst):
+        items = set([x.text() for x in org.selectedItems()])
+        items = items - set([dst.item(x).text() for x in range(dst.count())])
+        dst.addItems(items)
+        FormObserver.del_selected(org)
+
+    def add_to_ref(self):
+        self.generic_add_lists(self.window.orgstocks, self.window.refstocks)
+
+    def add_to_sel(self):
+        self.generic_add_lists(self.window.refstocks, self.window.orgstocks)
+
+    def add_selected(self):
+        org: QListWidget = self.window.orgstocks  # type:
+        org.addItem(self.window.addstock.currentText())
+        self.update_graph()
+
+    def add_reserved(self):
+        org: QListWidget = self.window.refstocks  # type:
+        org.addItem(self.window.addstock.currentText())
+        self.update_graph()
+
+
+class FormObserver(ListsObserver):
     def __init__(self):
         self._graphObj = None
         self.window=None
         self._toshow=True
         self._initiated=False
         #self._toselectall=False
-
-    def delref(self):
-        for z in [self.window.orgstocks,self.window.refstocks]:
-            self.delselected(z)
-
-    @staticmethod
-    def delselected(z):
-        listItems = z.selectedItems()
-        if not listItems: return
-        for item in listItems:
-            z.takeItem(z.row(item))
-
-    @staticmethod
-    def genericadd(org, dst):
-        items = set([x.text() for x in org.selectedItems()])
-        items = items - set([dst.item(x).text() for x in range(dst.count())])
-        dst.addItems(items)
-        FormObserver.delselected(org)
-
-    def addtoref(self):
-        self.genericadd(self.window.orgstocks, self.window.refstocks)
-
-    def addtosel(self):
-        self.genericadd(self.window.refstocks,self.window.orgstocks)
-
 
     def update_graph(self):
         if self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated:
@@ -102,23 +113,13 @@ class FormObserver:
         self._toshow= not self._toshow
         self._graphObj.show_hide( self._toshow)
 
-    def doselect(self):
+    def do_select(self):
         gr : QListWidget= self.window.groups
         if len(gr.selectedItems())!=gr.count():
             gr.selectAll()
             #select all
         else:
             gr.clearSelection()
-
-    def addselected(self):
-        org: QListWidget = self.window.orgstocks  # type:
-        org.addItem(self.window.addstock.currentText())
-        self.update_graph()
-
-    def addreserved(self):
-        org: QListWidget = self.window.refstocks  # type:
-        org.addItem(self.window.addstock.currentText())
-        self.update_graph()
 
     def compare_changed(self,num):
 
@@ -149,13 +150,13 @@ class FormObserver:
         self.window.max_num.valueChanged.connect(genobs('maxnum'))
         self.window.use_groups.toggled.connect(genobs('use_groups'))
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
-        self.window.addselected.pressed.connect(self.addselected)
-        self.window.addreserved.pressed.connect(self.addreserved)
+        self.window.addselected.pressed.connect(self.add_selected)
+        self.window.addreserved.pressed.connect(self.add_reserved)
         self.window.showhide.pressed.connect(self.showhide)
-        self.window.selectallnone.pressed.connect(self.doselect)
-        self.window.deletebtn.pressed.connect(self.delref)
-        self.window.addtoref.pressed.connect(self.addtoref)
-        self.window.addtosel.pressed.connect(self.addtosel)
+        self.window.selectallnone.pressed.connect(self.do_select)
+        self.window.deletebtn.pressed.connect(self.del_in_lists)
+        self.window.addtoref.pressed.connect(self.add_to_ref)
+        self.window.addtosel.pressed.connect(self.add_to_sel)
 
 
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
@@ -168,21 +169,6 @@ class FormObserver:
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
 
         self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobs('use_ext'))
-
-
-
-
-        #model=PySide6.QtCore.QItemSelectionModel()
-        #selection= PySide6.QtCore.QItemSelectionRange([options.index(v) for v in value])
-        #model.select(selection, PySide6.QtCore.QItemSelectionModel.Select)
-        #self.window.groups.setSelectionModel(model)
-
-        #stockl=list(get_options_from_groups(d.value))
-
-
-
-
-
 
         for rad in self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,name="unite_ADDTOTAL")+ self.window.findChildren(QCheckBox, name="COMPARE"):
             rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
