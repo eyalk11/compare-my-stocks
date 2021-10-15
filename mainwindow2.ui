@@ -238,7 +238,7 @@
                         <property name="orientation">
                          <enum>Qt::Vertical</enum>
                         </property>
-                        <widget class="QPushButton" name="addtocur_2">
+                        <widget class="QPushButton" name="addtoref">
                          <property name="minimumSize">
                           <size>
                            <width>16</width>
@@ -255,7 +255,7 @@
                           <string>&gt;</string>
                          </property>
                         </widget>
-                        <widget class="QPushButton" name="pushButton_25">
+                        <widget class="QPushButton" name="deletebtn">
                          <property name="minimumSize">
                           <size>
                            <width>16</width>
@@ -272,7 +272,7 @@
                           <string>X</string>
                          </property>
                         </widget>
-                        <widget class="QPushButton" name="pushButton_2">
+                        <widget class="QPushButton" name="addtosel">
                          <property name="maximumSize">
                           <size>
                            <width>16777215</width>
@@ -403,7 +403,7 @@
                      <item row="2" column="1">
                       <layout class="QGridLayout" name="gridLayout_10">
                        <item row="1" column="0">
-                        <widget class="QPushButton" name="selectallnone">
+                        <widget class="QPushButton" name="tttt">
                          <property name="text">
                           <string>Select All/None</string>
                          </property>
@@ -522,7 +522,7 @@
                           <item>
                            <widget class="QRadioButton" name="PRECENTAGE">
                             <property name="text">
-                             <string>Precentage</string>
+                             <string>Percentage</string>
                             </property>
                            </widget>
                           </item>
@@ -530,6 +530,13 @@
                            <widget class="QRadioButton" name="DIFF">
                             <property name="text">
                              <string>Diff</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QRadioButton" name="PRECDIFF">
+                            <property name="text">
+                             <string>Percentage Diff</string>
                             </property>
                            </widget>
                           </item>
@@ -962,16 +969,16 @@
                      <item row="0" column="0">
                       <layout class="QVBoxLayout" name="verticalLayout_9">
                        <item>
-                        <widget class="QPushButton" name="pushButton_17">
+                        <widget class="QPushButton" name="selectallnone">
                          <property name="text">
-                          <string>Edit Group</string>
+                          <string>Select All/None</string>
                          </property>
                         </widget>
                        </item>
                        <item>
                         <widget class="QPushButton" name="pushButton_18">
                          <property name="text">
-                          <string>Add Group</string>
+                          <string>Edit Groups</string>
                          </property>
                         </widget>
                        </item>
@@ -1013,7 +1020,7 @@
                       </layout>
                      </item>
                      <item row="2" column="0" colspan="2">
-                      <widget class="QGroupBox" name="">
+                      <widget class="QGroupBox" name="groupBox">
                        <property name="title">
                         <string>Saved Graphs</string>
                        </property>
@@ -1033,7 +1040,7 @@
                          </widget>
                         </item>
                         <item row="0" column="0" colspan="2">
-                         <widget class="QFrame" name="">
+                         <widget class="QFrame" name="frame">
                           <layout class="QFormLayout" name="summary_form_2">
                            <property name="horizontalSpacing">
                             <number>0</number>

@@ -26,6 +26,9 @@ class Types(Flag):
     PRECENTAGE=auto()
     DIFF=auto()
     COMPARE=auto()
+    PRECDIFF = PRECENTAGE | DIFF
+
+
 
 
 class UseCache(Enum):

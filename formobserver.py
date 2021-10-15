@@ -16,6 +16,31 @@ class FormObserver:
         self._initiated=False
         #self._toselectall=False
 
+    def delref(self):
+        for z in [self.window.orgstocks,self.window.refstocks]:
+            self.delselected(z)
+
+    @staticmethod
+    def delselected(z):
+        listItems = z.selectedItems()
+        if not listItems: return
+        for item in listItems:
+            z.takeItem(z.row(item))
+
+    @staticmethod
+    def genericadd(org, dst):
+        items = set([x.text() for x in org.selectedItems()])
+        items = items - set([dst.item(x).text() for x in range(dst.count())])
+        dst.addItems(items)
+        FormObserver.delselected(org)
+
+    def addtoref(self):
+        self.genericadd(self.window.orgstocks, self.window.refstocks)
+
+    def addtosel(self):
+        self.genericadd(self.window.refstocks,self.window.orgstocks)
+
+
     def update_graph(self):
         if self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated:
             self._graphObj.update_graph()
@@ -72,6 +97,7 @@ class FormObserver:
             selection.append(PySide6.QtCore.QItemSelectionRange(widget.model().index(idx)))
         widget.selectionModel().select(
             selection, PySide6.QtCore.QItemSelectionModel.ClearAndSelect)
+
     def showhide(self):
         self._toshow= not self._toshow
         self._graphObj.show_hide( self._toshow)
@@ -113,7 +139,9 @@ class FormObserver:
             self.update_graph()
 
 
-
+    def use_groups(self,val):
+        self.attribute_move('use_groups',val)
+        self.groups_changed()
     def setup_observers(self):
         genobs=lambda x:partial(self.attribute_move,x)
         #self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
@@ -124,7 +152,11 @@ class FormObserver:
         self.window.addselected.pressed.connect(self.addselected)
         self.window.addreserved.pressed.connect(self.addreserved)
         self.window.showhide.pressed.connect(self.showhide)
-        self.window.selectallnone.toggled.connect(self.doselect)
+        self.window.selectallnone.pressed.connect(self.doselect)
+        self.window.deletebtn.pressed.connect(self.delref)
+        self.window.addtoref.pressed.connect(self.addtoref)
+        self.window.addtosel.pressed.connect(self.addtosel)
+
 
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
         self.window.findChild(QPushButton,name="update_btn").pressed.connect(self._graphObj.update_graph)
@@ -134,6 +166,7 @@ class FormObserver:
         self.window.orgstocks.model().rowsRemoved.connect(self.selected_changed)
         self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
+
         self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobs('use_ext'))
 
 
@@ -210,11 +243,17 @@ class FormInitializer(FormObserver):
         #self.refernced_changed()
         self.set_all_toggled_value()
 
-    def update_stock_list(self,isinital=0):
-        alloptions= list(self._graphObj._usable_symbols) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
-        for comp in  [self.window.comparebox,self.window.addstock]:
-            comp.clear()
-            comp.addItems(alloptions)
+    def update_stock_list(self,isinitial=0):
+        alloptions= sorted(list(self._graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
+
+        #self._last_choice=  self.window.comparebox.currentText()
+        if isinitial:
+            for comp in  [self.window.comparebox,self.window.addstock] :
+                comp.clear()
+                comp.addItems(alloptions)
+
+
+
 
         gr=self._graphObj.params.groups
         org: QListWidget = self.window.orgstocks  # type:
@@ -227,6 +266,6 @@ class FormInitializer(FormObserver):
             if self._graphObj.params.use_groups:
                 org.clear()
                 org.addItems(self._graphObj.get_options_from_groups(self._graphObj.params.groups))
-            elif isinital:
+            elif isinitial:
                 org.clear()
                 org.addItems(self._graphObj.params.selected_stocks)

@@ -27,6 +27,16 @@ def params():
 
     return locals()
 
+def first_index_of(ls,fun=None):
+    #ls=list(ls)
+    if fun==None:
+        fun=lambda x:x
+    lst=[x for x in range(len(ls)) if fun(ls[x])]
+    if lst:
+        return lst[0]
+    else:
+        return -1
+
 class CompareEngine(GraphGenerator, InputProcessor,HasParams):
     Groups = config.GROUPS
 
@@ -53,7 +63,7 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
         #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
         #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
     @staticmethod
-    def get_first_where_all_are_good(arr):
+    def get_first_where_all_are_good(arr,add=None):
         getnan = np.any(np.isnan(arr), axis=0)
         return (list(getnan).index(False))
 
@@ -64,57 +74,77 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
 
         dic = self.get_dict_by_type(div)
         df = pandas.DataFrame.from_dict(dic)
-        if (self.params.unite_by_group & UniteType.NONE!=UniteType.NONE):
-            dic  = self.unite_groups(dic.deepcopy(),df)
-            df = pandas.DataFrame.from_dict(dic)
+        if (self.params.unite_by_group & ~UniteType.NONE):
+            df  = self.unite_groups(df)
+
 
         df=df[(df.index >=fromdateNum) * (df.index <=todateNum)]
 
-
+        compit_arr=None
         if div & Types.COMPARE:
-            if not compare_with in dic:
+            if not compare_with in df:
                 print('to bad, no comp')
                 div=div& ~Types.COMPARE
+
+                #ind=first_index_of(compit_arr,np.isnan)
+                #df=df.iloc[ind:]
+
+
+
+        if not (self.params.unite_by_group & ~(UniteType.ADDTOTAL)): #in unite, the compare_with is already there
+            cols = self.cols_by_selection(df,div)
+            if div & Types.COMPARE:
+                fulldf = df[list(cols.union(set([compare_with])))]
             else:
-                compit_arr=np.array(df[compare_with])
+                fulldf=df
+            ##else we need everything...
 
 
+        arr = np.array(fulldf).transpose()  # will just work with arr
 
-        if self.params.unite_by_group == UniteType.NONE:
-            cols = self.cols_by_selection(df)
-            df = df[list(cols)]#else we need everything...
+        fulldf=fulldf.drop(df.index[(np.all(np.isnan(arr),axis=0))]) # to check drop dates in which all stocks are none.
 
+        df = fulldf[list(cols - set([compare_with]))]
         arr = np.array(df).transpose()  # will just work with arr
-        df=df.drop(df.index[(np.all(np.isnan(arr),axis=0))]) # to check drop dates in which all stocks are none.
-        arr = np.array(df).transpose()  # will just work with arr
+
+        if len(arr)==0:
+            print('no data')
+            return None,None
 
         if div & (Types.COMPARE |Types.PRECENTAGE | Types.DIFF):
-            df = df.iloc[self.get_first_where_all_are_good(arr):]
+            fullarr= np.array(fulldf).transpose()
+            df = df.iloc[self.get_first_where_all_are_good(fullarr):]
             arr = np.array(df).transpose()
 
-        self.org_data=df.copy()
+        self.org_data=fulldf.copy()
 
 
         if div & (Types.COMPARE | Types.THEORTICAL_PROFIT)==(Types.COMPARE | Types.THEORTICAL_PROFIT):
-            df = df[[c for c in df if c != compare_with]]  # remove col
+            #df = df[[c for c in df if c != compare_with]]  # remove col
             ign = False
             df = self.calc_theoritical_profit(compare_with, df)
 
         initialarr = arr[:, 0]
+        transpose_arr = arr.transpose()
 
         ign=False
         if div & Types.COMPARE:
+            compit_arr= np.array(fulldf[compare_with])
             compit_initial = compit_arr[0]  # at f=0
-            compit = np.vstack([compit_arr] * len(df.index))
+            compit = np.vstack([compit_arr] * len(df.columns))
 
-            if div& (Types.PRECENTAGE |Types.DIFF):
-                newarr= ((arr/initialarr - compit/compit_initial))*100
+            transpose_compit = compit.transpose()
+            if div& (Types.PRECENTAGE |Types.DIFF) == (Types.PRECENTAGE |Types.DIFF):
+                newarr= ((transpose_arr / initialarr - transpose_compit / compit_initial)) * 100
                 ign=True
 
             elif div & Types.PRECENTAGE: #by what factor was it better...
-                newarr = ((arr / initialarr) / (compit/compit_initial) -1 )*100
+                newarr = ((transpose_arr / initialarr) / (transpose_compit / compit_initial) - 1) * 100
             else:
-                newarr= arr-compit
+                newarr= transpose_arr - transpose_compit
+            arr=newarr.transpose()
+            transpose_arr=newarr
+
         Marr= np.nanmax(arr, axis=1)
         M = np.vstack([Marr] * len(df.index))
 
@@ -129,16 +159,19 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
             refarr= initialarr
             
         if not ign:
+
             if div & Types.PRECENTAGE and not ign:
-                newarr= (arr.transpose()/ refarr -(1 if div & Types.RELTOSTART|Types.RELTOMIN else 0)   )*100
+                newarr= (transpose_arr / refarr - (1 if div & Types.RELTOSTART | Types.RELTOMIN else 0)) * 100
 
             elif div & Types.DIFF:
-                newarr= arr.transpose()-refarr
+                newarr= transpose_arr - refarr
             else: #if div & Types.ABS == Types.ABS:
-                newarr = arr.transpose()
+                newarr = transpose_arr
+        else:
+            newarr=arr.transpose()
 
             #we want to transpose the array anyway to get it fit to df...
-        df[df.columns] = newarr
+        df.loc[:, df.columns] = newarr
 
 
         return  df,Marr
@@ -188,27 +221,41 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
             yield [holdcomp(f) * costcomp(f) for f in self._curflist]
                 # compit_arr ={f:} #from here , either precentage or diff
 
-    def unite_groups(self, dic,df):
-        ndic = {}
+    def unite_groups(self, df):
+
         items = [(g, CompareEngine.Groups[g]) for g in self.params.groups]
+        if (self.params.unite_by_group & ~UniteType.ADDTOTAL):
+            ndf=pandas.DataFrame(index=df.index)
+
+        else:
+            ndf=df
+
         if self.params.unite_by_group & UniteType.ADDTOTAL:
-            items += [('All', list(dic.keys()))]
-            ndic = dic #start from the same dic
+            items += [('All', list(df.columns))]
+
+
 
 
         for gr, stocks in items:
-            arr = np.array(df[stocks]).transpose()
-
+            try:
+                arr = np.array(df[stocks]).transpose()
+            except KeyError:
+                print('none of the values here')
+                continue
+            incomplete= (arr.shape[0]!=len(stocks))
+            if incomplete:
+                print('incomplete unite')
             #curdat = {st:{f: dic[stocks[st]][self._curflist[f]]}  for st in range(len(stocks)) for f in range(len(self._curflist))} #should have default args
             #A=numpy.array(curdat)
             # = n[~numpy.isnan(n)]
 
             if self.params.unite_by_group & UniteType.SUM or gr=='All':
-                ndic[gr] =  numpy.nansum(arr, axis=0)
+                ndf.loc[:, gr] = numpy.sum(arr, axis=0)
+                #df.append({'gr':  },ignore_index=True)
             elif self.params.unite_by_group & UniteType.AVG:
-                ndic[gr] = numpy.nanmean(arr, axis=0 )
+                ndf.loc[:, gr] = numpy.nanmean(arr, axis=0 )
 
-        return ndic
+        return ndf
 
     def gen_graph(self, params: Parameters, just_upd=0, reprocess=1):
         if just_upd and self.params:
@@ -227,6 +274,8 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
         if reprocess:
             self.process()
         self.dt = self.generate_data()
+        if self.dt is None:
+            return
         self.cols = list(self.dt)
 
         try:
@@ -238,11 +287,19 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
 
     def generate_data(self):
         #self.params.use_ext=True #Will be changed by func
-        df, Marr= self.get_data_by_type(self.params.type, self.params.compare_with)
-        sordlist = [stock for (max, stock) in sorted(list(zip(Marr, df)), key=lambda x: x[0], reverse=True) if
-                    max >= self.params.mincrit]
-        df = df[sordlist[:self.params.maxnum]]  # rearrange columns by max
-        df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1)
+        try:
+            df, Marr= self.get_data_by_type(self.params.type, self.params.compare_with)
+
+            sordlist = [stock for (max, stock) in sorted(list(zip(Marr, df)), key=lambda x: x[0], reverse=True) if
+                        max >= self.params.mincrit]
+            df = df[sordlist[:self.params.maxnum]]  # rearrange columns by max
+            df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1)
+        except Exception as e :
+            import traceback
+            traceback.print_exc()
+            e=e
+            print('exception in generating data')
+            return None
         return df
         
 
@@ -250,25 +307,29 @@ class CompareEngine(GraphGenerator, InputProcessor,HasParams):
 
 
 
-    def cols_by_selection(self,  data):
+    def cols_by_selection(self,  data,div):
         cols = set([x for x in data])
+        selected=set(['All']) #always include All if there is all..
+
+
+        if self.params.use_ext:
+            selected.update(set(self.params.ext))
         try:
             if self.params.use_groups:
                 if self.params.groups:
-                    curse = set()
-                    for g in self.params.groups:
-                        curse = curse.union(set(self.Groups[g]))
 
-                    cols = cols.intersection(curse)
+                    for g in self.params.groups:
+                        selected.update((set(self.Groups[g])))
+
+
             else:
-                cols = cols.intersection(set(self.params.selected_stocks))
+                selected.update(set(self.params.selected_stocks))
         except KeyError:
             raise ParameterError("groups")
 
-        if self.params.use_ext:
-            cols.update(set(self.params.ext))
 
-        return cols
+
+        return cols.intersection(selected)
 
     # makes the entire graph from the default attributes.
     def update_graph(self, params: Parameters = Parameters()):

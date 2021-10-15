@@ -1,6 +1,7 @@
 import collections
 import math
 import pickle
+import time
 from collections import defaultdict
 #from datetime import datetime
 import datetime
@@ -21,8 +22,17 @@ class TransactionHandler(HasParams):
     def __init__(self,filename):
         self._fn=filename
 
-    def populate_buydic(self):
+    def try_to_use_cache(self):
+        try:
+            (self._buydic,self._buysymbols)=pickle.load(open(config.BUYDICTCACHE,'rb'))
+            return 1
+        except Exception as e :
+            print(e)
+            return 0
 
+    def populate_buydic(self):
+        if self.try_to_use_cache():
+            return
         x=pd.read_csv(self._fn)
         self._buydic = {}
         self._buysymbols=set()
@@ -53,6 +63,14 @@ class TransactionHandler(HasParams):
             self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1]) #Qty,cost,sym
             self._buysymbols.add(t[1])
 
+        if config.BUYDICTCACHE:
+            try:
+                pickle.dump((self._buydic,self._buysymbols),open(config.BUYDICTCACHE,'wb'))
+                print('dumpted')
+            except Exception as e:
+                print(e)
+
+
 
 
 class InputProcessor(TransactionHandler):
@@ -67,6 +85,7 @@ class InputProcessor(TransactionHandler):
             self._inputsource: InputSource = InvestPySource()
 
     def process_history(self):
+
 
         def update_curholding():
             stock = cur_action[1][2]
@@ -218,4 +237,8 @@ class InputProcessor(TransactionHandler):
     def process(self):
         self.populate_buydic()
         self._symbols_wanted= self._buysymbols.union(set(self.params.selected_stocks)) #there are symbols to check...
+        t = time.process_time()
         self.process_history()
+        # do some stuff
+        elapsed_time = time.process_time() - t
+        print('elasped : %s' % elapsed_time)
