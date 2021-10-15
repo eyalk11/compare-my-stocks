@@ -11,12 +11,12 @@ You can divide the stocks into sectors, and compare the performance of different
 * chart of average price change of  FANG vs interesting stock in  China) 
 * chart of profit of each section 
 
-You can compare your profit at any time to a theoretical situation in which you have bought the index(the exact same time you have made a purchase)!
+You can even compare your profit at any time to a theoretical situation in which you have bought the index(the exact same time you have made a purchase)!
 
-![comparestockscreen](https://user-images.githubusercontent.com/72234965/137033857-71283f52-59d7-4356-8f5c-8d43037ebf15.png)
+![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
 
+This is being developed in QT with matplotlib. 
 
-This was devloped in QT with matplotlib. 
 I used advance features of python, numpy and pandas for fast calcuation. 
 
 The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later Interactive brokers account's positions. 
