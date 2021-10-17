@@ -70,8 +70,8 @@ def dialog(gg):
         else:
             gg.type = t
 
-        gg.mincrit=mn
-        gg.maxnum=numit
+        gg.valuerange=mn
+        gg.numrange=numit
         gg.fromdate=dt2[0].to_pydatetime()
         gg.todate=dt2[1].to_pydatetime()
 

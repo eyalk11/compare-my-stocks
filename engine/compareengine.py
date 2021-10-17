@@ -1,9 +1,11 @@
+from pandas import DataFrame
+
 from config import config
-from common.common import NoDataException
+from common.common import NoDataException, UniteType
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
-from engine.parameters import Parameters
+from engine.parameters import Parameters, ParameterError
 
 
 def params():
@@ -50,12 +52,33 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
     def __init__(self,filename):
         super(CompareEngine, self).__init__()
         InputProcessor.__init__(self, filename)
-        self._alldates=None
-        self._fset=set()
+        DataGenerator.__init__(self)
+
         self._annotation=[]
         self._cache_date=None
         self.params=None
 
+    def required_syms(self, include_ext=True,want_it_all=False): #the want it all is in the case of populating dict
+        selected = set()
+        if want_it_all and (self.params.unite_by_group & UniteType.ADDTOTAL):
+            selected=set(self.get_portfolio_stocks())
+
+        if not (self.params.unite_by_group & ~UniteType.ADDTOTAL) and self.params.use_groups:
+            return selected.union(self.get_options_from_groups(self.params.groups))
+
+
+        if self.params.use_ext and include_ext:
+            selected.update(set(self.params.ext))
+        try:
+            if self.params.use_groups:
+                if self.params.groups:
+                    for g in self.params.groups:
+                        selected.update((set(self.Groups[g])))
+            else:
+                selected.update(self.params.selected_stocks)
+        except KeyError:
+            raise ParameterError("groups")
+        return selected
         #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
         #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
 
@@ -67,16 +90,19 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
 
         self.params._baseclass=self
 
-        if self.params.selected_stocks and not self.params.use_groups:
-            if not ( set(self.params.selected_stocks)<=set(self._symbols_wanted)):
-                print('should add stocks')
-                reprocess=1
+        requried_syms = self.required_syms(True, True)
+        if self._symbols_wanted and (not (set(requried_syms) <= set(self._symbols_wanted))):
+            symbols_neeeded= set(requried_syms) - set(self._symbols_wanted)
+            print('should add stocks')
+            reprocess=1
+        else:
+            symbols_neeeded=set() #process all...
 
         B = (1, 0.5)
         if reprocess:
-            self.process()
+            self.process(symbols_neeeded)
         try:
-            self.dt,type = self.generate_data()
+            self.df, type = self.generate_data()
         except NoDataException:
             print('no data')
             return
@@ -88,10 +114,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
             return
 
 
-        self.cols = list(self.dt)
-
         try:
-            self.gen_actual_graph(B, self.cols, self.dt,  self.params.isline, self.params.starthidden,just_upd,type)
+            self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden, just_upd, type)
         except TypeError as e:
             e=e
             print("failed generating graph ")

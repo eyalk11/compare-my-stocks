@@ -2,10 +2,13 @@
 import os
 from pathlib import Path
 import sys
+
+import PySide6
 from PySide6.QtWidgets import QMainWindow,QTabWidget,QVBoxLayout
 from PySide6.QtCore import QFile
 from PySide6.QtUiTools import QUiLoader
-from superqt import QLabeledSlider
+from superqt.sliders._labeled import EdgeLabelMode
+from superqt import QLabeledRangeSlider
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
 from superqt.sliders._labeled import LabelPosition
@@ -42,6 +45,8 @@ class MainWindow(QMainWindow, FormInitializer):
     def load_ui(self):
         loader = QUiLoader()
         loader.registerCustomWidget(QDateRangeSlider)
+        loader.registerCustomWidget(QLabeledRangeSlider)
+        loader.registerCustomWidget(QLabeledDoubleRangeSlider)
         path = os.fspath(Path(__file__).resolve().parent / "mainwindow.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
@@ -55,7 +60,7 @@ class MainWindow(QMainWindow, FormInitializer):
         if self._graphObj==None:
             return
 
-
+        self.prepare_sliders()
         self.setup_init_values()
         self.setup_observers()
 
@@ -75,8 +80,16 @@ class MainWindow(QMainWindow, FormInitializer):
         layout.addWidget(sc)
         tabWidget.setLayout(layout)
 
-    def replace_widgets(self):
-        self.window.max_num=QLabeledSlider(parent=self.window.max_num.parent(),LabelPosition=LabelPosition.LabelsRight,layout=self.window.max_num.layout())
+    def prepare_sliders(self):
+        self.window.max_num: QLabeledRangeSlider
+        self.window.max_num.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
+        self.window.max_num.setEdgeLabelMode(EdgeLabelMode.NoLabel)
+        self.window.min_crit : QLabeledDoubleRangeSlider
+        self.window.min_crit.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
+        self.window.min_crit.setEdgeLabelMode(EdgeLabelMode.NoLabel)
+        #self.window.min_crit.label_shift_x = 10
+        #self.window.max_num.label_shift_x = 10
 
+        pass
 
 

@@ -2,6 +2,9 @@ import dataclasses
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import List
+
+import numpy
 
 from config import config
 from common.common import Types, UseCache, UniteType
@@ -36,13 +39,15 @@ def paramaware(klass):
 @dataclass
 class Parameters:
     groups : list =field(default_factory=list)
-    mincrit : int = config.MIN
-    maxnum : int = config.MAXCOLS
+    valuerange : List[float] = ( (-1)* numpy.inf, numpy.inf)
+    numrange : List[int] = (None,None)
     type : Types =Types.VALUE
     ext : list =field(default_factory=config.EXT.copy)
     increase_fig: bool =1
     _fromdate : datetime=None
     _todate: datetime =None
+    transactions_fromdate : datetime = None
+    transactions_todate: datetime = None
     isline: bool =True
     starthidden : bool =0
     compare_with: str =None
@@ -57,6 +62,7 @@ class Parameters:
     shown_stock: list =field(default_factory=list)
     increase_fig: bool = False
     baseclass = dataclasses.InitVar
+    ignore_minmax: bool = False
 
     def __post_init__(self,baseclass=None):
         # super(Parameters,self).__init__(*args,**kwargs)

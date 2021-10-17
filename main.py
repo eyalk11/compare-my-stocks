@@ -31,7 +31,7 @@ if __name__ == "__main__":
     app = QApplication([])
     gg = initialize_graph_and_ib()
     gg.gen_graph(Parameters(
-        type=Types.PRICE, isline=True, groups=['FANG'], mincrit=-100000, maxnum=4000, use_cache=config.CACHEUSAGE,
+        type=Types.PRICE, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
         show_graph=False))
 
     mainwindow= MainWindow(gg)

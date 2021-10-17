@@ -64,9 +64,15 @@ def addAttrs(attr_names):
     return cls
   return deco
 
+EPS=0.0001
 
-def get_first_where_all_are_good(arr):
-    getnan = np.any(np.isnan(arr), axis=0)
+def get_first_where_all_are_good(arr,remove_zeros=False):
+    arr[np.abs(arr) < EPS] = 0
+    ind = np.isnan(arr)
+    if remove_zeros:
+        ind = np.bitwise_or(ind ,arr ==0)
+
+    getnan = np.any(ind, axis=0)
     return (list(getnan).index(False))
 
 class NoDataException(Exception):

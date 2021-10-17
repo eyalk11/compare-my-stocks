@@ -86,6 +86,10 @@ class ActOnData:
             yield [holdcomp(f) * costcomp(f) for f in self._ds.curflist]
                 # compit_arr ={f:} #from here , either precentage or diff
 
+    def fixinf(self,arr):
+        arr[np.isinf(arr)] = np.nan
+        return arr
+        # self.arr[np.isinf(self.arr)]=np.nan
 
     def do(self):
         if self.type & (Types.COMPARE | Types.THEORTICAL_PROFIT)==(Types.COMPARE | Types.THEORTICAL_PROFIT):
@@ -98,8 +102,9 @@ class ActOnData:
             ign = self.handle_compare()
 
         self.Marr = np.nanmax(self.arr, axis=1)
+        self.min_arr = np.nanmin(self.arr, axis=1)
 
         if ign:
-            self.df.loc[:, self.df.columns] = self.transpose_arr
+            self.df.loc[:, self.df.columns] = self.fixinf(self.transpose_arr)
         else:
-            self.df.loc[:, self.df.columns] = self.handle_operation()
+            self.df.loc[:, self.df.columns] = self.fixinf(self.handle_operation())

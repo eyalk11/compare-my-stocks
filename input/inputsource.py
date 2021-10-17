@@ -40,13 +40,13 @@ class InvestPySource(InputSource):
                     print(f'not  right exchange {sym}, picking {l}' )
                 else:
                     print('nothing for %s ' % sym )
-                    return None
+                    return l,None
             if 1: #use my fork please
                 df = investpy.get_etf_historical_data(etf=l['symbol'], country=l['country'], id=l['id_'],
                                                       from_date=startdate.strftime('%d/%m/%Y'),
                                                       to_date=enddate.strftime('%d/%m/%Y'))
 
-            return l, { row[0].to_pydatetime():{j:row[1][j] for j in df} for row in df.iterrows()}
+            return l, df.to_dict('index')
         except Exception as  r:
             print(f'{l if l else ""} is  {r}')
-            return None
+            return l,None
