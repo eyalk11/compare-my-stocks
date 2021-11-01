@@ -76,17 +76,25 @@ class Parameters:
     @todate.setter
     def todate(self, value):
         self._todate=value
+        if (not self.transactions_todate) or  (self.transactions_todate and value > self.transactions_todate):
+            self.transactions_todate = value
+
         if self._baseclass:
             self._baseclass.adjust_date=1
         pass
 
     @property
     def fromdate(self):
+        if  self._fromdate==None:
+            return self.transactions_fromdate
+
         return self._fromdate
 
     @fromdate.setter
     def fromdate(self, value):
         self._fromdate = value
+        if (not self.transactions_fromdate) or  (self.transactions_fromdate and value < self.transactions_fromdate):
+            self.transactions_fromdate = value
         if self._baseclass:
             self._baseclass.adjust_date = 1
         pass
@@ -95,13 +103,3 @@ class ParameterError(Exception):
     pass
 
 
-
-class HasParamsAndGroups(ABC):
-    @property
-    @abstractmethod
-    def params(self) -> Parameters:
-        ...
-    @classmethod
-    @property
-    def Groups(self) -> dict:
-        ...

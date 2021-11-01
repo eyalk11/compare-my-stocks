@@ -1,3 +1,4 @@
+import os.path
 from abc import abstractmethod
 from functools import partial
 
@@ -8,8 +9,11 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton
 from superqt.sliders._labeled import EdgeLabelMode
 
 from common.common import UniteType, Types
-from engine.parameters import HasParamsAndGroups, Parameters
+from config import config
+from engine.parameters import Parameters
+from engine.symbolsinterface import SymbolsInterface
 
+import json_editor_ui
 
 class ListsObserver:
     @staticmethod
@@ -49,17 +53,18 @@ class ListsObserver:
 
 class FormObserver(ListsObserver):
     def __init__(self):
-        self._graphObj : HasParamsAndGroups = None
+        self._graphObj : SymbolsInterface = None
         self.window=None
         self._toshow=True
         self._initiated=False
         self.disable_slider_values_updates=False
+        self.json_editor = json_editor_ui.JSONEditorWindow(None)
         #self._toselectall=False
 
     def update_graph(self,reset_ranges):
         if self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated:
             self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
-            #self.update_ranges(reset_ranges)
+            self.update_ranges(reset_ranges)
 
     def type_unite_toggled(self, name, value):
         unite_ref=False
@@ -150,12 +155,33 @@ class FormObserver(ListsObserver):
         self.attribute_set('use_groups', val)
         self.groups_changed()
 
+    def edit_groups(self):
+
+
+        #jw=json_editor_ui.JSONEditorWindow(None)
+        self.json_editor.set_json_path(config.JSONFILENAME)
+        self.json_editor.show()
+    def on_json_closed(self,*args):
+        self._graphObj.read_groups_from_file()
+        self.set_groups_values(0)
+    def category_changed(self,num):
+        if self.ignore_cat_changes:
+            return
+        category= self.window.categoryCombo.itemText(num)
+        self._graphObj._cur_category=category
+        self.set_groups_values(0)
+
     def setup_observers(self):
         genobs=lambda x:partial(self.attribute_set, x)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
         #self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
         self.window.min_crit.valueChanged.connect(genobs('valuerange'))
         self.window.max_num.valueChanged.connect(genobs('numrange'))
+
+        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsReset('use_ext'))
+        self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
+
+        self.window.findChild(QPushButton, name="update_btn").pressed.connect(self._graphObj.update_graph)
         self.window.use_groups.toggled.connect(self.use_groups)
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)
@@ -165,20 +191,16 @@ class FormObserver(ListsObserver):
         self.window.deletebtn.pressed.connect(self.del_in_lists)
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
-
-
-        self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
-        self.window.findChild(QPushButton,name="update_btn").pressed.connect(self._graphObj.update_graph)
-       # self.window.findChildd(QCheckBox, name="COMPARE").toggled.connect()
+        self.window.edit_groupBtn.pressed.connect(self.edit_groups)
         self.window.comparebox.currentIndexChanged.connect(self.compare_changed)
         self.window.orgstocks.model().rowsInserted.connect(self.selected_changed)
         self.window.orgstocks.model().rowsRemoved.connect(self.selected_changed)
         self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
+        self.window.categoryCombo.currentIndexChanged.connect(self.category_changed)
+        self.window.debug_btn.pressed.connect(self._graphObj.serialize_me)
 
-        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsReset('use_ext'))
-
-        for rad in self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,name="unite_ADDTOTAL")+ self.window.findChildren(QCheckBox, name="COMPARE"):
+        for rad in self.rad_types:
             rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
 
         #PySide6.QObject
@@ -187,6 +209,8 @@ class FormObserver(ListsObserver):
 
         self._graphObj.minMaxChanged.connect(self.update_rangeb)
         self._graphObj.namesChanged.connect(self.update_range_num)
+
+        self.json_editor.onCloseEvent.connect(self.on_json_closed)
         self._initiated=True
 
 
@@ -196,12 +220,18 @@ class FormObserver(ListsObserver):
 
 
 class FormInitializer(FormObserver):
+    def __init__(self):
+        super().__init__()
+
+    def after_load(self):
+        self.rad_types = self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,
+                                                                                           name="unite_ADDPROT") + self.window.findChildren(
+            QCheckBox, name="unite_ADDTOTAL") + self.window.findChildren(QCheckBox, name="COMPARE")
+
     def set_all_toggled_value(self):
         type= self._graphObj.params.type
         unite = self._graphObj.params.unite_by_group
-        for rad in self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,
-                                                                                     name="unite_ADDTOTAL") + self.window.findChildren(
-                QCheckBox, name="COMPARE"):
+        for rad in self.rad_types:
             name=rad.objectName()
             #func= rad.setChecked if type(rad)==QCheckBox else rad.setCheckState
             #x : QCheckBox
@@ -215,17 +245,8 @@ class FormInitializer(FormObserver):
                     pass
 
     def setup_init_values(self):
-
-        options=list(self._graphObj.Groups.keys())
-        value = self._graphObj.params.groups if self._graphObj.params.groups != None else list()
-
-
-        self.window.groups.addItems( options)
-        self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
-        #self.groups_changed()
-        self.update_stock_list(1)
-        self.update_ranges(1)
-        self.select_rows(self.window.groups,[options.index(v) for v in value])
+        self.ignore_cat_changes = False
+        self.set_groups_values()
 
         self.window.daterangepicker.update_prop()
         self.window.startdate.setDateTime(self._graphObj.mindate)
@@ -239,6 +260,33 @@ class FormInitializer(FormObserver):
 
 
         self.set_all_toggled_value()
+
+    def set_groups_values(self, isinit=1):
+        b=False
+        wc= self.window.categoryCombo
+        if self._graphObj.Categories!=[wc.itemText(x) for x in range(wc.count())]:
+            b=True
+            self.ignore_cat_changes=True
+            wc.clear()
+            wc.addItems(self._graphObj.Categories) #sorry
+            self.ignore_cat_changes = False
+
+        options = list(self._graphObj.Groups.keys())
+        value = self._graphObj.params.groups if self._graphObj.params.groups != None else list()
+        wc= self.window.groups
+        if options != [wc.item(x).text() for x in range(wc.count())]:
+            b=True
+            wc.clear()
+            wc.addItems(options)  # sorry
+        if not b and not isinit:
+            return
+        #self.window.groups.addItems(options)
+        self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
+        # self.groups_changed()
+        self.update_stock_list(isinit)
+        self.update_ranges(isinit)
+        if isinit:
+            self.select_rows(self.window.groups, [options.index(v) for v in value])
 
     def update_rangeb(self,minmax):
         self.disable_slider_values_updates=True
@@ -267,7 +315,10 @@ class FormInitializer(FormObserver):
         self.disable_slider_values_updates = False
 
     def update_stock_list(self,isinitial=0):
-        alloptions= sorted(list(self._graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
+        if self.window.fromall.isChecked():
+            alloptions = self
+        else:
+            alloptions= sorted(list(self._graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
 
         #self._last_choice=  self.window.comparebox.currentText()
         if isinitial:

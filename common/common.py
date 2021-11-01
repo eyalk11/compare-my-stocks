@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import namedtuple
 
 import numpy as np
 
@@ -6,7 +7,8 @@ USEWX=0
 USEWEB=0
 USEQT=1
 import sys
-
+from PySide6 import QtCore
+from PySide6.QtCore import  Signal
 
 
 from enum import Flag, auto, Enum
@@ -44,7 +46,9 @@ class UniteType(Flag):
     SUM=auto()
     AVG=auto()
     ADDTOTAL=auto()
-
+    ADDPROTTMP=auto()
+    ADDPROT= ADDPROTTMP | ADDTOTAL
+#did this trick to keep ADDTOTAL
 class InputSourceType(Flag):
     Cache=0
     IB=auto()
@@ -66,14 +70,45 @@ def addAttrs(attr_names):
 
 EPS=0.0001
 
-def get_first_where_all_are_good(arr,remove_zeros=False):
+def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     arr[np.abs(arr) < EPS] = 0
     ind = np.isnan(arr)
     if remove_zeros:
         ind = np.bitwise_or(ind ,arr ==0)
 
     getnan = np.any(ind, axis=0)
-    return (list(getnan).index(False))
+    ls = list(getnan)
+    if last:
+        ls.reverse()
+    return (ls.index(False) * (-1 if last else 0))
 
 class NoDataException(Exception):
     pass
+
+class MySignal:
+    def __init__(self,typ):
+        Emitter = type('Emitter', (QtCore.QObject,), {'signal': Signal(typ)})
+        self.emitter = Emitter()
+
+    def emit(self,*args,**kw):
+        self.emitter.signal.emit(*args,**kw)
+
+    def connect(self,  slot):
+        self.emitter.signal.connect(slot)
+
+
+Serialized=namedtuple('Serialized', ['beforedata','afterdata','act'])
+dictfilt = lambda x, y: dict([(i, x[i]) for i in x if i in set(y)])
+dictnfilt = lambda x, y: dict([(i, x[i]) for i in x if not(i in set(y))])
+
+# def ifnn(t,v,els=None):
+#     if t is not None:
+#         return v
+#     else:
+#         return els
+
+def ifnn(t, v, els=lambda: None):
+    if t is not None:
+        return v()
+    else:
+        return els()

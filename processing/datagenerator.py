@@ -1,157 +1,36 @@
-from abc import ABCMeta, ABC
-
 import matplotlib
 import numpy
 import numpy as np
 import pandas
 
 
-from PySide6 import QtCore
-from PySide6.QtCore import  Signal
 
-from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good
+
+from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized
 #from compareengine import CompareEngine
+from config import config
 from processing.actondata import ActOnData
 from input.inputdata import InputData
-from engine.parameters import HasParamsAndGroups, ParameterError
 
-from typing import TypeVar, Generic, List, Type
+from engine.symbolsinterface import SymbolsInterface
 
-T = TypeVar('T')
-
-class MySignal:
-    class Emitter(QtCore.QObject):
-        signal = Signal(tuple)
-        def __init__(self):
-            super(MySignal.Emitter, self).__init__()
-
-    def __init__(self):
-        self.emitter = MySignal.Emitter()
-
-    def emit(self,*args,**kw):
-        self.emitter.signal.emit(*args,**kw)
-
-    def connect(self,  slot):
-        self.emitter.signal.connect(slot)
-
-class MyIntSignal:
-    class Emitter(QtCore.QObject):
-        signal = Signal(int)
-        def __init__(self):
-            super(MyIntSignal.Emitter, self).__init__()
-
-    def __init__(self):
-        self.emitter = MyIntSignal.Emitter()
-
-    def emit(self,*args,**kw):
-        self.emitter.signal.emit(*args,**kw)
-
-    def connect(self,  slot):
-        self.emitter.signal.connect(slot)
-
-#
-# class MyIntSignal:
-#     def __init__(self):
-#         self.emitter = MyIntSignal.Emitter()
-#
-#     def emit(self,*args,**kw):
-#         self.emitter.signal.emit(*args,**kw)
-#
-#     def connect(self,  slot):
-#         self.emitter.signal.connect(slot)
-#
-# from abc import ABCMeta
-#
-#
-# X= TypeVar('X')
-# class MyABC(ABC,Generic[X]):
-#     pass
-
-#
-# class NEmitter(QtCore.QObject,NEmitterAbs[X]):
-#         signal = Signal(Type[S])
-#         def __init__(self):
-#             super(NEmitter, self).__init__()
-# T = TypeVar('T')
-#
-# def addSignal(typ):
-#     def decorator(klass):
-#         klass.__new__ =Signal(typ)
-#         return klass
-#     return decorator
-#
-#
-# class MySignal(Generic[T]):
-#     def __new__(cls):
-#         print("Creating instance")
-#         x= super(MySignal, cls).__new__(cls)
-#
-#         return x
-#
-#     #@addSignal(typ=T)
-#     class Emitter(QtCore.QObject):
-#
-#         def __init__(self):
-#             super(MySignal.Emitter, self).__init__()
-#     def initemit(self):
-#         self.__class__.Emitter.signal = Signal(T)
-#         self.emitter = self.Emitter()
-#     def __init__(self):
-#         pass#self.emitter = self.Emitter()
-#
-#     def emit(self,*args,**kw):
-#         self.emitter.signal.emit(*args,**kw)
-#
-#
-# class SignalTypeMeta:
-#     def __new__(cls, name, bases, namespace, **kwargs):
-#         #res= QtCore.QObject.__new__(NEmitter)
-#         cls= type.__new__(cls, name, bases, namespace)
-#         cls.emitter=type('Emitter', (QtCore.QObject,), {'signal':Signal(kwargs['typ'])})
-#         return cls
-#     pass
-#
-
-# class NMySignal(metaclass=SignalTypeMeta,typ=T):
-#      def emit(self,*args,**kw):
-#          self.emitter.signal.emit(*args,**kw)
-# #
-#      def connect(self,  slot):
-#          self.emitter.signal.connect(slot)
-    
-    
-# class NMySignal(Generic[T]):
-#     class NEmitter(metaclass=EmitterTypeMeta,typ=T):
-#         pass
-#         #signal = Signal(X)
-#         #def __init__(self):
-#             #super(MySignal.NEmitter, self).__init__()
-#
-#     def __init__(self):
-#         self.emitter = self.NEmitter()
-#
-#     def emit(self,*args,**kw):
-#         self.emitter.signal.emit(*args,**kw)
-#
-#     def connect(self,  slot):
-#         self.emitter.signal.connect(slot)
-
-class DataGenerator(HasParamsAndGroups, InputData):
-    minMaxChanged=MySignal()
-    namesChanged=MyIntSignal()
-    #minMaxChanged=MySignal(typ=tuple)()
-    #namesChanged = MySignal(typ=int)()
+class DataGenerator(SymbolsInterface, InputData):
+    minMaxChanged=MySignal(tuple)
+    namesChanged = MySignal(int)
     def __init__(self):
         #DataGenerator.minMaxChanged.initemit()
         self.colswithoutext=[]
         self.tmp_colswithoutext=[]
-        self.org_data=None
+        self.after_filter_data=None
         self.minValue=None
         self.maxValue=None
         self.cols=None
+        self.act=None
+
     def get_data_by_type(self, type= Types.RELTOMAX, compare_with=None):
         arr, df, type, fulldf = self.generate_initial_data(compare_with, type)
         act= ActOnData(arr, df, type, fulldf,compare_with,self)
+        self.act=act
         act.do()
 
         return  act.df,act.Marr,act.min_arr,act.type
@@ -159,23 +38,26 @@ class DataGenerator(HasParamsAndGroups, InputData):
     def generate_initial_data(self, compare_with, type):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
-        dic = self.get_dict_by_type(type)
+        dic,use_ext = self.get_dict_by_type(type)
+        self.used_type=type
+        self.to_use_ext = use_ext and self.params.use_ext
+
         df = pandas.DataFrame.from_dict(dic)
         if (self.params.unite_by_group & ~UniteType.NONE):
             df , colswithoutext = self.unite_groups(df) #in case really unite groups, colswithoutext is correct
         df = df[(df.index >= fromdateNum) * (df.index <= todateNum)]
-        compit_arr = None
-        if type & Types.COMPARE:
+
+        if self.used_type & Types.COMPARE:
             if not compare_with in df:
                 print('to bad, no comp')
-                type = type & ~Types.COMPARE
+                self.used_type = self.used_type & ~Types.COMPARE
 
                 # ind=first_index_of(compit_arr,np.isnan)
                 # df=df.iloc[ind:]
         if not (self.params.unite_by_group & ~(UniteType.ADDTOTAL)):  # in unite, the compare_with is already there.
             # If the  unite is non-trivial, then colswithoutext already returned
             cols,colswithoutext = self.cols_by_selection(df)
-            if type & Types.COMPARE:
+            if self.used_type & Types.COMPARE:
                 fulldf = df[list(cols.union(set([compare_with])))]
             else:
                 fulldf = df[list(cols)]
@@ -184,6 +66,7 @@ class DataGenerator(HasParamsAndGroups, InputData):
             cols=set(df.columns)
 
             ##else we need everything...
+        self.bef_rem_data = fulldf.copy()
         arr = np.array(fulldf).transpose()  # will just work with arr
         fulldf = fulldf.drop(
             df.index[(np.all(np.isnan(arr), axis=0))])  # to check drop dates in which all stocks are none.
@@ -193,42 +76,52 @@ class DataGenerator(HasParamsAndGroups, InputData):
         if len(arr)==0:
             raise NoDataException("arr is empty")
 
-        if type & (Types.COMPARE | Types.PRECENTAGE | Types.DIFF):
+        if self.used_type & (Types.COMPARE | Types.PRECENTAGE | Types.DIFF):
             fullarr= np.array(fulldf).transpose()
-            df = df.iloc[get_first_where_all_are_good(fullarr, type & Types.PRECENTAGE):]
+            df = df.iloc[get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE):]
+            if self.used_type & (Types.RELTOEND):
+                df = df.iloc[:get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE,last=1)]
+
             arr = np.array(df).transpose()
 
         self.tmp_colswithoutext=  set(colswithoutext).intersection(df.columns)
-        self.org_data=fulldf.copy()
+        self.after_filter_data=fulldf.copy()
 
         return arr, df, type, fulldf
 
     def get_dict_by_type(self, div):
+        use_ext=True
         if div & Types.PROFIT:
             dic = self.unrel_profit
-            self.params.use_ext = False
+            use_ext = False
         elif div & Types.RELPROFIT:
             dic = self.rel_profit_by_stock
-            self.params.use_ext = False
+            use_ext = False
         elif div & Types.PRICE:
             dic = self.alldates
         elif div & Types.TOTPROFIT:
             dic = self.tot_profit_by_stock
         elif div & Types.VALUE:
             dic = self.value
-            self.params.use_ext = False
+            use_ext = False
         elif div & Types.THEORTICAL_PROFIT:
             dic = self.tot_profit_by_stock
         else:
             dic = self.alldates
-        return dic
+        return dic,use_ext
 
     def unite_groups(self, df):
+        def filt(x,df):
+            if not (x <  set(df.columns)):
+                print('not enough stocks, not complete')
+                print (x- set(df.columns))
+            return list(x.intersection(set(df.columns)))
 
         items = [(g, self.Groups[g]) for g in self.params.groups]
         if (self.params.unite_by_group & ~UniteType.ADDTOTAL): #Non trivial unite. groups
-            if len(self.params.ext)>0 and self.params.use_ext:
-                ndf= df.loc[:, list(self.params.ext)]
+            reqsym= self.required_syms(data_symbols_for_unite=True).intersection(set(df.columns) )
+            if len(reqsym )>0:
+                ndf= df.loc[:, reqsym]
             else:
                 ndf=pandas.DataFrame(index=df.index,)
         else: #just add total
@@ -236,7 +129,12 @@ class DataGenerator(HasParamsAndGroups, InputData):
 
 
         if self.params.unite_by_group & UniteType.ADDTOTAL:
-            items += [('All', list(df.columns))]
+            if self.params.unite_by_group & UniteType.ADDPROT:
+                x=set(self.get_portfolio_stocks())
+                items += [('Portfolio', filt(x,df) )]
+            else:
+                x=set(self.required_syms(True))
+                items += [('All', filt(x,df))]
 
 
 
@@ -254,7 +152,7 @@ class DataGenerator(HasParamsAndGroups, InputData):
             #A=numpy.array(curdat)
             # = n[~numpy.isnan(n)]
 
-            if self.params.unite_by_group & UniteType.SUM or gr=='All':
+            if self.params.unite_by_group & UniteType.SUM or gr in ['All','Portfolio']:
                 ndf.loc[:, gr] = numpy.sum(arr, axis=0)
                 #df.append({'gr':  },ignore_index=True)
             elif self.params.unite_by_group & UniteType.AVG:
@@ -277,8 +175,8 @@ class DataGenerator(HasParamsAndGroups, InputData):
 
         self.cols = df.columns
 
-
-        self.update_ranges(df)
+        b=self.update_ranges(df)
+        self.params.ignore_minmax= self.params.ignore_minmax or b
 
         mainlst= sorted(list(zip(Marr, min_arr, self.colswithoutext)), key=lambda x: x[0], reverse=True)
 
@@ -297,7 +195,8 @@ class DataGenerator(HasParamsAndGroups, InputData):
         return df,type
 
     def update_ranges(self, df):
-        if self.tmp_colswithoutext!=self.colswithoutext:
+        upd1=self.tmp_colswithoutext!=self.colswithoutext
+        if upd1:
             self.colswithoutext=self.tmp_colswithoutext
             self.namesChanged.emit(len(self.colswithoutext))
 
@@ -307,3 +206,9 @@ class DataGenerator(HasParamsAndGroups, InputData):
         self.minValue, self.maxValue = m, M
         if diff:
             self.minMaxChanged.emit((self.minValue, self.maxValue))
+        return upd1 or diff
+
+    def serialize_me(self):
+        with open(config.SERIALIZEDFILE,'wb') as f:
+            import pickle
+            pickle.dump(Serialized(self.bef_rem_data, self.after_filter_data, self.act), f)

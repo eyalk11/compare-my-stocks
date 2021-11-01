@@ -1,11 +1,12 @@
-from pandas import DataFrame
+import json
 
 from config import config
-from common.common import NoDataException, UniteType
+from common.common import NoDataException, UniteType, Types
+from engine.symbolsinterface import SymbolsInterface
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
-from engine.parameters import Parameters, ParameterError
+from engine.parameters import Parameters
 
 
 def params():
@@ -19,35 +20,34 @@ def params():
 
     return locals()
 
-def first_index_of(ls,fun=None):
-    #ls=list(ls)
-    if fun==None:
-        fun=lambda x:x
-    lst=[x for x in range(len(ls)) if fun(ls[x])]
-    if lst:
-        return lst[0]
-    else:
-        return -1
 
+class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterface):
+    params = property(**params())
 
-class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
-    _groups = config.GROUPS
+    @property
+    def Categories(self):
+        return self._categories
 
-    @classmethod
     @property
     def Groups(self):
-        return CompareEngine._groups
-
-    @staticmethod
-    def get_options_from_groups(ls):
+        return self._groups_by_cat[self._cur_category]
+    def get_options_from_groups(self,ls):
+        if not ls:
+            return []
         s = set()
         for g in ls:
-            s = s.union(set(CompareEngine.Groups[g]))
+            s = s.union(set(self.Groups[g]))
         return list(s)
 
-
-
-    params = property(**params())
+    def read_groups_from_file(self):
+        try:
+            jsongroups= json.load(open(config.JSONFILENAME,'rt'))
+            self._groups_by_cat = jsongroups
+            self._categories= list(self._groups_by_cat.keys())
+            if self._cur_category==None:
+                self._cur_category=self._categories[0]
+        except:
+            print('groups are problem') #raise Exception("error reading groups")
 
     def __init__(self,filename):
         super(CompareEngine, self).__init__()
@@ -58,27 +58,30 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
         self._cache_date=None
         self.params=None
 
-    def required_syms(self, include_ext=True,want_it_all=False): #the want it all is in the case of populating dict
+        #self._groups = config.GROUPS
+        self._catagories=None
+        self._cur_category = None
+        self.read_groups_from_file()
+
+    def required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
         selected = set()
-        if want_it_all and (self.params.unite_by_group & UniteType.ADDTOTAL):
+        if data_symbols_for_unite and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
+            selected.update(set([self.params.compare_with]))
+
+
+        if want_it_all and (self.params.unite_by_group & UniteType.ADDPROT):
             selected=set(self.get_portfolio_stocks())
 
-        if not (self.params.unite_by_group & ~UniteType.ADDTOTAL) and self.params.use_groups:
-            return selected.union(self.get_options_from_groups(self.params.groups))
-
-
-        if self.params.use_ext and include_ext:
+        if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
-        try:
-            if self.params.use_groups:
-                if self.params.groups:
-                    for g in self.params.groups:
-                        selected.update((set(self.Groups[g])))
-            else:
-                selected.update(self.params.selected_stocks)
-        except KeyError:
-            raise ParameterError("groups")
-        return selected
+        if (self.params.unite_by_group & ~UniteType.ADDTOTAL) and data_symbols_for_unite:
+            print('nontrivla')
+            return selected #it is a bit of cheating but we don't need to specify require data symbols in that case
+        if  self.params.use_groups:
+            return selected.union(self.get_options_from_groups(self.params.groups))
+        else:
+            return selected.union(self.params.selected_stocks)
+
         #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
         #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
 
@@ -89,6 +92,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator):
             self.params=params
 
         self.params._baseclass=self
+
+        self.to_use_ext = self.params.use_ext
 
         requried_syms = self.required_syms(True, True)
         if self._symbols_wanted and (not (set(requried_syms) <= set(self._symbols_wanted))):

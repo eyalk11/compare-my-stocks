@@ -9,7 +9,7 @@ from engine.compareengine import CompareEngine
 from engine.parameters import Parameters
 from ib.ibtest import main as ibmain
 
-from ui.mainwindow import MainWindow
+from gui.mainwindow import MainWindow
 
 def initialize_graph_and_ib():
     if USEWX:

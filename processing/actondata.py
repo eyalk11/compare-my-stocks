@@ -2,7 +2,8 @@ import math
 
 import numpy as np
 
-from common.common import Types, get_first_where_all_are_good
+from common.common import Types, get_first_where_all_are_good,dictnfilt
+from config import config
 
 from input.inputdata import InputData
 
@@ -14,47 +15,68 @@ class ActOnData:
         self.fulldf=fulldf
         self._ds=inputData
         self.compare_with=compare_with
-        self.initialarr = self.arr[:, 0]
         self.transpose_arr = self.arr.transpose()
+    def __getstate__(self):
+        return dictnfilt(self.__dict__,set(['_ds']))
 
     def handle_operation(self):
-
-        if self.type & Types.RELTOMAX:
-            refarr = self.Marr
-        elif self.type & Types.RELTOMIN:
-            refarr = np.nanmin(self.arr, axis=1)
-
-        elif self.type & Types.RELTOEND:
-            refarr = self.arr[:, -1]
-        else:  # if self.type & Types.RELTOSTART:TODO:: the rel things should be another type like unite.. some messy code...
-            refarr = self.initialarr
+        if config.DEBUG:
+            self.org_arr=self.arr.copy()
 
         if self.type & Types.PRECENTAGE:
-            newarr = (self.transpose_arr / refarr - (1 if self.type & Types.RELTOSTART | Types.RELTOMIN else 0)) * 100
+            newarr = (self.transpose_arr / self.refarr - (1 if self.type & Types.RELTOSTART | Types.RELTOMIN else 0)) * 100
 
         elif self.type & Types.DIFF:
-            newarr = self.transpose_arr - refarr
+            newarr = self.transpose_arr - self.refarr
         else:  # if self.type & Types.ABS == Types.ABS:
             newarr = self.transpose_arr
-
+        if config.DEBUG:
+            self.refarr=self.refarr.copy()
+            #self.newarr=newarr.copy()
         # we want to transpose the array anyway to get it fit to self.df...
         return  newarr
+
+    def get_ref_array(self,arr):
+        if len(arr.shape)==1:
+            if self.type & Types.RELTOMAX:
+                refarr = np.nanmax(arr)
+            elif self.type & Types.RELTOMIN:
+                refarr = np.nanmin(arr)
+
+            elif self.type & Types.RELTOEND:
+                refarr = arr[-1]
+            else:  # if self.type & Types.RELTOSTART:TODO:: the rel things should be another type like unite.. some messy code...
+                refarr = arr[ 0]
+        else:
+            if self.type & Types.RELTOMAX:
+                refarr = np.nanmax(arr,axis=1)
+            elif self.type & Types.RELTOMIN:
+                refarr = np.nanmin(arr, axis=1)
+
+            elif self.type & Types.RELTOEND:
+                refarr = arr[:, -1]
+            else:  # if self.type & Types.RELTOSTART:TODO:: the rel things should be another type like unite.. some messy code...
+                refarr = arr[:, 0]
+        return refarr
 
     def handle_compare(self):
         ign=False
 
         compit_arr = np.array(self.fulldf[self.compare_with])
-        compit_initial = compit_arr[0]  # at f=0
         compit = np.vstack([compit_arr] * len(self.df.columns))
+
+        compit_initial = self.get_ref_array(compit_arr)  # at f=0 - ref value
+
 
         transpose_compit = compit.transpose()
 
         if self.type & (Types.PRECENTAGE | Types.DIFF) == (Types.PRECENTAGE | Types.DIFF):
-            newarr = ((self.transpose_arr / self.initialarr - transpose_compit / compit_initial)) * 100
+            newarr = ((self.transpose_arr / self.refarr - transpose_compit / compit_initial)) * 100
             ign = True
 
         elif self.type & Types.PRECENTAGE:  # by what factor was it better...
-            newarr = ((self.transpose_arr / self.initialarr) / (transpose_compit / compit_initial) - 1) * 100
+            newarr = ((self.transpose_arr / self.refarr) / (transpose_compit / compit_initial) - 1) * 100
+            ign=True
         else:
             newarr = self.transpose_arr - transpose_compit
 
@@ -92,6 +114,8 @@ class ActOnData:
         # self.arr[np.isinf(self.arr)]=np.nan
 
     def do(self):
+        self.refarr = self.get_ref_array(self.arr)
+
         if self.type & (Types.COMPARE | Types.THEORTICAL_PROFIT)==(Types.COMPARE | Types.THEORTICAL_PROFIT):
             self.df = self.calc_theoritical_profit()
 

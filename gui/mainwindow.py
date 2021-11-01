@@ -13,8 +13,8 @@ from superqt import QLabeledRangeSlider
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
 from superqt.sliders._labeled import LabelPosition
 
-from ui.daterangeslider import QDateRangeSlider
-from ui.formobserver import FormObserver, FormInitializer
+from gui.daterangeslider import QDateRangeSlider
+from gui.formobserver import FormObserver, FormInitializer
 
 try:
     from config import config
@@ -37,7 +37,7 @@ class MainWindow(QMainWindow, FormInitializer):
     def __init__(self,graphObj):
 
         super(MainWindow, self).__init__()
-        FormObserver.__init__(self)
+        FormInitializer.__init__(self)
         self._graphObj = graphObj
         self.load_ui()
 
@@ -55,6 +55,7 @@ class MainWindow(QMainWindow, FormInitializer):
 
         ui_file.close()
         self.setCentralWidget(self.window)
+        self.after_load()
 
     def run(self):
         if self._graphObj==None:

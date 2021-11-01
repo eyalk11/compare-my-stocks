@@ -87,13 +87,13 @@
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>90</height>
+                  <height>100</height>
                  </size>
                 </property>
                 <property name="title">
                  <string>Add Stock</string>
                 </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <layout class="QVBoxLayout" name="verticalLayout_5">
                  <item>
                   <layout class="QHBoxLayout" name="horizontalLayout_3">
                    <item>
@@ -167,6 +167,13 @@
                     </layout>
                    </item>
                   </layout>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="fromall">
+                   <property name="text">
+                    <string>Complete from everything</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -602,7 +609,7 @@
                       </layout>
                      </item>
                      <item row="1" column="1">
-                      <widget class="QGroupBox" name="">
+                      <widget class="QGroupBox" name="groupBox">
                        <property name="minimumSize">
                         <size>
                          <width>40</width>
@@ -786,9 +793,9 @@
                         </widget>
                        </item>
                        <item row="1" column="1">
-                        <widget class="QPushButton" name="pushButton_16">
+                        <widget class="QPushButton" name="debug_btn">
                          <property name="text">
-                          <string>PushButton</string>
+                          <string>Debug</string>
                          </property>
                         </widget>
                        </item>
@@ -811,13 +818,13 @@
                      <bool>true</bool>
                     </property>
                     <property name="text">
-                     <string>Add Total Profit</string>
+                     <string>Add Total to Graph</string>
                     </property>
                     <property name="checked">
                      <bool>true</bool>
                     </property>
                    </widget>
-                   <widget class="QCheckBox" name="auto_update">
+                   <widget class="QCheckBox" name="unite_ADDPROT">
                     <property name="enabled">
                      <bool>true</bool>
                     </property>
@@ -828,10 +835,10 @@
                      </size>
                     </property>
                     <property name="text">
-                     <string>Auto Update</string>
+                     <string>Add Portofolio to graph</string>
                     </property>
                     <property name="checked">
-                     <bool>true</bool>
+                     <bool>false</bool>
                     </property>
                    </widget>
                    <widget class="QCheckBox" name="start_hidden">
@@ -840,6 +847,9 @@
                     </property>
                     <property name="text">
                      <string>Start Hidden</string>
+                    </property>
+                    <property name="tristate">
+                     <bool>true</bool>
                     </property>
                    </widget>
                    <widget class="QCheckBox" name="checkBox">
@@ -851,6 +861,14 @@
                     </property>
                     <property name="tristate">
                      <bool>false</bool>
+                    </property>
+                   </widget>
+                   <widget class="QCheckBox" name="auto_update">
+                    <property name="text">
+                     <string>Auto Update</string>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
                     </property>
                    </widget>
                   </widget>
@@ -959,6 +977,9 @@
                    <widget class="QWidget" name="layoutWidget_6">
                     <layout class="QVBoxLayout" name="groups_lay_2">
                      <item>
+                      <widget class="QComboBox" name="categoryCombo"/>
+                     </item>
+                     <item>
                       <widget class="QListWidget" name="groups">
                        <property name="minimumSize">
                         <size>
@@ -1029,7 +1050,7 @@
                         </widget>
                        </item>
                        <item>
-                        <widget class="QPushButton" name="pushButton_18">
+                        <widget class="QPushButton" name="edit_groupBtn">
                          <property name="text">
                           <string>Edit Groups</string>
                          </property>
