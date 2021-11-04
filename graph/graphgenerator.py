@@ -205,18 +205,21 @@ class GraphGenerator:
         return (lined, fig)
 
     def update_limit(self,ar,fig,ofig,lines):
-        try:
-            MAXV=100000000000
-            maxline = -1 * MAXV
-            minline = MAXV
-            for l in lines:
-                if l.get_visible():
-                    y = list(filter(lambda x: not math.isnan(x), l._y))
-                    # x = list(filter(lambda x:not math.isnan(x) , l._x))
-                    maxline = max(maxline, max(y))
-                    minline = min(minline, min(y))
-            #self.maxValue=0 if maxline==(-1)* MAXV else maxline
+
+        MAXV=100000000000
+        maxline = -1 * MAXV
+        minline = MAXV
+        for l in lines:
+            if l.get_visible():
+                y = list(filter(lambda x: not math.isnan(x), l._y))
+                if len(y)==0:
+                    continue
+                # x = list(filter(lambda x:not math.isnan(x) , l._x))
+                maxline = max(maxline, max(y))
+                minline = min(minline, min(y))
+            #self.maxValue=0 if maxline==(-1)* MAX  V else maxline
             #self.minValue=0 if minline== MAXV else minline
+        try:
             ar.set_ylim(ymin=minline-0.12*abs(max(minline,maxline-minline)), ymax=maxline+0.12*abs(max(maxline,maxline-minline)))
         except ValueError:
             print('val error')

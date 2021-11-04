@@ -550,14 +550,20 @@
                            </widget>
                           </item>
                           <item>
-                           <widget class="QRadioButton" name="radioButton_2">
+                           <widget class="QRadioButton" name="unite_MAX">
+                            <property name="enabled">
+                             <bool>false</bool>
+                            </property>
                             <property name="text">
                              <string>Max</string>
                             </property>
                            </widget>
                           </item>
                           <item>
-                           <widget class="QRadioButton" name="radioButton_3">
+                           <widget class="QRadioButton" name="unite_MIN">
+                            <property name="enabled">
+                             <bool>false</bool>
+                            </property>
                             <property name="text">
                              <string>Min</string>
                             </property>
@@ -565,6 +571,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="unite_SUM">
+                            <property name="enabled">
+                             <bool>true</bool>
+                            </property>
                             <property name="text">
                              <string>Sum</string>
                             </property>

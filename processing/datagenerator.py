@@ -54,13 +54,13 @@ class DataGenerator(SymbolsInterface, InputData):
 
                 # ind=first_index_of(compit_arr,np.isnan)
                 # df=df.iloc[ind:]
+        comp_set = (set([compare_with]) if self.used_type & Types.COMPARE else set())
+
         if not (self.params.unite_by_group & ~(UniteType.ADDTOTAL)):  # in unite, the compare_with is already there.
             # If the  unite is non-trivial, then colswithoutext already returned
             cols,colswithoutext = self.cols_by_selection(df)
-            if self.used_type & Types.COMPARE:
-                fulldf = df[list(cols.union(set([compare_with])))]
-            else:
-                fulldf = df[list(cols)]
+            #if self.used_type & Types.COMPARE:
+            fulldf = df[sorted(list(cols.union(comp_set)))]
         else: #colswithoutext non-trivial
             fulldf = df
             cols=set(df.columns)
@@ -70,7 +70,9 @@ class DataGenerator(SymbolsInterface, InputData):
         arr = np.array(fulldf).transpose()  # will just work with arr
         fulldf = fulldf.drop(list(
             df.index[list((np.all(np.isnan(arr), axis=0)))]))  # to check drop dates in which all stocks are none.
-        df = fulldf[list(cols - set([compare_with]))]
+
+
+        df = fulldf[sorted(list(cols - comp_set))]
         arr = np.array(df).transpose()  # will just work with arr
 
         if len(arr)==0:
@@ -98,23 +100,23 @@ class DataGenerator(SymbolsInterface, InputData):
 
         if div & Types.PROFIT:
             df = df['unrel_profit']
-            use_ext = False
+            #use_ext = False
         elif div & Types.RELPROFIT:
             df = df['rel_profit_by_stock']
-            use_ext = False
+            #use_ext = False
         elif div & Types.PRICE:
             df = df['alldates']
         elif div & Types.TOTPROFIT:
             df = df['tot_profit_by_stock']
         elif div & Types.VALUE:
             df = df['value']
-            use_ext = False
+            #use_ext = False
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
         else:
             df = df['alldates']
 
-        return df,use_ext
+        return df.copy(),use_ext
 
     def unite_groups(self, df):
         def filt(x,df):
@@ -196,7 +198,7 @@ class DataGenerator(SymbolsInterface, InputData):
             rang=(None,None)
 
         df = df[sorted(list(restofcols))+ sordlist[rang[0]:rang[1]]  ]  # rearrange columns by max, and include rest
-        df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1)
+        df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1) #problematicline
 
         return df,type
 

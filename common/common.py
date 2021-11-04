@@ -45,6 +45,8 @@ class UniteType(Flag):
     NONE=0
     SUM=auto()
     AVG=auto()
+    MIN=auto()
+    MAX=auto()
     ADDTOTAL=auto()
     ADDPROTTMP=auto()
     ADDPROT= ADDPROTTMP | ADDTOTAL
@@ -74,6 +76,7 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     try:
         arr[np.abs(arr) < EPS] = 0
     except:
+        print('err EPS')
         pass
     ind = np.isnan(arr)
     if remove_zeros:
@@ -83,7 +86,7 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     ls = list(getnan)
     if last:
         ls.reverse()
-    return (ls.index(False) * (-1 if last else 0))
+    return (ls.index(False) * (-1 if last else 1))
 
 class NoDataException(Exception):
     pass

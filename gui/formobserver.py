@@ -61,8 +61,8 @@ class FormObserver(ListsObserver):
         self.json_editor = json_editor_ui.JSONEditorWindow(None)
         #self._toselectall=False
 
-    def update_graph(self,reset_ranges):
-        if self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated:
+    def update_graph(self,reset_ranges,force=False):
+        if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
             self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
             self.update_ranges(reset_ranges)
 
@@ -153,7 +153,10 @@ class FormObserver(ListsObserver):
 
     def use_groups(self,val):
         self.attribute_set('use_groups', val)
-        self.groups_changed()
+        if not val:
+            self.selected_changed()
+        else:
+            self.groups_changed()
 
     def edit_groups(self):
 
@@ -181,7 +184,8 @@ class FormObserver(ListsObserver):
         self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsReset('use_ext'))
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
 
-        self.window.findChild(QPushButton, name="update_btn").pressed.connect(self._graphObj.update_graph)
+        self.window.findChild(QPushButton, name="update_btn").pressed.connect(
+            partial(self.update_graph,force=True,reset_ranges=1))
         self.window.use_groups.toggled.connect(self.use_groups)
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)
@@ -304,6 +308,8 @@ class FormInitializer(FormObserver):
         nuofoptions = len(self._graphObj.colswithoutext)
 
         self.disable_slider_values_updates=True
+        if nuofoptions==0:
+            nuofoptions =1
         self.window.max_num.setRange(0, nuofoptions)
 
 
