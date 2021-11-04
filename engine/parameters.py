@@ -63,6 +63,7 @@ class Parameters:
     increase_fig: bool = False
     baseclass = dataclasses.InitVar
     ignore_minmax: bool = False
+    adjusted_for_cur :bool = True
 
     def __post_init__(self,baseclass=None):
         # super(Parameters,self).__init__(*args,**kwargs)

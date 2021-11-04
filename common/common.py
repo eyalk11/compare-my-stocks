@@ -71,7 +71,10 @@ def addAttrs(attr_names):
 EPS=0.0001
 
 def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
-    arr[np.abs(arr) < EPS] = 0
+    try:
+        arr[np.abs(arr) < EPS] = 0
+    except:
+        pass
     ind = np.isnan(arr)
     if remove_zeros:
         ind = np.bitwise_or(ind ,arr ==0)

@@ -38,13 +38,13 @@ class DataGenerator(SymbolsInterface, InputData):
     def generate_initial_data(self, compare_with, type):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
-        dic,use_ext = self.get_dict_by_type(type)
+        df,use_ext = self.get_df_by_type(type)
         self.used_type=type
         self.to_use_ext = use_ext and self.params.use_ext
 
-        df = pandas.DataFrame.from_dict(dic)
         if (self.params.unite_by_group & ~UniteType.NONE):
             df , colswithoutext = self.unite_groups(df) #in case really unite groups, colswithoutext is correct
+
         df = df[(df.index >= fromdateNum) * (df.index <= todateNum)]
 
         if self.used_type & Types.COMPARE:
@@ -68,8 +68,8 @@ class DataGenerator(SymbolsInterface, InputData):
             ##else we need everything...
         self.bef_rem_data = fulldf.copy()
         arr = np.array(fulldf).transpose()  # will just work with arr
-        fulldf = fulldf.drop(
-            df.index[(np.all(np.isnan(arr), axis=0))])  # to check drop dates in which all stocks are none.
+        fulldf = fulldf.drop(list(
+            df.index[list((np.all(np.isnan(arr), axis=0)))]))  # to check drop dates in which all stocks are none.
         df = fulldf[list(cols - set([compare_with]))]
         arr = np.array(df).transpose()  # will just work with arr
 
@@ -89,26 +89,32 @@ class DataGenerator(SymbolsInterface, InputData):
 
         return arr, df, type, fulldf
 
-    def get_dict_by_type(self, div):
+    def get_df_by_type(self, div):
         use_ext=True
+        if self.params.adjusted_for_cur:
+            df=self.reg_panel #self.adjusted_panel
+        else:
+            df=self.reg_panel
+
         if div & Types.PROFIT:
-            dic = self.unrel_profit
+            df = df['unrel_profit']
             use_ext = False
         elif div & Types.RELPROFIT:
-            dic = self.rel_profit_by_stock
+            df = df['rel_profit_by_stock']
             use_ext = False
         elif div & Types.PRICE:
-            dic = self.alldates
+            df = df['alldates']
         elif div & Types.TOTPROFIT:
-            dic = self.tot_profit_by_stock
+            df = df['tot_profit_by_stock']
         elif div & Types.VALUE:
-            dic = self.value
+            df = df['value']
             use_ext = False
         elif div & Types.THEORTICAL_PROFIT:
-            dic = self.tot_profit_by_stock
+            df = df['tot_profit_by_stock']
         else:
-            dic = self.alldates
-        return dic,use_ext
+            df = df['alldates']
+
+        return df,use_ext
 
     def unite_groups(self, df):
         def filt(x,df):

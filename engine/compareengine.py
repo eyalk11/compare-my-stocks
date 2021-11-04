@@ -116,6 +116,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             traceback.print_exc()
             e = e
             print('exception in generating data')
+            if config.DEBUG:
+                pass#raise
             return
 
 

@@ -48,6 +48,9 @@ class ActOnData:
             else:  # if self.type & Types.RELTOSTART:TODO:: the rel things should be another type like unite.. some messy code...
                 refarr = arr[ 0]
         else:
+            if arr.shape[1]==0:
+                print('errarr')
+                return []
             if self.type & Types.RELTOMAX:
                 refarr = np.nanmax(arr,axis=1)
             elif self.type & Types.RELTOMIN:
@@ -114,6 +117,7 @@ class ActOnData:
         # self.arr[np.isinf(self.arr)]=np.nan
 
     def do(self):
+
         self.refarr = self.get_ref_array(self.arr)
 
         if self.type & (Types.COMPARE | Types.THEORTICAL_PROFIT)==(Types.COMPARE | Types.THEORTICAL_PROFIT):

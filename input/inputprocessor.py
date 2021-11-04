@@ -12,7 +12,7 @@ import pytz
 from dateutil import parser
 
 from config import config
-from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, ifnn
+from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
 
 from input.inputsource import InputSource, IBSource, InvestPySource
 from engine.symbolsinterface import SymbolsInterface
@@ -150,6 +150,58 @@ class InputProcessor(TransactionHandler):
 
     def process_history(self, partial_symbols_update=set()):
 
+        if not partial_symbols_update:
+            self.init_input()
+        else:
+            self.filter_input(partial_symbols_update)
+
+
+        b = collections.OrderedDict(sorted(self._buydic.items()))  # ordered
+
+        cur_action = b.popitem(False)
+
+
+        if self.params.transactions_fromdate == None:
+            if not cur_action:
+                print('where to start?')
+                return
+            self.params.transactions_fromdate = cur_action[0] #start from first buy
+
+
+        query_source = True
+        if self.params.use_cache != UseCache.DONT and not partial_symbols_update:
+            query_source = self.load_cache()
+
+
+        self.currency_hist= {}
+        if query_source:
+            self.get_data_from_source(partial_symbols_update)
+
+        self.simplify_hist(partial_symbols_update)
+
+        self.process_hist_internal(b, cur_action, partial_symbols_update)
+        self.convert_dicts_to_df()
+        #self.adjust_for_currency()
+
+    def load_cache(self):
+        query_source = True
+        try:
+            hist_by_date, self.symbol_info, self._cache_date = pickle.load(open(config.HIST_F, 'rb'))
+            if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache == UseCache.FORCEUSE:
+                self._hist_by_date = hist_by_date
+            self.update_usable_symbols()
+            if not self.params.use_cache == UseCache.FORCEUSE:
+                query_source = not (set(self._symbols_wanted) <= set(
+                    self._usable_symbols))  # all the buy and required are in there
+            else:
+                print('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))
+                query_source = False
+        except Exception as e:
+            e = e
+            print('failed to use cache')
+        return query_source
+
+    def process_hist_internal(self, b, cur_action, partial_symbols_update):
         def update_curholding():
             stock = cur_action[1][2]
             if partial_symbols_update and stock not in partial_symbols_update:
@@ -170,117 +222,19 @@ class InputProcessor(TransactionHandler):
             _cur_holding_bystock[stock] += cur_action[1][0]
             if _cur_holding_bystock[stock] < 0:
                 print('warning sell below zero', stock, cur_action[0])
-
-        if not partial_symbols_update:
-            self.init_input()
-        else:
-            self.filter_input(partial_symbols_update)
-
-        _cur_avg_cost_bystock = defaultdict(lambda: 0)
-        _cur_holding_bystock = defaultdict(lambda: 0)
-        _cur_relprofit_bystock = defaultdict(lambda: 0)
-        _cur_stock_price = defaultdict(lambda: (numpy.NaN,numpy.NaN))
-
-        b = collections.OrderedDict(sorted(self._buydic.items()))  # ordered
-
-        cur_action = b.popitem(False)
-
-
-
-
-
-        #if not cur_action:
-        #    return
-        if self.params.transactions_fromdate == None:
-            if not cur_action:
-                print('where to start?')
-                return
-            self.params.transactions_fromdate = cur_action[0] #start from first buy
-
-        # update_profit = lambda y: y[0]
-
-        query_source = True
-        if self.params.use_cache != UseCache.DONT and not partial_symbols_update:
-            try:
-                hist_by_date, self.symbol_info, self._cache_date = pickle.load(open(config.HIST_F, 'rb'))
-                if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache == UseCache.FORCEUSE:
-                    self._hist_by_date = hist_by_date
-                self.update_usable_symbols()
-                if not self.params.use_cache == UseCache.FORCEUSE:
-                    query_source = not (set(self._symbols_wanted) <= set(
-                        self._usable_symbols))  # all the buy and required are in there
-                else:
-                    print('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))
-                    query_source = False
-            except Exception as e:
-                e = e
-                print('failed to use cache')
-        localize_me = lambda x :  (pytz.UTC.localize(x, True) if not x.tzinfo else x)
-
-        self.currency_hist= {}
-        if query_source:
-            if not partial_symbols_update:
-                self._usable_symbols = set()
-                self._hist_by_date = collections.OrderedDict()  # like all dates but by
-
-            for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
-                todate = self.params.transactions_todate if self.params.transactions_todate is not None else datetime.datetime.now()
-
-                todate= localize_me(todate)
-                transactions_fromdate=localize_me(self.params.transactions_fromdate)
-                numdays = (todate - transactions_fromdate).days
-                sym_corrected = config.TRANSLATEDIC.get(sym,sym)
-
-                l, hist = self._inputsource.get_symbol_history(sym_corrected, self.params.transactions_fromdate, todate,iscrypto = sym_corrected in config.CRYPTO )  # should be rounded
-                self.symbol_info[sym]=l
-                if hist is None:
-                    print('bad %s' % sym)
-                    continue
-
-                adjusted, currency= self.resolve_currency(sym,l,hist,transactions_fromdate,todate)
-                if not (self.symbol_info[sym] is None) :
-                    self.symbol_info[sym]['currency']=currency
-                else:
-                    self.symbol_info[sym]={'currency':currency}
-
-                hist = hist.to_dict('index')
-                if adjusted is not None:
-                    adjusted=adjusted.to_dict('index')
-                prec = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
-                if prec / numdays < config.MINIMALPRECREQ and numdays > config.MINCHECKREQ:
-                    print('not enough days %s %f' % (sym, prec / numdays))
-                    continue
-                self._usable_symbols.add(sym)
-
-                for date, dic in hist.items():
-                    if not date in self._hist_by_date:
-                        self._hist_by_date[date] = {}
-
-                    self._hist_by_date[date][sym] = (dic,adjusted.get(date) if adjusted else None )  # should be =l
-
-            pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now()), open(config.HIST_F, 'wb'))
-
-        self._simp_hist_by_date = collections.OrderedDict()
-        for date, symdic in self._hist_by_date.items():
-            for s, (dica,dicb) in symdic.items():
-                if partial_symbols_update and s not in partial_symbols_update:
-                    continue
-                if not date in self._simp_hist_by_date:
-                    self._simp_hist_by_date[date] = {}
-                adjust= ifnn(dicb, lambda: (dicb['Close'] + dicb['Open']) / 2, lambda : (dica['Close'] + dica['Open']) / 2)
-                self._simp_hist_by_date[date][s] = ( (dica['Close'] + dica['Open']) / 2 , adjust)
-
-        tz = datetime.timezone(datetime.timedelta(hours=0), 'UTC')
         self.mindate = min(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
-
-
+        _cur_avg_cost_bystock = defaultdict(lambda: 0)
+        _cur_holding_bystock = defaultdict(lambda: 0)
+        _cur_relprofit_bystock = defaultdict(lambda: 0)
+        _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         hh = pytz.UTC  # timezone('Israel')
+        self._fset=[]
         for t, dic in sorted(self._simp_hist_by_date.items()):
             if partial_symbols_update:
-                dic= dictfilt(dic, partial_symbols_update)
+                dic = dictfilt(dic, partial_symbols_update)
             t = hh.localize(t, True)
             # t=pytz.normalize(t,cur_action[0].tzinfo())#t.replace(tzinfo=pytz.UTC)
             if self.params.transactions_todate and t > self.params.transactions_todate:
@@ -293,87 +247,139 @@ class InputProcessor(TransactionHandler):
                 cur_action = b.popitem(False)
 
             tim = matplotlib.dates.date2num(t)
-            holdopt =  set(_cur_holding_bystock.keys()).intersection(partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
+            holdopt = set(_cur_holding_bystock.keys()).intersection(
+                partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
             for sym in holdopt:
                 if partial_symbols_update and not sym in partial_symbols_update:
                     continue
                 self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
                 self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
-                self._avg_cost_by_stock[sym][tim]=_cur_avg_cost_bystock[sym]
+                self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
 
-            symopt =  self._usable_symbols.intersection(partial_symbols_update) if partial_symbols_update else self._usable_symbols
+            symopt = self._usable_symbols.intersection(
+                partial_symbols_update) if partial_symbols_update else self._usable_symbols
             for sym in symopt:
                 if partial_symbols_update and not sym in partial_symbols_update:
                     continue
                 if sym in dic:
                     v = dic[sym]
                 else:
-                    v = _cur_stock_price[sym]#actually, should fix for currency. but doesn't matter
+                    v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
 
                 self._alldates[sym][tim] = v[0]
-                self._alldates_adjusted[sym][tim]=v[1]
-                _cur_stock_price[sym]=v
-                v=v[0]
-                self._value[sym][tim] = v * _cur_holding_bystock[sym]
-                self._unrel_profit[sym][tim] = v * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
+                self._alldates_adjusted[sym][tim] = v[1]
+                _cur_stock_price[sym] = v
+                #v = v[0]
+                self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
+                self._unrel_profit[sym][tim] = v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
+                                               _cur_avg_cost_bystock[sym]
+                self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
                 self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
-
-
+            self._fset+=[tim]
         if cur_action:
-            #run_cur_action(None)
+            # run_cur_action(None)
             print('after, should update rel_prof... ')
             # cur_action[0]
-        #self.convert_dicts_to_df()
-        #relevant_currencies = set([ v['currency'] for v in self.symbol_info.values() if not (v is None) ]) -set(['unk',config.BASECUR])
-        #for x in relevant_currencies:
-        #    self._relevant_currencies_rates[x]=self._inputsource.get_current_currency((config.BASECUR,x) )
-        #self.adjust_for_currency()
 
+    def simplify_hist(self, partial_symbols_update):
+        self._simp_hist_by_date = collections.OrderedDict()
+        for date, symdic in self._hist_by_date.items():
+            for s, (dica, dicb) in symdic.items():
+                if partial_symbols_update and s not in partial_symbols_update:
+                    continue
+                if not date in self._simp_hist_by_date:
+                    self._simp_hist_by_date[date] = {}
+                adjust = ifnn(dicb, lambda: (dicb['Close'] + dicb['Open']) / 2,
+                              lambda: (dica['Close'] + dica['Open']) / 2)
+                self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
+
+    def get_data_from_source(self, partial_symbols_update):
+        localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
+        if not partial_symbols_update:
+            self._usable_symbols = set()
+            self._hist_by_date = collections.OrderedDict()  # like all dates but by
+        for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
+            todate = self.params.transactions_todate if self.params.transactions_todate is not None else datetime.datetime.now()
+
+            todate = localize_me(todate)
+            transactions_fromdate = localize_me(self.params.transactions_fromdate)
+            numdays = (todate - transactions_fromdate).days
+            sym_corrected = config.TRANSLATEDIC.get(sym, sym)
+
+            l, hist = self._inputsource.get_symbol_history(sym_corrected, self.params.transactions_fromdate, todate,
+                                                           iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
+            self.symbol_info[sym] = l
+            if hist is None:
+                print('bad %s' % sym)
+                continue
+
+            adjusted, currency = self.resolve_currency(sym, l, hist, transactions_fromdate, todate)
+            if not (self.symbol_info[sym] is None):
+                self.symbol_info[sym]['currency'] = currency
+            else:
+                self.symbol_info[sym] = {'currency': currency}
+
+            hist = hist.to_dict('index')
+            if adjusted is not None:
+                adjusted = adjusted.to_dict('index')
+            prec = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
+            if prec / numdays < config.MINIMALPRECREQ and numdays > config.MINCHECKREQ:
+                print('not enough days %s %f' % (sym, prec / numdays))
+                continue
+            self._usable_symbols.add(sym)
+
+            for date, dic in hist.items():
+                if not date in self._hist_by_date:
+                    self._hist_by_date[date] = {}
+
+                self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
+        pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now()), open(config.HIST_F, 'wb'))
 
     def convert_dicts_to_df(self):
         dataframes = []
         self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
                       self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
-                      self._alldates_adjusted]
+                      self._alldates_adjusted,self._unrel_profit_adjusted]
+        NONADJUSTEDDICTS= len(self.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
-        for name, dic in zip(self.dicts_names, self.dicts[:-1]):
-            df = pd.DataFrame.from_dict(dic)
+        seldict= self.dicts[:NONADJUSTEDDICTS]
+        for name, dic in zip(self.dicts_names,seldict):
+            #for x in self._fset:
+            #    dic[x]
+            df = pd.DataFrame(dic,index=self._fset)
             # df["Name"]= name
-            # dataframes.append(df.set_index(['name',df.index]))
-
             df.columns = pd.MultiIndex.from_product([[name], list(df.columns)], names=['Name', 'Symbols'])
+
             dataframes.append(df)
-        self.reg_panel = pd.concat(dataframes)  # pd.Panel(data= dict( ),)
+
+        self.reg_panel = pd.concat(dataframes,axis=1)
+        self.reg_panel=self.reg_panel
+
+        #self.reg_panel.set_index()
 
     def adjust_for_currency(self):
         TOADJUST=[ 'unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
-
+        relevant_currencies = set([v['currency'] for v in self.symbol_info.values() if not (v is None)]) - \
+                              set(['unk', config.BASECUR])
+        for x in relevant_currencies:
+            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
         dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
-        #cur = pd.DataFrame(dic, index=self.reg_panel.index,
-        #                   )
+
         multiIndex = pd.MultiIndex.from_product([TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
         df=pd.DataFrame(index=self.reg_panel.index,columns=multiIndex)
         for x in TOADJUST:
             for k,v in dic.items():
                 df.loc[:,(x,k)] = dic[k]
-        # dataframes=[]
-        # for name in TOADJUST:
-        #
-        #     # df["Name"]= name
-        #     # dataframes.append(df.set_index(['name',df.index]))
-
-        #    df.columns = pd.MultiIndex.from_product([[name], list(df.columns)], names=['Name', 'Symbols'])
-        #    dataframes.append(df)
-
-        #df=pd.DataFrame()
-        #for k in TOADJUST:
-        #    df[k]=cur
-
         nn=self.reg_panel.copy()
         uu= self.reg_panel[multiIndex].mul(df)
         nn[multiIndex] =uu
-        nn=nn
+        nn['alldates']= pd.DataFrame.from_dict(self._alldates_adjusted)
+        nn['unrel_profit']= pd.DataFrame.from_dict(self._unrel_profit_adjusted)
+        #nn['tot_profit_by_stock']= nn['rel_profit_by_stock'] + nn['unrel_profit']
+
+
+        self.adjusted_panel=nn
 
 
 
@@ -388,6 +394,7 @@ class InputProcessor(TransactionHandler):
         self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # re
         self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
 
     def filter_input(self,keys):
 
