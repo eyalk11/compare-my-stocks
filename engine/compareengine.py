@@ -63,7 +63,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         self._cur_category = None
         self.read_groups_from_file()
 
-    def required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
+    def  required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
         selected = set()
         if data_symbols_for_unite and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
             selected.update(set([self.params.compare_with]))
@@ -74,7 +74,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
 
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
-        if (self.params.unite_by_group & ~UniteType.ADDTOTAL) and data_symbols_for_unite:
+        if (self.params.unite_by_group & ~UniteType.ADDTOTALS) and data_symbols_for_unite:
             print('nontrivla')
             return selected #it is a bit of cheating but we don't need to specify require data symbols in that case
         if  self.params.use_groups:

@@ -48,8 +48,8 @@ class UniteType(Flag):
     MIN=auto()
     MAX=auto()
     ADDTOTAL=auto()
-    ADDPROTTMP=auto()
-    ADDPROT= ADDPROTTMP | ADDTOTAL
+    ADDPROT=auto()
+    ADDTOTALS= ADDPROT | ADDTOTAL
 #did this trick to keep ADDTOTAL
 class InputSourceType(Flag):
     Cache=0

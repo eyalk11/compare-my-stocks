@@ -56,7 +56,7 @@ class DataGenerator(SymbolsInterface, InputData):
                 # df=df.iloc[ind:]
         comp_set = (set([compare_with]) if self.used_type & Types.COMPARE else set())
 
-        if not (self.params.unite_by_group & ~(UniteType.ADDTOTAL)):  # in unite, the compare_with is already there.
+        if not (self.params.unite_by_group & ~(UniteType.ADDTOTALS)):  # in unite, the compare_with is already there.
             # If the  unite is non-trivial, then colswithoutext already returned
             cols,colswithoutext = self.cols_by_selection(df)
             #if self.used_type & Types.COMPARE:
@@ -92,9 +92,10 @@ class DataGenerator(SymbolsInterface, InputData):
         return arr, df, type, fulldf
 
     def get_df_by_type(self, div):
+        #raise 'xx'
         use_ext=True
         if self.params.adjusted_for_cur:
-            df=self.reg_panel #self.adjusted_panel
+            df=self.adjusted_panel
         else:
             df=self.reg_panel
 
@@ -126,7 +127,7 @@ class DataGenerator(SymbolsInterface, InputData):
             return list(x.intersection(set(df.columns)))
 
         items = [(g, self.Groups[g]) for g in self.params.groups]
-        if (self.params.unite_by_group & ~UniteType.ADDTOTAL): #Non trivial unite. groups
+        if (self.params.unite_by_group & ~UniteType.ADDTOTALS): #Non trivial unite. groups
             reqsym= self.required_syms(data_symbols_for_unite=True).intersection(set(df.columns) )
             if len(reqsym )>0:
                 ndf= df.loc[:, reqsym]
@@ -136,11 +137,11 @@ class DataGenerator(SymbolsInterface, InputData):
             ndf=df
 
 
-        if self.params.unite_by_group & UniteType.ADDTOTAL:
+        if self.params.unite_by_group & UniteType.ADDTOTALS:
             if self.params.unite_by_group & UniteType.ADDPROT:
                 x=set(self.get_portfolio_stocks())
                 items += [('Portfolio', filt(x,df) )]
-            else:
+            else: #add TOTAL
                 x=set(self.required_syms(True))
                 items += [('All', filt(x,df))]
 
@@ -161,7 +162,7 @@ class DataGenerator(SymbolsInterface, InputData):
             # = n[~numpy.isnan(n)]
 
             if self.params.unite_by_group & UniteType.SUM or gr in ['All','Portfolio']:
-                ndf.loc[:, gr] = numpy.sum(arr, axis=0)
+                ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
                 #df.append({'gr':  },ignore_index=True)
             elif self.params.unite_by_group & UniteType.AVG:
                 ndf.loc[:, gr] = numpy.nanmean(arr, axis=0 )
@@ -172,8 +173,8 @@ class DataGenerator(SymbolsInterface, InputData):
 
     def cols_by_selection(self,  data):
         cols = set([x for x in data])
-        selected=self.required_syms(True).union(set(['All'])) #always include All if there is all..
-        withoutext=self.required_syms(False).union(set(['All']))
+        selected=self.required_syms(True).union(set(['All','Portfolio'])) #always include All if there is all..
+        withoutext=self.required_syms(False).union(set(['All','Portfolio']))
         return cols.intersection(selected),cols.intersection(withoutext)
 
     def generate_data(self):

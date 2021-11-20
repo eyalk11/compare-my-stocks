@@ -127,7 +127,7 @@ class InputProcessor(TransactionHandler):
 
         if currency != config.BASECUR and currency != 'unk':
             print('adjusted %s %s ' % (sym, currency))
-            pair = (config.BASECUR, currency)
+            pair = (currency, config.BASECUR )
             currency_df = self.currency_hist.get(currency,
                                                  self._inputsource.get_currency_history(pair, fromdate, enddate))
 
@@ -181,7 +181,7 @@ class InputProcessor(TransactionHandler):
 
         self.process_hist_internal(b, cur_action, partial_symbols_update)
         self.convert_dicts_to_df()
-        #self.adjust_for_currency()
+        self.adjust_for_currency()
 
     def load_cache(self):
         query_source = True
@@ -215,8 +215,8 @@ class InputProcessor(TransactionHandler):
                             old_holding + cur_action[1][0])
                 # self._avg_cost_by_stock[stock][cur_action[0]] = nv
             else:
-                _cur_relprofit_bystock[stock] += cur_action[1][0] * (
-                            cur_action[1][1] * (-1) - _cur_avg_cost_bystock[stock])
+                _cur_relprofit_bystock[stock] += (-1) * ( cur_action[1][0] * (
+                            cur_action[1][1]  - _cur_avg_cost_bystock[stock]))
                 # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += cur_action[1][0]
@@ -376,10 +376,13 @@ class InputProcessor(TransactionHandler):
         nn[multiIndex] =uu
         nn['alldates']= pd.DataFrame.from_dict(self._alldates_adjusted)
         nn['unrel_profit']= pd.DataFrame.from_dict(self._unrel_profit_adjusted)
-        #nn['tot_profit_by_stock']= nn['rel_profit_by_stock'] + nn['unrel_profit']
+        nn.drop(columns='tot_profit_by_stock',inplace=True)
 
+        t= nn['rel_profit_by_stock'] + nn['unrel_profit']
+        t.columns = pd.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)], names=['Name', 'Symbols'])
 
-        self.adjusted_panel=nn
+        #nn['tot_profit_by_stock']=
+        self.adjusted_panel=pd.concat([nn,t], axis=1)
 
 
 
@@ -410,9 +413,12 @@ class InputProcessor(TransactionHandler):
             self._usable_symbols.update(set(dic.keys()))
 
     def process(self, partial_symbol_update=set()):
+        t = time.process_time()
         if not self._initial_process_done:
             self.populate_buydic()
             self._initial_process_done = True
+        elapsed_time = time.process_time() - t
+        print('elasped populating : %s' % elapsed_time)
         if not partial_symbol_update:
             required=set(self.required_syms(True,True))
             self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
