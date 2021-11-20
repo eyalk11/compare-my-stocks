@@ -183,6 +183,9 @@ class FormObserver(ListsObserver):
 
         self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsReset('use_ext'))
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
+        self.window.findChild(QCheckBox, name="adjust_currency").toggled.connect(genobsReset('adjust_to_currency'))
+        self.window.home_currency_combo.currentTextChanged.connect(genobsReset('currency_to_adjust'))
+
 
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
             partial(self.update_graph,force=True,reset_ranges=1))

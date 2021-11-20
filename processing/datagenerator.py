@@ -38,6 +38,7 @@ class DataGenerator(SymbolsInterface, InputData):
     def generate_initial_data(self, compare_with, type):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
+
         df,use_ext = self.get_df_by_type(type)
         self.used_type=type
         self.to_use_ext = use_ext and self.params.use_ext
@@ -92,12 +93,14 @@ class DataGenerator(SymbolsInterface, InputData):
         return arr, df, type, fulldf
 
     def get_df_by_type(self, div):
-        #raise 'xx'
         use_ext=True
-        if self.params.adjusted_for_cur:
+        if self.params.adjusted_for_base_cur:
             df=self.adjusted_panel
         else:
             df=self.reg_panel
+
+        if self.params.adjust_to_currency and self.params.currency_to_adjust:
+            df=self.readjust_for_currency(self.params.currency_to_adjust)
 
         if div & Types.PROFIT:
             df = df['unrel_profit']
@@ -216,6 +219,21 @@ class DataGenerator(SymbolsInterface, InputData):
         if diff:
             self.minMaxChanged.emit((self.minValue, self.maxValue))
         return upd1 or diff
+
+    def readjust_for_currency(self,ncurrency):
+        currency_hist= self.get_currency_hist(ncurrency,self.currencyrange[0],self.currencyrange[1]) #should be fine, the range
+        simplified= (currency_hist['Open']+currency_hist['Close'])/2
+        rate= self._relevant_currencies_rates[ncurrency]
+
+        nn= self.adjusted_panel.copy() #adjusted_panel is already at base.
+        for x in self.TOADJUST:
+            nn[x]= nn[x].mul(rate)
+
+        missingvalues = set(list(nn.index))-        set(list(simplified.index))
+        print('missing in readjust' , len(missingvalues))
+
+        nn['alldates']=nn['alldates'].mul(simplified,fill_value=numpy.NaN)
+        return nn
 
     def serialize_me(self):
         with open(config.SERIALIZEDFILE,'wb') as f:

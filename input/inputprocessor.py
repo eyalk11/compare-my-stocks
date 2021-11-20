@@ -18,6 +18,7 @@ from input.inputsource import InputSource, IBSource, InvestPySource
 from engine.symbolsinterface import SymbolsInterface
 
 
+
 class TransactionHandler(SymbolsInterface):
     def __init__(self, filename):
         self._fn = filename
@@ -91,6 +92,8 @@ class TransactionHandler(SymbolsInterface):
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
 class InputProcessor(TransactionHandler):
+
+
     def __init__(self, filename):
         TransactionHandler.__init__(self, filename)
         self._symbols_wanted = set()
@@ -127,12 +130,7 @@ class InputProcessor(TransactionHandler):
 
         if currency != config.BASECUR and currency != 'unk':
             print('adjusted %s %s ' % (sym, currency))
-            pair = (currency, config.BASECUR )
-            currency_df = self.currency_hist.get(currency,
-                                                 self._inputsource.get_currency_history(pair, fromdate, enddate))
-
-            if currency not in self.currency_hist:
-                self.currency_hist[currency] = currency_df
+            currency_df = self.get_currency_hist(currency, enddate, fromdate)
             inc=['Open', 'High', 'Low', 'Close']
             currency_df=currency_df[inc]
             hh= hist[inc].mul(currency_df, fill_value=numpy.NaN)
@@ -147,6 +145,22 @@ class InputProcessor(TransactionHandler):
             return hh ,currency
         else:
             return None , currency
+
+    def get_currency_hist(self, currency, enddate, fromdate):
+        pair = (config.BASECUR, currency)
+        if self.currencyrange !=None: #if currencyrange is updated, then entire dict should be
+            if currency in self.currency_hist:
+                if (fromdate!= self.currencyrange[0] or  enddate!= self.currencyrange[1]):
+                    self.currency_hist= {}
+                    #[currency]=  self._inputsource.get_currency_history(pair, fromdate, enddate)
+
+        currency_df = self.currency_hist.get(currency,
+                                             self._inputsource.get_currency_history(pair, fromdate, enddate))
+        self.currencyrange = ( fromdate, enddate)
+
+        if currency not in self.currency_hist:
+            self.currency_hist[currency] = currency_df
+        return currency_df
 
     def process_history(self, partial_symbols_update=set()):
 
@@ -217,6 +231,8 @@ class InputProcessor(TransactionHandler):
             else:
                 _cur_relprofit_bystock[stock] += (-1) * ( cur_action[1][0] * (
                             cur_action[1][1]  - _cur_avg_cost_bystock[stock]))
+                # _cur_relprofit_bystock[stock] += cur_action[1][0] * (
+                                        # cur_action[1][1] * (-1) - _cur_avg_cost_bystock[stock])
                 # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += cur_action[1][0]
@@ -359,33 +375,14 @@ class InputProcessor(TransactionHandler):
         #self.reg_panel.set_index()
 
     def adjust_for_currency(self):
-        TOADJUST=[ 'unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
+
         relevant_currencies = set([v['currency'] for v in self.symbol_info.values() if not (v is None)]) - \
                               set(['unk', config.BASECUR])
         for x in relevant_currencies:
             self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
         dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
 
-        multiIndex = pd.MultiIndex.from_product([TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
-        df=pd.DataFrame(index=self.reg_panel.index,columns=multiIndex)
-        for x in TOADJUST:
-            for k,v in dic.items():
-                df.loc[:,(x,k)] = dic[k]
-        nn=self.reg_panel.copy()
-        uu= self.reg_panel[multiIndex].mul(df)
-        nn[multiIndex] =uu
-        nn['alldates']= pd.DataFrame.from_dict(self._alldates_adjusted)
-        nn['unrel_profit']= pd.DataFrame.from_dict(self._unrel_profit_adjusted)
-        nn.drop(columns='tot_profit_by_stock',inplace=True)
-
-        t= nn['rel_profit_by_stock'] + nn['unrel_profit']
-        t.columns = pd.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)], names=['Name', 'Symbols'])
-
-        #nn['tot_profit_by_stock']=
-        self.adjusted_panel=pd.concat([nn,t], axis=1)
-
-
-
+        self.adjusted_panel=self.get_adjusted_df_for_currency(dic)
 
     def init_input(self):
         #todo: make dataframe... but it is 3d...
@@ -398,6 +395,22 @@ class InputProcessor(TransactionHandler):
         self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+
+    def get_adjusted_df_for_currency(self, dic):
+
+
+        multiIndex = pd.MultiIndex.from_product([InputProcessor.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
+        df = pd.DataFrame(index=self.reg_panel.index, columns=multiIndex)
+        for x in InputProcessor.TOADJUST:
+            for k, v in dic.items():
+                df.loc[:, (x, k)] = dic[k]
+        nn = self.reg_panel.copy()
+        uu = self.reg_panel[multiIndex].mul(df)
+        nn[multiIndex] = uu
+        nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
+        nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)
+        return nn
+
 
     def filter_input(self,keys):
 
