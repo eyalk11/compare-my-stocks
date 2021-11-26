@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1604</width>
-    <height>945</height>
+    <height>910</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,6 +26,9 @@
       <layout class="QHBoxLayout" name="horizontalLayout_4">
        <item>
         <layout class="QGridLayout" name="gridLayout_3">
+         <property name="horizontalSpacing">
+          <number>6</number>
+         </property>
          <item row="0" column="0">
           <widget class="QTabWidget" name="tabWidget">
            <property name="sizePolicy">
@@ -37,7 +40,7 @@
            <property name="minimumSize">
             <size>
              <width>1300</width>
-             <height>500</height>
+             <height>550</height>
             </size>
            </property>
            <widget class="QWidget" name="tabWidget_8Page1">
@@ -51,7 +54,7 @@
              </sizepolicy>
             </property>
             <attribute name="title">
-             <string>page</string>
+             <string>graph1</string>
             </attribute>
            </widget>
           </widget>
@@ -351,7 +354,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>350</height>
+             <height>300</height>
             </size>
            </property>
            <layout class="QHBoxLayout" name="horizontalLayout_10">
@@ -622,7 +625,7 @@
                        <property name="minimumSize">
                         <size>
                          <width>40</width>
-                         <height>0</height>
+                         <height>60</height>
                         </size>
                        </property>
                        <property name="title">
@@ -847,7 +850,7 @@
                      <string>Add Portofolio to graph</string>
                     </property>
                     <property name="checked">
-                     <bool>false</bool>
+                     <bool>true</bool>
                     </property>
                    </widget>
                    <widget class="QCheckBox" name="start_hidden">

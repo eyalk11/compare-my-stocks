@@ -9,84 +9,13 @@ import matplotlib
 import numpy
 import pandas as pd
 import pytz
-from dateutil import parser
 
 from config import config
 from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
 
 from input.inputsource import InputSource, IBSource, InvestPySource
 from engine.symbolsinterface import SymbolsInterface
-
-
-
-class TransactionHandler(SymbolsInterface):
-    def __init__(self, filename):
-        self._fn = filename
-
-    def try_to_use_cache(self):
-        try:
-            (self._buydic, self._buysymbols) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
-    def get_portfolio_stocks(self):  # TODO:: to fix
-
-        return [config.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
-
-    def populate_buydic(self):
-        if self.try_to_use_cache():
-            return
-        try:
-            x = pd.read_csv(self._fn)
-        except Exception as e:
-            print(f'{e} while getting buydic data')
-            return
-        try:
-            self.read_trasaction_table(x)
-        except Exception as e:
-            print(f'{e} while reading transaction data')
-            return
-
-        if config.BUYDICTCACHE:
-            try:
-                pickle.dump((self._buydic, self._buysymbols), open(config.BUYDICTCACHE, 'wb'))
-                print('dumpted')
-            except Exception as e:
-                print(e)
-
-    def read_trasaction_table(self, x):
-        self._buydic = {}
-        self._buysymbols = set()
-        x = x.loc[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
-        #   x['TimeOfDay']
-        for t in x.iterrows():  # zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],
-            #   x['TimeOfDay']):
-            # if not math.isnan(t[1]):
-            #    self._symbols.add(t[1])
-
-            if (self.params.portfolio and t[0] != self.params.portfolio) or math.isnan(t[2]):
-                continue
-            dt = str(t[-2]) + ' ' + str(t[-1])
-            # print(dt)
-            try:
-                if math.isnan(t[-2]):
-                    print(t)
-            except:
-                pass
-            arr = dt.split(' ')
-
-            dt = parser.parse(' '.join([arr[0], arr[2], arr[1]]))
-            while dt in self._buydic:
-                dt += datetime.timedelta(milliseconds=10)
-
-            # aa=matplotlib.dates.date2num(dt)
-            # timezone = pytz.timezone("UTC")
-            # dt=timezone.normalize(dt)
-            # dt=dt.replace(tzinfo=None)
-            self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1])  # Qty,cost,sym
-            self._buysymbols.add(t[1])
+from input.transactionhandler import TransactionHandler
 
 
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
@@ -96,6 +25,7 @@ class InputProcessor(TransactionHandler):
 
     def __init__(self, filename):
         TransactionHandler.__init__(self, filename)
+        self.cached_used = None
         self._symbols_wanted = set()
         self.symbol_info = {}
 
@@ -109,6 +39,7 @@ class InputProcessor(TransactionHandler):
 
         self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
+        self.currencyrange=None
 
 
 
@@ -210,9 +141,11 @@ class InputProcessor(TransactionHandler):
             else:
                 print('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))
                 query_source = False
+                self.cached_used=True
         except Exception as e:
             e = e
             print('failed to use cache')
+            self.cached_used = False
         return query_source
 
     def process_hist_internal(self, b, cur_action, partial_symbols_update):
@@ -231,8 +164,9 @@ class InputProcessor(TransactionHandler):
             else:
                 _cur_relprofit_bystock[stock] += (-1) * ( cur_action[1][0] * (
                             cur_action[1][1]  - _cur_avg_cost_bystock[stock]))
-                # _cur_relprofit_bystock[stock] += cur_action[1][0] * (
-                                        # cur_action[1][1] * (-1) - _cur_avg_cost_bystock[stock])
+
+                 #_cur_relprofit_bystock[stock] += cur_action[1][0] * (
+                 #                        cur_action[1][1] * (-1) - _cur_avg_cost_bystock[stock])
                 # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += cur_action[1][0]
@@ -283,10 +217,11 @@ class InputProcessor(TransactionHandler):
                     v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
 
                 self._alldates[sym][tim] = v[0]
-                self._alldates_adjusted[sym][tim] = v[1]
+                self._alldates_adjusted[sym][tim]=v[1]
                 _cur_stock_price[sym] = v
                 #v = v[0]
                 self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
+                self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
                 self._unrel_profit[sym][tim] = v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
                 self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
@@ -311,6 +246,7 @@ class InputProcessor(TransactionHandler):
                 self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
 
     def get_data_from_source(self, partial_symbols_update):
+        self.symbol_info_tmp={}
         localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
         if not partial_symbols_update:
             self._usable_symbols = set()
@@ -325,10 +261,11 @@ class InputProcessor(TransactionHandler):
 
             l, hist = self._inputsource.get_symbol_history(sym_corrected, self.params.transactions_fromdate, todate,
                                                            iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
-            self.symbol_info[sym] = l
+            self.symbol_info_tmp[sym] = l
             if hist is None:
                 print('bad %s' % sym)
                 continue
+            self.symbol_info[sym] = l
 
             adjusted, currency = self.resolve_currency(sym, l, hist, transactions_fromdate, todate)
             if not (self.symbol_info[sym] is None):
@@ -350,7 +287,15 @@ class InputProcessor(TransactionHandler):
                     self._hist_by_date[date] = {}
 
                 self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
-        pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now()), open(config.HIST_F, 'wb'))
+        import shutil
+        try:
+            shutil.copy(config.HIST_F,config.HIST_F_BACKUP)
+            try:
+                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now()), open(config.HIST_F, 'wb'))
+            except:
+                print("error in dumping hist")
+        except:
+            print('error in copy, wont save')
 
     def convert_dicts_to_df(self):
         dataframes = []
@@ -388,6 +333,7 @@ class InputProcessor(TransactionHandler):
         #todo: make dataframe... but it is 3d...
         self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._alldates_adjusted= defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._adjusted_value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # how much we hold
         self._avg_cost_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # cost per unit
@@ -397,6 +343,10 @@ class InputProcessor(TransactionHandler):
         self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
 
     def get_adjusted_df_for_currency(self, dic):
+        def return_subpanel(s,dic):
+            t=pd.DataFrame.from_dict(dic)
+            t.columns=pd.MultiIndex.from_product([[s], list(t.columns)], names=['Name', 'Symbols'])
+            return t
 
 
         multiIndex = pd.MultiIndex.from_product([InputProcessor.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
@@ -404,12 +354,31 @@ class InputProcessor(TransactionHandler):
         for x in InputProcessor.TOADJUST:
             for k, v in dic.items():
                 df.loc[:, (x, k)] = dic[k]
-        nn = self.reg_panel.copy()
+
+        nn=pd.DataFrame(index=self.reg_panel.index, columns=self.reg_panel.columns)#[ (c,d)  for (c,d) in   self.reg_panel.columns if c!='tot_profit_by_stock']  )
+        for x in SymbolsInterface.TOKEEP:
+           nn[x] = self.reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
+
         uu = self.reg_panel[multiIndex].mul(df)
         nn[multiIndex] = uu
-        nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
-        nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)
-        return nn
+       # nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
+        #nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)
+        #nn['value']  = pd.DataFrame.from_dict(self._adjusted_value)
+
+
+
+
+        TODIS= ['alldates','unrel_profit','value','tot_profit_by_stock']
+
+        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not  in TODIS]]
+        n1= return_subpanel('value',self._adjusted_value)
+        n2= return_subpanel('alldates', self._alldates_adjusted)
+        n3 = return_subpanel('unrel_profit',self._unrel_profit_adjusted)
+        nn['rel_profit_by_stock']= nn['rel_profit_by_stock'].fillna(0)
+        t = nn['rel_profit_by_stock'] + n3['unrel_profit']
+        t.columns = pd.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)], names=['Name', 'Symbols'])
+        x= pd.concat([nn,t,n1,n2,n3], axis=1)
+        return  x
 
 
     def filter_input(self,keys):

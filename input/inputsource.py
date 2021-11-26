@@ -1,5 +1,6 @@
 import datetime
 import os
+import random
 from abc import ABC, abstractmethod
 
 import pandas as pd
@@ -53,6 +54,8 @@ class InvestPySource(InputSource):
             return None, None
 
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
+        import time
+        time.sleep(random.randrange(0,300)/100)
         if iscrypto:
             return self._get_crypto_history(sym,startdate,enddate)
         else:
@@ -61,11 +64,17 @@ class InvestPySource(InputSource):
     def _get_symbol_history(self, sym, startdate, enddate):
         try:
             l=None
+            tmpl=None
             for l in InvestPySource.investpy.search_quotes(text=sym,n_results=10):
                 l=l.__dict__
                 if l['exchange'].lower() in  config.EXCHANGES:
-                    break
+                    tmpl=l
+                    if l['symbol'].lower()==sym.lower():
+                        break #everythingisfine
             else:
+                if tmpl:
+                    print('using unmatch sym. n : %s o: %s ' % (tmpl['symbol'],sym))
+                    l=tmpl
                 if l:
                     print(f'not  right exchange {sym}, picking {l}' )
                 else:

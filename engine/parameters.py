@@ -63,7 +63,7 @@ class Parameters:
     increase_fig: bool = False
     baseclass = dataclasses.InitVar
     ignore_minmax: bool = False
-    adjusted_for_base_cur :bool = True
+    adjusted_for_base_cur :bool =True
     adjust_to_currency : bool= True
     currency_to_adjust: str = None
 

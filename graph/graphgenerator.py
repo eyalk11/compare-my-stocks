@@ -6,7 +6,7 @@ import mplcursors
 from matplotlib import pyplot as plt
 import numpy
 from config import config
-from common.common import USEQT
+USEQT=config.USEQT
 from common.common import Types
 plt.rcParams["figure.autolayout"] = False
 

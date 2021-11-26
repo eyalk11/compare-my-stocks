@@ -5,6 +5,7 @@ from engine.parameters import Parameters
 
 class SymbolsInterface(metaclass=ABCMeta):
     TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
+    TOKEEP= ['holding_by_stock','rel_profit_by_stock','avg_cost_by_stock']
 
     @abstractmethod
     def get_options_from_groups(self, ls):

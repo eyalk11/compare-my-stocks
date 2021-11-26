@@ -3,9 +3,7 @@ from collections import namedtuple
 
 import numpy as np
 
-USEWX=0
-USEWEB=0
-USEQT=1
+
 import sys
 from PySide6 import QtCore
 from PySide6.QtCore import  Signal
@@ -103,7 +101,7 @@ class MySignal:
         self.emitter.signal.connect(slot)
 
 
-Serialized=namedtuple('Serialized', ['beforedata','afterdata','act'])
+Serialized=namedtuple('Serialized', ['origdata','beforedata','afterdata','act'])
 dictfilt = lambda x, y: dict([(i, x[i]) for i in x if i in set(y)])
 dictnfilt = lambda x, y: dict([(i, x[i]) for i in x if not(i in set(y))])
 

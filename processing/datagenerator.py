@@ -40,6 +40,7 @@ class DataGenerator(SymbolsInterface, InputData):
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
 
         df,use_ext = self.get_df_by_type(type)
+        self.orig_df = df
         self.used_type=type
         self.to_use_ext = use_ext and self.params.use_ext
 
@@ -238,4 +239,4 @@ class DataGenerator(SymbolsInterface, InputData):
     def serialize_me(self):
         with open(config.SERIALIZEDFILE,'wb') as f:
             import pickle
-            pickle.dump(Serialized(self.bef_rem_data, self.after_filter_data, self.act), f)
+            pickle.dump(Serialized(self.orig_df,self.bef_rem_data, self.after_filter_data, self.act), f)
