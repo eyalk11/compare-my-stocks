@@ -12,7 +12,7 @@ from PySide6.QtCore import  Signal
 from enum import Flag, auto, Enum
 
 
-class Types(Flag):
+class Types(int,Flag):
     ABS = 0
     PRICE=auto()
     VALUE=auto()
@@ -33,13 +33,13 @@ class Types(Flag):
 
 
 
-class UseCache(Enum):
+class UseCache(int,Enum):
     DONT=0
     USEIFAVALIABLE=1
     FORCEUSE=2
 
 
-class UniteType(Flag):
+class UniteType(int,Flag):
     NONE=0
     SUM=auto()
     AVG=auto()

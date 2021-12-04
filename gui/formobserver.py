@@ -1,16 +1,19 @@
+import copy
+import json
 import os.path
 from abc import abstractmethod
 from functools import partial
 
 import PySide6.QtCore
 import PySide6.QtWidgets
+
 from PySide6 import QtCore
-from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton
+from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton,QLineEdit,QInputDialog
 from superqt.sliders._labeled import EdgeLabelMode
 
 from common.common import UniteType, Types
 from config import config
-from engine.parameters import Parameters
+from engine.parameters import Parameters, EnhancedJSONEncoder
 from engine.symbolsinterface import SymbolsInterface
 
 import json_editor_ui
@@ -49,10 +52,47 @@ class ListsObserver:
         org: QListWidget = self.window.refstocks  # type:
         org.addItem(self.window.addstock.currentText())
         self.update_graph(1)
-
-
-class FormObserver(ListsObserver):
+from django.core.serializers.json import Deserializer
+class GraphsHandler:
     def __init__(self):
+        self.graphs= {}
+        self.lastgraphtext=""
+
+    def load_existing_graphs(self):
+        try:
+            #gg=Deserializer(open(config.GRAPHFN,'rt'))
+            gg=json.load(open(config.GRAPHFN,'rt'))#,object_hook=Deserializer
+            self.graphs={k:Parameters.load_from_json_dict(v) for k,v in gg.items()}
+            self.update_graph_list()
+        except:
+            print('err loading graphs')
+            return
+
+
+    def update_graph_list(self):
+        self.window.graphList.clear()
+        self.window.graphList.addItems(list(self.graphs.keys()))
+
+    def save_graph(self):
+        text, ok = QInputDialog().getText(self, "Enter Graph Name",
+        "Graph name:",QLineEdit.Normal,
+                                                  self.lastgraphtext)
+        if ok and text:
+            self.graphs[text]= copy.copy(self._graphObj.params)
+            self.lastgraphtext=text
+        json.dump(self.graphs,open(config.GRAPHFN,'wt'),cls=EnhancedJSONEncoder)
+        self.update_graph_list()
+
+
+    def load_graph(self):
+        text=self.window.graphList.currentItem().text()
+        self._graphObj.params = copy.copy(self.graphs[text])
+        self.update_graph(1,force=True)
+        self.setup_init_values()
+
+class FormObserver(ListsObserver,GraphsHandler):
+    def __init__(self):
+        GraphsHandler.__init__(self)
         self._graphObj : SymbolsInterface = None
         self.window=None
         self._toshow=True
@@ -174,6 +214,7 @@ class FormObserver(ListsObserver):
         self._graphObj._cur_category=category
         self.set_groups_values(0)
 
+
     def setup_observers(self):
         genobs=lambda x:partial(self.attribute_set, x)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
@@ -206,6 +247,9 @@ class FormObserver(ListsObserver):
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
         self.window.categoryCombo.currentIndexChanged.connect(self.category_changed)
         self.window.debug_btn.pressed.connect(self._graphObj.serialize_me)
+        self.window.save_graph_btn.pressed.connect(self.save_graph)
+        self.window.load_graph_btn.pressed.connect(self.load_graph)
+
 
         for rad in self.rad_types:
             rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
@@ -265,9 +309,11 @@ class FormInitializer(FormObserver):
         self.window.use_groups.setChecked(self._graphObj.params.use_groups)
         self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
 
+        self.window.home_currency_combo.clear()
         self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
 
         self.set_all_toggled_value()
+        self.load_existing_graphs()
 
     def set_groups_values(self, isinit=1):
         b=False

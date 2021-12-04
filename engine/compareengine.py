@@ -31,6 +31,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
     @property
     def Groups(self):
         return self._groups_by_cat[self._cur_category]
+
     def get_options_from_groups(self,ls):
         if not ls:
             return []

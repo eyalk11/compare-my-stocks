@@ -1,9 +1,11 @@
 import dataclasses
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
 
+import dateutil
 import numpy
 
 from config import config
@@ -33,8 +35,18 @@ def paramaware(klass):
     klass.update_from=update_from
 
     return klass
+from django.core.serializers.json import DjangoJSONEncoder,Deserializer
 
 
+class EnhancedJSONEncoder(DjangoJSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
+
+#from dataclasses_json import dataclass_json
+
+#@dataclass_json
 @paramaware
 @dataclass
 class Parameters:
@@ -67,6 +79,12 @@ class Parameters:
     adjust_to_currency : bool= True
     currency_to_adjust: str = None
 
+    @classmethod
+    def load_from_json_dict(cls,dic):
+        for d in dic:
+            if 'date' in d and dic[d]:
+                dic[d]= dateutil.parser.parse(dic[d])
+        return Parameters(dic)
     def __post_init__(self,baseclass=None):
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass
