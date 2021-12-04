@@ -73,20 +73,17 @@ class DataGenerator(SymbolsInterface, InputData):
         fulldf = fulldf.drop(list(
             df.index[list((np.all(np.isnan(arr), axis=0)))]))  # to check drop dates in which all stocks are none.
 
+        if self.used_type & (Types.COMPARE | Types.PRECENTAGE | Types.DIFF):
+            fullarr = np.array(fulldf).transpose() #again...
+            fulldf = fulldf.iloc[get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE):]
+            if self.used_type & (Types.RELTOEND):
+                fulldf = fulldf.iloc[:get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE, last=1)]
 
         df = fulldf[sorted(list(cols - comp_set))]
         arr = np.array(df).transpose()  # will just work with arr
 
         if len(arr)==0:
             raise NoDataException("arr is empty")
-
-        if self.used_type & (Types.COMPARE | Types.PRECENTAGE | Types.DIFF):
-            fullarr= np.array(fulldf).transpose()
-            df = df.iloc[get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE):]
-            if self.used_type & (Types.RELTOEND):
-                df = df.iloc[:get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE,last=1)]
-
-            arr = np.array(df).transpose()
 
         self.tmp_colswithoutext=  set(colswithoutext).intersection(df.columns)
         self.after_filter_data=fulldf.copy()
@@ -224,16 +221,25 @@ class DataGenerator(SymbolsInterface, InputData):
     def readjust_for_currency(self,ncurrency):
         currency_hist= self.get_currency_hist(ncurrency,self.currencyrange[0],self.currencyrange[1]) #should be fine, the range
         simplified= (currency_hist['Open']+currency_hist['Close'])/2
-        rate= self._relevant_currencies_rates[ncurrency]
+        rate= self.get_relevant_currency(ncurrency)
 
         nn= self.adjusted_panel.copy() #adjusted_panel is already at base.
         for x in self.TOADJUST:
-            nn[x]= nn[x].mul(rate)
+            nn[x]= nn[x].mul(1/rate)
+        simplified =pandas.DataFrame(simplified,columns=['data'])
+        simplified=simplified.set_index(matplotlib.dates.date2num(list(simplified.index)))
+        missingvalues = set(list(nn.index)) - set(list(simplified.index))
+        print('missing in readjust', len(missingvalues))
+        simplified=simplified.reindex(nn.index,method='pad')
 
-        missingvalues = set(list(nn.index))-        set(list(simplified.index))
-        print('missing in readjust' , len(missingvalues))
 
-        nn['alldates']=nn['alldates'].mul(simplified,fill_value=numpy.NaN)
+        for y in SymbolsInterface.TOADJUSTLONG:
+            nn[y]=nn[y].mul(simplified['data'],axis=0)
+
+        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not in ['tot_profit_by_stock']]]
+        t = nn['rel_profit_by_stock'] + nn['unrel_profit']
+        t.columns = pandas.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)], names=['Name', 'Symbols'])
+        nn = pandas.concat([nn, t], axis=1)
         return nn
 
     def serialize_me(self):

@@ -2,9 +2,10 @@ import sys
 import time
 
 import matplotlib
+#from matplotlib import pyplot as plt
+from PySide6.QtWidgets import QApplication
 from matplotlib import pyplot as plt
-
-from common.common import InputSourceType, Types
+from common.common import InputSourceType, Types, UniteType
 from config import config
 from engine.compareengine import CompareEngine
 from engine.parameters import Parameters
@@ -44,8 +45,8 @@ if __name__ == "__main__":
 
     gg = initialize_graph_and_ib()
     gg.gen_graph(Parameters(
-        type=Types.PRICE, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
-        show_graph=False))
+        type=Types.PRICE,unite_by_group=UniteType.ADDPROT,  isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
+        show_graph=False))#,adjust_to_currency=True,currency_to_adjust='ILS'))
 
     if not SIMPLEMODE:
         mainwindow= MainWindow(gg)

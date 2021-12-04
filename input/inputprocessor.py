@@ -61,7 +61,7 @@ class InputProcessor(TransactionHandler):
 
         if currency != config.BASECUR and currency != 'unk':
             print('adjusted %s %s ' % (sym, currency))
-            currency_df = self.get_currency_hist(currency, enddate, fromdate)
+            currency_df = self.get_currency_hist(currency, fromdate,enddate )
             inc=['Open', 'High', 'Low', 'Close']
             currency_df=currency_df[inc]
             hh= hist[inc].mul(currency_df, fill_value=numpy.NaN)
@@ -77,7 +77,7 @@ class InputProcessor(TransactionHandler):
         else:
             return None , currency
 
-    def get_currency_hist(self, currency, enddate, fromdate):
+    def get_currency_hist(self, currency, fromdate, enddate):
         pair = (config.BASECUR, currency)
         if self.currencyrange !=None: #if currencyrange is updated, then entire dict should be
             if currency in self.currency_hist:
@@ -131,7 +131,7 @@ class InputProcessor(TransactionHandler):
     def load_cache(self):
         query_source = True
         try:
-            hist_by_date, self.symbol_info, self._cache_date = pickle.load(open(config.HIST_F, 'rb'))
+            hist_by_date, self.symbol_info, self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
             if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
             self.update_usable_symbols()
@@ -277,9 +277,9 @@ class InputProcessor(TransactionHandler):
             if adjusted is not None:
                 adjusted = adjusted.to_dict('index')
             prec = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
-            if prec / numdays < config.MINIMALPRECREQ and numdays > config.MINCHECKREQ:
-                print('not enough days %s %f' % (sym, prec / numdays))
-                continue
+            #if prec / numdays < config.MINIMALPRECREQ and numdays > config.MINCHECKREQ:
+            #    print('not enough days %s %f' % (sym, prec / numdays))
+            #    continue
             self._usable_symbols.add(sym)
 
             for date, dic in hist.items():
@@ -291,7 +291,7 @@ class InputProcessor(TransactionHandler):
         try:
             shutil.copy(config.HIST_F,config.HIST_F_BACKUP)
             try:
-                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now()), open(config.HIST_F, 'wb'))
+                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(),self.currency_hist,self.currencyrange), open(config.HIST_F, 'wb'))
             except:
                 print("error in dumping hist")
         except:
@@ -318,6 +318,11 @@ class InputProcessor(TransactionHandler):
         self.reg_panel=self.reg_panel
 
         #self.reg_panel.set_index()
+
+    def get_relevant_currency(self,x):
+        if x not in self._relevant_currencies_rates:
+            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
+        return  self._relevant_currencies_rates[x]
 
     def adjust_for_currency(self):
 
@@ -368,9 +373,9 @@ class InputProcessor(TransactionHandler):
 
 
 
-        TODIS= ['alldates','unrel_profit','value','tot_profit_by_stock']
 
-        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not  in TODIS]]
+
+        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not in self.TOADJUSTLONG]]
         n1= return_subpanel('value',self._adjusted_value)
         n2= return_subpanel('alldates', self._alldates_adjusted)
         n3 = return_subpanel('unrel_profit',self._unrel_profit_adjusted)
@@ -403,7 +408,10 @@ class InputProcessor(TransactionHandler):
         print('elasped populating : %s' % elapsed_time)
         if not partial_symbol_update:
             required=set(self.required_syms(True,True))
-            self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
+            if config.DOWNLOADDATAFORPROT:
+                self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
+            else:
+                self._symbols_wanted= required.copy()
         else:
             self._symbols_wanted.update(partial_symbol_update)
         t = time.process_time()

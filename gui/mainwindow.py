@@ -88,6 +88,7 @@ class MainWindow(QMainWindow, FormInitializer):
         self.window.min_crit : QLabeledDoubleRangeSlider
         self.window.min_crit.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
         self.window.min_crit.setEdgeLabelMode(EdgeLabelMode.NoLabel)
+        self.window.min_crit.update()
         #self.window.min_crit.label_shift_x = 10
         #self.window.max_num.label_shift_x = 10
 

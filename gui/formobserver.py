@@ -177,7 +177,7 @@ class FormObserver(ListsObserver):
     def setup_observers(self):
         genobs=lambda x:partial(self.attribute_set, x)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
-        #self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
+        self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
         self.window.min_crit.valueChanged.connect(genobs('valuerange'))
         self.window.max_num.valueChanged.connect(genobs('numrange'))
 
@@ -265,6 +265,7 @@ class FormInitializer(FormObserver):
         self.window.use_groups.setChecked(self._graphObj.params.use_groups)
         self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
 
+        self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
 
         self.set_all_toggled_value()
 

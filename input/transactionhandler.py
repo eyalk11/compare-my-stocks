@@ -12,6 +12,7 @@ from engine.symbolsinterface import SymbolsInterface
 class TransactionHandler(SymbolsInterface):
     def __init__(self, filename):
         self._fn = filename
+        self._buysymbols = set()
 
     def try_to_use_cache(self):
         try:
