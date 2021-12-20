@@ -78,13 +78,14 @@ class Parameters:
     adjusted_for_base_cur :bool =True
     adjust_to_currency : bool= True
     currency_to_adjust: str = None
+    cur_category:str = None
 
     @classmethod
     def load_from_json_dict(cls,dic):
         for d in dic:
             if 'date' in d and dic[d]:
                 dic[d]= dateutil.parser.parse(dic[d])
-        return Parameters(dic)
+        return Parameters(**dic)
     def __post_init__(self,baseclass=None):
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass
@@ -124,3 +125,5 @@ class ParameterError(Exception):
     pass
 
 
+def copyit(cls):
+    return Parameters(**dataclasses.asdict(cls))

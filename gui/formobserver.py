@@ -1,22 +1,20 @@
-import copy
 import json
-import os.path
 from abc import abstractmethod
 from functools import partial
 
 import PySide6.QtCore
 import PySide6.QtWidgets
 
-from PySide6 import QtCore
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton,QLineEdit,QInputDialog
 from superqt.sliders._labeled import EdgeLabelMode
 
 from common.common import UniteType, Types
 from config import config
-from engine.parameters import Parameters, EnhancedJSONEncoder
+from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
 
 import json_editor_ui
+
 
 class ListsObserver:
     @staticmethod
@@ -52,7 +50,8 @@ class ListsObserver:
         org: QListWidget = self.window.refstocks  # type:
         org.addItem(self.window.addstock.currentText())
         self.update_graph(1)
-from django.core.serializers.json import Deserializer
+
+
 class GraphsHandler:
     def __init__(self):
         self.graphs= {}
@@ -78,7 +77,7 @@ class GraphsHandler:
         "Graph name:",QLineEdit.Normal,
                                                   self.lastgraphtext)
         if ok and text:
-            self.graphs[text]= copy.copy(self._graphObj.params)
+            self.graphs[text]= copyit(self._graphObj.params)
             self.lastgraphtext=text
         json.dump(self.graphs,open(config.GRAPHFN,'wt'),cls=EnhancedJSONEncoder)
         self.update_graph_list()
@@ -86,7 +85,7 @@ class GraphsHandler:
 
     def load_graph(self):
         text=self.window.graphList.currentItem().text()
-        self._graphObj.params = copy.copy(self.graphs[text])
+        self._graphObj.params = copyit(self.graphs[text])
         self.update_graph(1,force=True)
         self.setup_init_values()
 
@@ -102,9 +101,14 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._toselectall=False
 
     def update_graph(self,reset_ranges,force=False):
-        if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
-            self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
-            self.update_ranges(reset_ranges)
+        try:
+            if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
+                self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
+                self.update_ranges(reset_ranges)
+        except:
+            print('failed updating graph')
+            import traceback
+            traceback.print_exc()
 
     def type_unite_toggled(self, name, value):
         unite_ref=False
@@ -207,11 +211,12 @@ class FormObserver(ListsObserver,GraphsHandler):
     def on_json_closed(self,*args):
         self._graphObj.read_groups_from_file()
         self.set_groups_values(0)
+
     def category_changed(self,num):
         if self.ignore_cat_changes:
             return
         category= self.window.categoryCombo.itemText(num)
-        self._graphObj._cur_category=category
+        self._graphObj.cur_category=category
         self.set_groups_values(0)
 
 

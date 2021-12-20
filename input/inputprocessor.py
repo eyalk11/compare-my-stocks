@@ -16,7 +16,8 @@ from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
 from input.inputsource import InputSource, IBSource, InvestPySource
 from engine.symbolsinterface import SymbolsInterface
 from input.transactionhandler import TransactionHandler
-
+#import input.earningsinp
+from input.earningsinp import get_earnings
 
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
@@ -25,10 +26,12 @@ class InputProcessor(TransactionHandler):
 
     def __init__(self, filename):
         TransactionHandler.__init__(self, filename)
+        self._income, self._revenue, = None,None
         self.cached_used = None
         self._symbols_wanted = set()
         self.symbol_info = {}
-
+        self._usable_symbols = None
+        self._bad_symbols = set()
         if config.INPUTSOURCE == InputSourceType.IB:
             self._inputsource: InputSource = IBSource()
         else:
@@ -40,7 +43,6 @@ class InputProcessor(TransactionHandler):
         self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
         self.currencyrange=None
-
 
 
     def resolve_currency(self, sym, l, hist, fromdate, enddate):
@@ -121,11 +123,13 @@ class InputProcessor(TransactionHandler):
         self.currency_hist= {}
         if query_source:
             self.get_data_from_source(partial_symbols_update)
+            self.save_data()
 
         self.simplify_hist(partial_symbols_update)
 
         self.process_hist_internal(b, cur_action, partial_symbols_update)
-        self.convert_dicts_to_df()
+
+        self.convert_dicts_to_df_and_add_earnings()
         self.adjust_for_currency()
 
     def load_cache(self):
@@ -135,6 +139,7 @@ class InputProcessor(TransactionHandler):
             if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
             self.update_usable_symbols()
+            print(f'cache symbols used {sorted(list(self._usable_symbols))}')
             if not self.params.use_cache == UseCache.FORCEUSE:
                 query_source = not (set(self._symbols_wanted) <= set(
                     self._usable_symbols))  # all the buy and required are in there
@@ -250,7 +255,10 @@ class InputProcessor(TransactionHandler):
         localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
         if not partial_symbols_update:
             self._usable_symbols = set()
+            self._bad_symbols = set()
             self._hist_by_date = collections.OrderedDict()  # like all dates but by
+        else:
+            self._bad_symbols=self._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
         for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
             todate = self.params.transactions_todate if self.params.transactions_todate is not None else datetime.datetime.now()
 
@@ -264,6 +272,7 @@ class InputProcessor(TransactionHandler):
             self.symbol_info_tmp[sym] = l
             if hist is None:
                 print('bad %s' % sym)
+                self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
             self.symbol_info[sym] = l
 
@@ -287,17 +296,21 @@ class InputProcessor(TransactionHandler):
                     self._hist_by_date[date] = {}
 
                 self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
+
+
+    def save_data(self):
         import shutil
         try:
-            shutil.copy(config.HIST_F,config.HIST_F_BACKUP)
+            shutil.copy(config.HIST_F, config.HIST_F_BACKUP)
             try:
-                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(),self.currency_hist,self.currencyrange), open(config.HIST_F, 'wb'))
+                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
+                             self.currencyrange), open(config.HIST_F, 'wb'))
             except:
                 print("error in dumping hist")
         except:
             print('error in copy, wont save')
 
-    def convert_dicts_to_df(self):
+    def convert_dicts_to_df_and_add_earnings(self):
         dataframes = []
         self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
                       self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
@@ -305,19 +318,43 @@ class InputProcessor(TransactionHandler):
         NONADJUSTEDDICTS= len(self.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
         seldict= self.dicts[:NONADJUSTEDDICTS]
+
+        income, revenue, cs = get_earnings()
+
+        combinedindex= sorted( list(set(self._fset).union(set (cs.index)).union(set(income.index)).union(set(revenue.index))))
+
         for name, dic in zip(self.dicts_names,seldict):
-            #for x in self._fset:
-            #    dic[x]
-            df = pd.DataFrame(dic,index=self._fset)
+            df = pd.DataFrame(dic,index=combinedindex)
+
             # df["Name"]= name
             df.columns = pd.MultiIndex.from_product([[name], list(df.columns)], names=['Name', 'Symbols'])
 
             dataframes.append(df)
 
+        try:
+            dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,cs,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,cs,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
+        except:
+            print('earnings failed ')
+
         self.reg_panel = pd.concat(dataframes,axis=1)
         self.reg_panel=self.reg_panel
 
         #self.reg_panel.set_index()
+
+    @staticmethod
+    def return_df(df, cur,commonstock_df,name):
+        cur.sort_index(axis=0, inplace=True)
+        cur=cur.reindex(sorted(list(df.index)),method='pad')
+        commonstock_df.sort_index(axis=0,inplace=True)
+        commonstock_df=commonstock_df.reindex(df.index,method='pad')
+        eps= cur.divide(commonstock_df)
+        cur= df[cur.columns].divide(eps) #pr ps / eps = price / earnings
+        cur.columns = pd.MultiIndex.from_product([[name], list(cur.columns)], names=['Name', 'Symbols'])
+        return cur
+
+
+
+
 
     def get_relevant_currency(self,x):
         if x not in self._relevant_currencies_rates:
@@ -407,16 +444,18 @@ class InputProcessor(TransactionHandler):
         elapsed_time = time.process_time() - t
         print('elasped populating : %s' % elapsed_time)
         if not partial_symbol_update:
+            self.used_unitetype = self.params.unite_by_group
             required=set(self.required_syms(True,True))
             if config.DOWNLOADDATAFORPROT:
                 self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
             else:
                 self._symbols_wanted= required.copy()
         else:
-            self._symbols_wanted.update(partial_symbol_update)
+            self._symbols_wanted.update(partial_symbol_update) #will try also the symbols wanted. That are generally only updated first..
         t = time.process_time()
         self.process_history(partial_symbol_update)
         # do some stuff
         elapsed_time = time.process_time() - t
         print('elasped : %s' % elapsed_time)
+
 

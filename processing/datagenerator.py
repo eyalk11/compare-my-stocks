@@ -39,12 +39,12 @@ class DataGenerator(SymbolsInterface, InputData):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
 
-        df,use_ext = self.get_df_by_type(type)
+        df,self.used_unitetype = self.get_df_by_type(type,self.params.unite_by_group)
         self.orig_df = df
         self.used_type=type
-        self.to_use_ext = use_ext and self.params.use_ext
-
-        if (self.params.unite_by_group & ~UniteType.NONE):
+        #self.to_use_ext = use_ext and self.params.use_ext
+        self.to_use_ext =self.params.use_ext
+        if (self.used_unitetype & ~UniteType.NONE):
             df , colswithoutext = self.unite_groups(df) #in case really unite groups, colswithoutext is correct
 
         df = df[(df.index >= fromdateNum) * (df.index <= todateNum)]
@@ -90,8 +90,9 @@ class DataGenerator(SymbolsInterface, InputData):
 
         return arr, df, type, fulldf
 
-    def get_df_by_type(self, div):
-        use_ext=True
+    def get_df_by_type(self, div,unitetyp):
+
+        unitetypeff=unitetyp
         if self.params.adjusted_for_base_cur:
             df=self.adjusted_panel
         else:
@@ -106,8 +107,9 @@ class DataGenerator(SymbolsInterface, InputData):
         elif div & Types.RELPROFIT:
             df = df['rel_profit_by_stock']
             #use_ext = False
-        elif div & Types.PRICE:
-            df = df['alldates']
+        # elif div & Types.PRICE:
+        #     df = df['alldates']
+        #     df=df.fillna(method='ffill', axis=1) #understand more before?
         elif div & Types.TOTPROFIT:
             df = df['tot_profit_by_stock']
         elif div & Types.VALUE:
@@ -116,9 +118,13 @@ class DataGenerator(SymbolsInterface, InputData):
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
         else:
+            #print('default!!') #price
             df = df['alldates']
+            df = df.fillna(method='ffill', axis=1)  # understand more before?
+            if ( unitetyp & UniteType.ADDPROT) and (unitetyp & ~UniteType.ADDTOTALS ==0 )  and (div & Types.PRECDIFF ==  0): #(div& ~Types.COMPARE) and
+                unitetypeff = unitetypeff & ~UniteType.ADDPROT
 
-        return df.copy(),use_ext
+        return df.copy(),unitetypeff
 
     def unite_groups(self, df):
         def filt(x,df):
@@ -128,7 +134,7 @@ class DataGenerator(SymbolsInterface, InputData):
             return list(x.intersection(set(df.columns)))
 
         items = [(g, self.Groups[g]) for g in self.params.groups]
-        if (self.params.unite_by_group & ~UniteType.ADDTOTALS): #Non trivial unite. groups
+        if (self.used_unitetype & ~UniteType.ADDTOTALS): #Non trivial unite. groups
             reqsym= self.required_syms(data_symbols_for_unite=True).intersection(set(df.columns) )
             if len(reqsym )>0:
                 ndf= df.loc[:, reqsym]
@@ -138,8 +144,8 @@ class DataGenerator(SymbolsInterface, InputData):
             ndf=df
 
 
-        if self.params.unite_by_group & UniteType.ADDTOTALS:
-            if self.params.unite_by_group & UniteType.ADDPROT:
+        if self.used_unitetype & UniteType.ADDTOTALS:
+            if self.used_unitetype & UniteType.ADDPROT:
                 x=set(self.get_portfolio_stocks())
                 items += [('Portfolio', filt(x,df) )]
             else: #add TOTAL
@@ -158,14 +164,11 @@ class DataGenerator(SymbolsInterface, InputData):
             incomplete= (arr.shape[0]!=len(stocks))
             if incomplete:
                 print('incomplete unite')
-            #curdat = {st:{f: dic[stocks[st]][self._curflist[f]]}  for st in range(len(stocks)) for f in range(len(self._curflist))} #should have default args
-            #A=numpy.array(curdat)
-            # = n[~numpy.isnan(n)]
+            if self.used_unitetype & UniteType.SUM or gr in ['All','Portfolio']:
 
-            if self.params.unite_by_group & UniteType.SUM or gr in ['All','Portfolio']:
                 ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
-                #df.append({'gr':  },ignore_index=True)
-            elif self.params.unite_by_group & UniteType.AVG:
+
+            elif self.used_unitetype & UniteType.AVG:
                 ndf.loc[:, gr] = numpy.nanmean(arr, axis=0 )
 
         return ndf ,[x[0] for x in items]

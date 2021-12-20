@@ -7,7 +7,7 @@ class SymbolsInterface(metaclass=ABCMeta):
     TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
     #TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
     TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock']
-    TOKEEP= ['holding_by_stock','rel_profit_by_stock','avg_cost_by_stock']
+    TOKEEP= ['holding_by_stock','rel_profit_by_stock','avg_cost_by_stock','peratio','pricesells']
 
     @abstractmethod
     def get_options_from_groups(self, ls):

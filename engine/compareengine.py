@@ -29,8 +29,23 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         return self._categories
 
     @property
+    def cur_category(self) -> str:
+        param=self.params
+        if param:
+            param= self.params.cur_category
+        if param==None:
+            return self._categories[0]
+        return param
+
+    @cur_category.setter
+    def cur_category(self, value: str):
+        if self.params:
+            self.params.cur_category = value
+
+
+    @property
     def Groups(self):
-        return self._groups_by_cat[self._cur_category]
+        return self._groups_by_cat[self.cur_category]
 
     def get_options_from_groups(self,ls):
         if not ls:
@@ -45,8 +60,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             jsongroups= json.load(open(config.JSONFILENAME,'rt'))
             self._groups_by_cat = jsongroups
             self._categories= list(self._groups_by_cat.keys())
-            if self._cur_category==None:
-                self._cur_category=self._categories[0]
+            # if self.cur_category==None:
+                # self.cur_category=self._categories[0]
         except:
             print('groups are problem') #raise Exception("error reading groups")
 
@@ -60,7 +75,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         self.params=None
 
         #self._groups = config.GROUPS
-        self._catagories=None
+        self._categories=None
         self._cur_category = None
         self.read_groups_from_file()
 
@@ -75,8 +90,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
 
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
-        if (self.params.unite_by_group & ~UniteType.ADDTOTALS) and data_symbols_for_unite:
-            print('nontrivla')
+        if (self.used_unitetype & ~UniteType.ADDTOTALS) and data_symbols_for_unite:
+            #print('nontrivla')
             return selected #it is a bit of cheating but we don't need to specify require data symbols in that case
         if  self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))
@@ -95,12 +110,16 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         self.params._baseclass=self
 
         self.to_use_ext = self.params.use_ext
-
+        self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
-        if self._symbols_wanted and (not (set(requried_syms) <= set(self._symbols_wanted))):
-            symbols_neeeded= set(requried_syms) - set(self._symbols_wanted)
-            print('should add stocks')
-            reprocess=1
+        if self._usable_symbols and (not (set(requried_syms) <=self._usable_symbols)):
+            symbols_neeeded= set(requried_syms) - self._usable_symbols - self._bad_symbols
+
+            if len(symbols_neeeded)>0:
+                reprocess=1
+                print(f'should add stocks {symbols_neeeded}')
+            else:
+                reprocess=0
         else:
             symbols_neeeded=set() #process all...
 
@@ -139,3 +158,4 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         #t = inspect.getfullargspec(CompareEngine.gen_graph)
         #dd={x:self.__getattribute__(x) for x in t.args if x not in ['self','increase_fig','reprocess','just_upd' ] }
         self.gen_graph(params,just_upd=1,reprocess=reprocess )
+
