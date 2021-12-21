@@ -115,6 +115,10 @@ class DataGenerator(SymbolsInterface, InputData):
         elif div & Types.VALUE:
             df = df['value']
             #use_ext = False
+        elif div & Types.PERATIO:
+            df=df['peratio']
+        elif div & Types.PRICESELLS:
+            df = df['pricesells']
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
         else:

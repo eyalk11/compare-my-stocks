@@ -75,6 +75,7 @@ class MainWindow(QMainWindow, FormInitializer):
             print('no cant do. No initial graph generated.')
             return
         sc = MplCanvas(self._graphObj._linesandfig[-1][2])
+        #sc.manager.window.move(1,1)
         toolbar = NavigationToolbar(sc, self.window)
         layout = QVBoxLayout()
         layout.addWidget(toolbar)

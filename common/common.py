@@ -19,6 +19,8 @@ class Types(int,Flag):
     PROFIT = auto()
     TOTPROFIT = auto()
     RELPROFIT = auto()
+    PERATIO = auto()
+    PRICESELLS=auto()
     THEORTICAL_PROFIT=auto()
 
     RELTOMAX=auto()
