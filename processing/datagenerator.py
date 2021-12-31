@@ -17,6 +17,7 @@ from engine.symbolsinterface import SymbolsInterface
 class DataGenerator(SymbolsInterface, InputData):
     minMaxChanged=MySignal(tuple)
     namesChanged = MySignal(int)
+    statusChanges= MySignal(str)
     def __init__(self):
         #DataGenerator.minMaxChanged.initemit()
         self.colswithoutext=[]
@@ -117,8 +118,12 @@ class DataGenerator(SymbolsInterface, InputData):
             df = df['value']
             #use_ext = False
         elif div & Types.PERATIO:
+            if not 'peratio' in df:
+                raise NoDataException()
             df=df['peratio']
         elif div & Types.PRICESELLS:
+            if not 'pricesells' in df:
+                raise NoDataException()
             df = df['pricesells']
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
@@ -128,7 +133,8 @@ class DataGenerator(SymbolsInterface, InputData):
             df = df.fillna(method='ffill', axis=1)  # understand more before?
             if ( unitetyp & UniteType.ADDPROT) and (unitetyp & ~UniteType.ADDTOTALS ==0 )  and (div & Types.PRECDIFF ==  0): #(div& ~Types.COMPARE) and
                 unitetypeff = unitetypeff & ~UniteType.ADDPROT
-
+        if df.isnull().all(axis=None):
+            raise NoDataException()
         return df.copy(),unitetypeff
 
     def unite_groups(self, df):

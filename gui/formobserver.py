@@ -102,6 +102,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._toselectall=False
 
     def update_graph(self,reset_ranges,force=False):
+        self.window.last_status.setText('')
         if self.ignore_updates_for_now:
             return
         try:
@@ -110,6 +111,7 @@ class FormObserver(ListsObserver,GraphsHandler):
                 self.update_ranges(reset_ranges)
         except:
             print('failed updating graph')
+            self.window.last_status.setText('failed updating graph')
             import traceback
             traceback.print_exc()
 
@@ -182,7 +184,7 @@ class FormObserver(ListsObserver,GraphsHandler):
     def compare_changed(self,num):
 
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
-        self._graphObj.params.compare_with=self.window.comparebox.itemText(num)
+        self._graphObj.params.compare_with=self.window.comparebox.currentText()
         self._graphObj.params.type=self._graphObj.params.type | Types.COMPARE
         self.update_graph(1)
 
@@ -197,7 +199,8 @@ class FormObserver(ListsObserver,GraphsHandler):
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
             self.update_graph(1)
 
-
+    def update_status(self,text):
+        self.window.last_status.setText(text)
     def use_groups(self,val):
         self.attribute_set('use_groups', val)
         if not val:
@@ -268,6 +271,7 @@ class FormObserver(ListsObserver,GraphsHandler):
 
         self._graphObj.minMaxChanged.connect(self.update_rangeb)
         self._graphObj.namesChanged.connect(self.update_range_num)
+        self._graphObj.statusChanges.connect(self.update_status)
 
         self.json_editor.onCloseEvent.connect(self.on_json_closed)
         self._initiated=True

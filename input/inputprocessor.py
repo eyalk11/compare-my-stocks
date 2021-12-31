@@ -7,6 +7,7 @@ from collections import defaultdict
 import datetime
 import matplotlib
 import numpy
+import pandas
 import pandas as pd
 import pytz
 
@@ -54,12 +55,12 @@ class InputProcessor(TransactionHandler):
             currency = 'unk'
 
         if currency == 'unk':
-            print('resolving borsa')
+            print(f'resolving currency for {sym}')
             currency = config.STOCK_CURRENCY.get(sym, 'unk')
         if currency == 'unk':
             currency = config.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
-            print(f'giving up on {sym}')
+            print(f'unk currency for {sym}')
 
         if currency != config.BASECUR and currency != 'unk':
             print('adjusted %s %s ' % (sym, currency))
@@ -302,13 +303,14 @@ class InputProcessor(TransactionHandler):
         import shutil
         try:
             shutil.copy(config.HIST_F, config.HIST_F_BACKUP)
-            try:
-                pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
-                             self.currencyrange), open(config.HIST_F, 'wb'))
-            except:
-                print("error in dumping hist")
         except:
-            print('error in copy, wont save')
+            print('error in backuping hist file')
+        try:
+            pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
+                         self.currencyrange), open(config.HIST_F, 'wb'))
+        except:
+            print("error in dumping hist")
+
 
     def convert_dicts_to_df_and_add_earnings(self):
         dataframes = []
@@ -319,9 +321,18 @@ class InputProcessor(TransactionHandler):
         # no more dicts #we removed alldatesadjusted from dicts..
         seldict= self.dicts[:NONADJUSTEDDICTS]
 
-        income, revenue, cs = get_earnings()
+        try:
+            income, revenue, cs = get_earnings()
+            hasearnings=True
+            combinedindex = sorted(
+                list(set(self._fset).union(set(cs.index)).union(set(income.index)).union(set(revenue.index))))
+        except:
+            print('earning reading failed')
+            import traceback
+            traceback.print_exc()
+            hasearnings = False
+            combinedindex=sorted(list(self._fset))
 
-        combinedindex= sorted( list(set(self._fset).union(set (cs.index)).union(set(income.index)).union(set(revenue.index))))
 
         for name, dic in zip(self.dicts_names,seldict):
             df = pd.DataFrame(dic,index=combinedindex)
@@ -332,14 +343,17 @@ class InputProcessor(TransactionHandler):
             dataframes.append(df)
 
         try:
-            dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,cs,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,cs,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
+            if hasearnings:
+                dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,cs,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,cs,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
+            else:
+                dataframes += [pandas.DataFrame(), pandas.DataFrame(), pandas.DataFrame()]
         except:
-            print('earnings failed ')
+            import traceback
+            traceback.print_exc()
+            print('earnings calc failed ')
 
         self.reg_panel = pd.concat(dataframes,axis=1)
         self.reg_panel=self.reg_panel
-
-        #self.reg_panel.set_index()
 
     @staticmethod
     def return_df(df, cur,commonstock_df,name):
@@ -399,7 +413,8 @@ class InputProcessor(TransactionHandler):
 
         nn=pd.DataFrame(index=self.reg_panel.index, columns=self.reg_panel.columns)#[ (c,d)  for (c,d) in   self.reg_panel.columns if c!='tot_profit_by_stock']  )
         for x in SymbolsInterface.TOKEEP:
-           nn[x] = self.reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
+            if x in self.reg_panel:
+                nn[x] = self.reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
 
         uu = self.reg_panel[multiIndex].mul(df)
         nn[multiIndex] = uu

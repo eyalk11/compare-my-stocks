@@ -19,7 +19,7 @@ from gui.formobserver import FormObserver, FormInitializer
 try:
     from config import config
 except Exception as e :
-    print('please rename exampleconfig to config and adjust accordingly')
+    print('please set a config file')
     sys.exit(1)
 
 

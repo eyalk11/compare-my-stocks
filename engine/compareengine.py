@@ -63,7 +63,9 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             # if self.cur_category==None:
                 # self.cur_category=self._categories[0]
         except:
-            print('groups are problem') #raise Exception("error reading groups")
+            import traceback
+            traceback.print_exc()
+            print('exception in  groups file') #raise Exception("error reading groups")
 
     def __init__(self,filename):
         super(CompareEngine, self).__init__()
@@ -77,7 +79,9 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         #self._groups = config.GROUPS
         self._categories=None
         self._cur_category = None
+        self._groups_by_cat = {}
         self.read_groups_from_file()
+
 
     def  required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
         selected = set()
@@ -129,6 +133,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         try:
             self.df, type = self.generate_data()
         except NoDataException:
+            self.statusChanges.emit(f'No Data For Graph!')
             print('no data')
             return
         except Exception as e:
@@ -136,6 +141,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             traceback.print_exc()
             e = e
             print('exception in generating data')
+            self.statusChanges.emit(f'Exception in gen: {e}'  )
             if config.DEBUG:
                 pass#raise
             return
@@ -143,9 +149,12 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
 
         try:
             self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden, just_upd, type)
+            self.statusChanges.emit("Generated Graph :)")
         except TypeError as e:
             e=e
             print("failed generating graph ")
+            self.statusChanges.emit(f"failed generating graph {e}")
+
 
 
 
