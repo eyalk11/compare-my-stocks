@@ -41,3 +41,7 @@ class QDateRangeSlider(_GenericRangeSlider[float]):
     @property
     def datevalue(self):
         return matplotlib.dates.num2date([matplotlib.dates.num2date(x) for x in self.value])
+
+    @datevalue.setter
+    def datevalue(self,val):
+        super(QDateRangeSlider, self).setValue(tuple([matplotlib.dates.date2num(x) for x in val]))

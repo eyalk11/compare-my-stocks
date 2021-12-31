@@ -87,7 +87,7 @@ class GraphsHandler:
         text=self.window.graphList.currentItem().text()
         self._graphObj.params = copyit(self.graphs[text])
         self.update_graph(1,force=True)
-        self.setup_init_values()
+        self.setup_controls_from_params(0)
 
 class FormObserver(ListsObserver,GraphsHandler):
     def __init__(self):
@@ -98,9 +98,12 @@ class FormObserver(ListsObserver,GraphsHandler):
         self._initiated=False
         self.disable_slider_values_updates=False
         self.json_editor = json_editor_ui.JSONEditorWindow(None)
+        self.ignore_updates_for_now = False
         #self._toselectall=False
 
     def update_graph(self,reset_ranges,force=False):
+        if self.ignore_updates_for_now:
+            return
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
                 self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
@@ -277,6 +280,7 @@ class FormObserver(ListsObserver,GraphsHandler):
 
 class FormInitializer(FormObserver):
     def __init__(self):
+
         super().__init__()
 
     def after_load(self):
@@ -300,9 +304,10 @@ class FormInitializer(FormObserver):
                 except:
                     pass
 
-    def setup_init_values(self):
+    def setup_controls_from_params(self,initial=True):
         self.ignore_cat_changes = False
-        self.set_groups_values()
+        self.ignore_updates_for_now=True
+        self.set_groups_values(isinitialforstock=initial)
 
         self.window.daterangepicker.update_prop()
         self.window.startdate.setDateTime(self._graphObj.mindate)
@@ -310,7 +315,10 @@ class FormInitializer(FormObserver):
         self.window.daterangepicker.start=self._graphObj.mindate
         self.window.daterangepicker.end = self._graphObj.maxdate
         self.window.daterangepicker.update_obj()
-        self.window.daterangepicker.dateValueChanged.connect(self.date_changed)
+        if not initial:
+            self.window.daterangepicker.datevalue= (self._graphObj.params.fromdate,self._graphObj.params.todate)
+        else:
+            self.window.daterangepicker.dateValueChanged.connect(self.date_changed)
         self.window.use_groups.setChecked(self._graphObj.params.use_groups)
         self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
 
@@ -318,9 +326,20 @@ class FormInitializer(FormObserver):
         self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
 
         self.set_all_toggled_value()
-        self.load_existing_graphs()
+        if not initial and self._graphObj.params.compare_with:
+            wc = self.window.comparebox
 
-    def set_groups_values(self, isinit=1):
+            l=[wc.itemText(x) for x in range(wc.count())]
+            ind=l.index(self._graphObj.params.compare_with)
+            self.window.comparebox.setCurrentIndex(ind)
+            if ind==-1:
+                self.window.comparebox.setCurrentText(self._graphObj.params.compare_with)
+
+        if initial:
+            self.load_existing_graphs()
+        self.ignore_updates_for_now = False
+
+    def set_groups_values(self, isinit=1,isinitialforstock=1):
         b=False
         wc= self.window.categoryCombo
         if self._graphObj.Categories!=[wc.itemText(x) for x in range(wc.count())]:
@@ -342,7 +361,7 @@ class FormInitializer(FormObserver):
         #self.window.groups.addItems(options)
         self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
         # self.groups_changed()
-        self.update_stock_list(isinit)
+        self.update_stock_list(isinitialforstock and isinit)
         self.update_ranges(isinit)
         if isinit:
             self.select_rows(self.window.groups, [options.index(v) for v in value])
@@ -354,6 +373,8 @@ class FormInitializer(FormObserver):
         self.disable_slider_values_updates = False
 
     def update_range_num(self,nuofoptions):
+        if nuofoptions==0:
+            nuofoptions=1
         self.disable_slider_values_updates=True
         self.window.max_num.setRange(0, nuofoptions)
         self.window.max_num.setValue((0, nuofoptions))

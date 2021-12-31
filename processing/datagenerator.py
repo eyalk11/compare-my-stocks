@@ -99,7 +99,8 @@ class DataGenerator(SymbolsInterface, InputData):
             df=self.reg_panel
 
         if self.params.adjust_to_currency and self.params.currency_to_adjust:
-            df=self.readjust_for_currency(self.params.currency_to_adjust)
+            if self.params.currency_to_adjust != config.BASECUR:
+                df=self.readjust_for_currency(self.params.currency_to_adjust)
 
         if div & Types.PROFIT:
             df = df['unrel_profit']
@@ -226,6 +227,7 @@ class DataGenerator(SymbolsInterface, InputData):
         return upd1 or diff
 
     def readjust_for_currency(self,ncurrency):
+
         currency_hist= self.get_currency_hist(ncurrency,self.currencyrange[0],self.currencyrange[1]) #should be fine, the range
         simplified= (currency_hist['Open']+currency_hist['Close'])/2
         rate= self.get_relevant_currency(ncurrency)

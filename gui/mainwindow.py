@@ -62,7 +62,7 @@ class MainWindow(QMainWindow, FormInitializer):
             return
 
         self.prepare_sliders()
-        self.setup_init_values()
+        self.setup_controls_from_params()
         self.setup_observers()
 
         self.prepare_graph_widget()
