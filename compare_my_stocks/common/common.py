@@ -86,7 +86,8 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     ls = list(getnan)
     if last:
         ls.reverse()
-    return (ls.index(False) * (-1 if last else 1))
+    ind=ls.find(False)
+    return ( ind * (-1 if last else 1)) if ind!=-1 else -1
 
 class NoDataException(Exception):
     pass

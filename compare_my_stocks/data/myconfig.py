@@ -2,9 +2,17 @@ import datetime
 
 from common.common import InputSourceType, UseCache
 
+'''
+Config file for your project.
 
+All the mentioned files here can take an absolute path. But if not, then config/config.py looks for them in  
+'./data/', os.curdir, "~/MYPROJ", "/etc/"+MYPROJ, $PROJPATHENV
+
+This is true also for myconfig.py.
+'''
 
 import datetime
+import pytz
 
 from common.common import InputSourceType, UseCache
 
@@ -25,7 +33,10 @@ EXT=['QQQ']
 DEF_FIG_SIZE = (13.2,6)
 EXCHANGES= ["nasdaq","xetra",'NYSE','London','OTC Markets']
 EXCHANGES= [i.lower() for i in EXCHANGES]
-DEFAULTFROMDATE = datetime.datetime(2020,1,1)
+
+#Please use timezone aware value here!!
+DEFAULTFROMDATE = datetime.datetime(2020,1,1,tzinfo=pytz.UTC)
+
 '''
 Define currencies for exchanges... 
 '''

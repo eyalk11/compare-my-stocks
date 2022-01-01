@@ -16,7 +16,7 @@ setup(
     data_files=[
         ( dir , ["compare_my_stocks/data/myconfig.py" , "compare_my_stocks/data/mygroups.json"])
     ],
-    entry_points={'console_scripts': ['compare_my_stocks = compare_my_stocks.__main__:main']},
+    entry_points={'console_scripts': ['compare-my-stocks = compare_my_stocks.__main__:main']},
     url='https://github.com/eyalk11/compare-my-stocks',
     license='GNU Affero General Public License v3.0 ',
     author='Eyal Karni',

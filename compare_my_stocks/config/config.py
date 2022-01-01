@@ -15,7 +15,8 @@ def resolvefile(filename):
             fil=os.path.join( loc,filename)
             if os.path.exists(fil):
                 return fil
-        return None
+        print(f'failed resolving {filename}')
+        return os.path.join( os.path.join(os.path.expanduser("~"),"."+MYPROJ),filename) #default location
     except:
         return None
 
@@ -25,7 +26,7 @@ print(config_file)
 with open(config_file) as f:
     code = compile(f.read(), config_file, 'exec')
     exec(code, globals(), locals())
-print(JSONFILENAME)
+
 FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","PORTFOLIOFN"]
 for f in FILE_LIST_TO_RES:
     if not f in globals():
@@ -33,8 +34,7 @@ for f in FILE_LIST_TO_RES:
         sys.exit(-1)
     fil=resolvefile(globals()[f])
     if fil==None:
-        print(f'failed resolving {f}')
+        print(f'Invalid value {f}')
     globals()[f]=fil
 
 
-print(JSONFILENAME)
