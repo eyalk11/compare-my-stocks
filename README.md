@@ -5,14 +5,20 @@
 Visualize the performance of stocks in your portfolio or that  you are interested in.
 There is maximal control over charts, and a variaty of comparision options. 
 
-For instance: 
-
 You can divide the stocks into sectors, and compare the performance of different sector! 
 
-* chart of average price change of  FANG vs interesting stock in  China) 
-* chart of profit of each section 
+For instance: 
 
-You can even compare your profit at any time to a theoretical situation in which you have bought the index(the exact same time you have made a purchase)!
+* chart of average price change of FANG vs interesting stock in China. 
+
+* chart of profit of stocks in your portfolio belonging to each sector. 
+
+* chart of specifc airline vs all the airlines and the Nasdaq 
+ 
+![image](https://user-images.githubusercontent.com/72234965/147842609-bf1323af-a4dd-48e1-ae71-c7d95109b990.png)
+
+
+See full gui here: 
 
 ![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
 
@@ -20,9 +26,9 @@ This is being developed in QT with matplotlib amd pandas.
 
 
 ##  Features 
-⚕️	planned
-✅ working 
-
+⚕️	Planned
+✅ Working 
+⚪ Present but not working yet
 ### **Stocks from all over the world!**
  
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy (uses inversting.com)  
@@ -31,7 +37,7 @@ This is being developed in QT with matplotlib amd pandas.
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ ETF support 
 
-### **connect with your portfolio!**
+### **Connect with your portfolio!**
 
 &nbsp;&nbsp;&nbsp;&nbsp;   (As it get exported transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks))  
 
@@ -48,6 +54,11 @@ This is being developed in QT with matplotlib amd pandas.
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Pick only top stocks for graphs 
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ⚪ Compare your profit to a theoretical situation in which you have bought the index
+
+&nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)!
+
 
 ✅ Adjusted performance relative to a currency of your choice! 
 
@@ -71,7 +82,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 ⚕️ Adjusted performance based on  inflation. 
 
-⚕️ Introducing advanced features like P/E and price to sells.
+⚪ Introducing advanced features like P/E and price to sells.
 
 ⚕️ Find corelations between sectors  
 
