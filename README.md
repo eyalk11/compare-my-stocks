@@ -74,6 +74,8 @@ For instance:
 gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
 ```
 
+✅ Extendable input sources (for stock history), and transaction handlers (for transactions and portfolios)
+
 ✅ **Completely free and open source!** 
 
 ## Planned Features
