@@ -104,13 +104,16 @@ Remark: **Not fully tested, and prerelease. Some features may not work correctly
 ## Legal Words
 
 I would like to add that: 
-IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com( using investpy), as well as Interactive Brokers Api by this code. 
 
-I am in way affiliated with them. Please consult the corresponding sites' license before usage, and use it appropriately. See also the disclaimer https://github.com/eyalk11/investpy.
+1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com( using investpy), as well as Interactive Brokers Api by this code. 
 
-I am also in no way affilated with `My Stocks Portfolio & Widget` by peeksoft. The sofware might use csvs obtained from using their app. 
+Please consult the corresponding sites' license before using this software, and use it accordingly. See also the disclaimer https://github.com/eyalk11/investpy.
 
-I of course don't take responsibilty on the correctness of the displayed graphs. 
+2. The sofware might use csvs obtained from using  My Stocks Portfolio & Widget by peeksoft.   
+
+3. This project was developed individually in my free time and without any compensation. I am an in no way affiliated with the mentioned companies. 
+
+4. I of course take no responsibilty on the correctness of the displayed graphs/data. 
 
 ## Final words
 * This is being developed in QT with matplotlib amd pandas. I tried to use advanced features of pandas and numpy for fast calculation(sometimes).
