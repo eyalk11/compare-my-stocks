@@ -7,7 +7,6 @@ There is maximal control over charts, and a variaty of comparision options.
 
 For instance: 
 
-
 You can divide the stocks into sectors, and compare the performance of different sector! 
 
 * chart of average price change of  FANG vs interesting stock in  China) 
@@ -17,13 +16,7 @@ You can even compare your profit at any time to a theoretical situation in which
 
 ![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
 
-This is being developed in QT with matplotlib. 
-
-I used advance features of python, numpy and pandas for fast calcuation. 
-
-The input data I currently have is a MyStockProtfolio CSV (any csv that describes buys/sells), and will add later Interactive brokers account's positions. 
-The stocks historical prices are obtained from investpy (originally https://github.com/alvarobartt/investpy) .
-
+This is being developed in QT with matplotlib amd pandas.  
 
 
 ##  Features 
@@ -112,14 +105,9 @@ I of course don't take responsibilty on the correctness of the displayed graphs.
 
 ## Final words
 
-I belive this software is already usable and provide many useful features that are usually paid for. 
+* I belive this software is already usable and provide many useful features that are usually paid for. This despite doing this in short time, at my free time. I would very much apperiate community contributions. 
 
-I wanted this product to be used inline in jupyter notebook. This is not possible with the way it is currently QT (having full features). 
-
-I am not sure about the right level of exposure to code. 
-
-Should I allow for customized, code-based operations between stocks? I am not a fun of GUI, and it is a lot of work. 
-Include notebook inside QT? What kind of statisitics to incorporate? 
+* If you have an idea about how it will be best integrated with active stock research using Jupyter Lab or something else, let me know. 
 
 
 Feel free to contact me at eyalk5@gmail.com.
