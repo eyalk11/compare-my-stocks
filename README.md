@@ -58,7 +58,7 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 ✅ Adjusted performance relative to a currency of your choice! 
 
-✅ Save and load graphs 
+✅ Save and load graphs with all parameters instantly! 
 
 ✅ Edit categories and groups (using a GUI interface)! 
 
@@ -72,17 +72,26 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
  
  &nbsp;&nbsp;&nbsp;&nbsp; (Found many places in which they charge a lot for minimal features. )
 
-### More Planned Featured!
-⚕️	Bar graphs 
-⚕️ Adjusted performance based on cash   inflation. 
-⚕️ Introducing advanced features like P/E and price to sells, with all possible comparisions.  
-⚕️ Find corelations between sectors  
-⚕️ Exporting dataframes to jupyter (should be easy)
+### More Planned Features!
 
+⚕️	Bar graphs 
+
+⚕️ Adjusted performance based on  inflation. 
+
+⚕️ Introducing advanced features like P/E and price to sells.
+
+⚕️ Find corelations between sectors  
+
+⚕️ Close Integration  with jupyter (like export and import graph data) 
+
+⚕️ All this in a web interface!
+
+
+Remark: ** Not fully tested, and prerelease. Some features may not work correctly. ** 
 
 ## Running Instructions
 
-** Preliminary version, many features are not working yet ** 
+
 
  1. Look at config/config.py and follow instructions there.
 
@@ -99,9 +108,11 @@ I am in way affiliated with them. Please consult the corresponding sites' licens
 
 I am also in no way affilated with `My Stocks Portfolio & Widget` by peeksoft. The sofware might use csvs obtained from using their app. 
 
+I of course don't take responsibilty on the correctness of the displayed graphs. 
+
 ## Final words
 
-I belive this is 
+I belive this software is already usable and provide many useful features that are usually paid for. 
 
 I wanted this product to be used inline in jupyter notebook. This is not possible with the way it is currently QT (having full features). 
 
