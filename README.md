@@ -11,11 +11,11 @@ For instance:
 
 * **Chart of profit of stocks in your portfolio belonging to each sector.** 
 
-* **Chart of specifc airlines and the Nasdaq vs the airlines as a group**
+* **Chart of specifc airlines and the Nasdaq vs the airlines as a group:**
  
 ![image](https://user-images.githubusercontent.com/72234965/147842609-bf1323af-a4dd-48e1-ae71-c7d95109b990.png)
 
-* **Chart of average price change of FANG vs Biontech (full ui):** 
+* **Chart of different  FANG stocks vs Nasdaq vs Biontech:** 
  
 ![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
 
