@@ -74,21 +74,24 @@ class MainWindow(QMainWindow, FormInitializer):
         if len(self._graphObj._linesandfig)==0:
             print('no cant do. No initial graph generated.')
             return
-        #sc = MplCanvas(self._graphObj._linesandfig[-1][2])
+        sc = MplCanvas(self._graphObj._linesandfig[-1][2])
         #sc.manager.window.move(1,1)
-        #toolbar = NavigationToolbar(sc, self.window)
+        toolbar = NavigationToolbar(sc, self.window)
         #layout = QVBoxLayout()
-        #layout.addWidget(toolbar)
-        #layout.addWidget(sc)
+        self.window.graph_groupbox.layout().addWidget(toolbar)
+        self.window.graph_groupbox.layout().addWidget(sc)
         #self.window.gridLayout_8.addWidget(toolbar)
         #self.window.gridLayout_8.addWidget(sc)
         #self.window.tabWidget.setLayout(QVBoxLayout())
         #self.window.tabWidget.setCenteralWidget()
         #tabWidget.setCentralWidget(self.window.gridLayout_8)
-        #tabWidget.setLayout(layout)
+        #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
         #layoutq=QVBoxLayout()
         #self.window.tab
 
+    #from PySide6.QtWidgets import QGroupBox
+    #self.window.findChild(QGroupBox, name='graph_groupbox')
+    #self.window.findChild(QGroupBox, name='graph_groupbox')
     def prepare_sliders(self):
         self.window.max_num: QLabeledRangeSlider
         self.window.max_num.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
