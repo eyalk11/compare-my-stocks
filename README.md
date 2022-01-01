@@ -39,7 +39,7 @@ This is being developed in QT with matplotlib amd pandas.
 
 ### **Connect with your portfolio!**
 
-&nbsp;&nbsp;&nbsp;&nbsp;   (As it get exported transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks))  
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Export your transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks) 
 
 &nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
 
