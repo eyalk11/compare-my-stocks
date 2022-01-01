@@ -91,7 +91,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 ## Running Instructions
 
-Remark: ** Not fully tested, and prerelease. Some features may not work correctly. ** 
+Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
 
  1. Look at config/config.py and follow instructions there.
 
