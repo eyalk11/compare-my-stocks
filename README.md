@@ -57,6 +57,7 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)
 
+### Misc features 
 
 ✅ Adjusted performance relative to a currency of your choice! 
 
@@ -70,9 +71,7 @@ For instance:
 ```
 gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
 ```
- ### Completely free and open source! 
- 
- &nbsp;&nbsp;&nbsp;&nbsp; (Found many places in which they charge a lot for minimal features. )
+
 
 ### More Planned Features!
 
@@ -89,6 +88,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 ⚕️ All this in a web interface!
 
 
+ ###  <p align="center">  ✅ Completely free and open source! ✅  </p>
 
 
 ## Running Instructions
