@@ -63,6 +63,13 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
  3. Depends on inverstpy. Please use https://github.com/eyalk11/investpy for it to work.
  4. Run main.py
 
+## Legal Words
+
+I would like to add that: 
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com( using investpy), as well as Interactive Brokers Api by this code. 
+
+I am in way affiliated with them. Please consult the corresponding sites' license before usage, and use it appropriately. See also the disclaimer https://github.com/eyalk11/investpy
+
 ## Final words
 
 I wanted this product to be used inline in jupyter notebook. This is not possible with the way it is currently QT (having full features). 
