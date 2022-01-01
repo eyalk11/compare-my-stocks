@@ -3,6 +3,7 @@ import time
 
 import matplotlib
 #from matplotlib import pyplot as plt
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 from matplotlib import pyplot as plt
 from engine.compareengine import CompareEngine
@@ -47,7 +48,10 @@ def initialize_graph_and_ib():
 
 
 def main():
+
+
     if USEQT:
+        #QGuiApplication.setAttribute(Qt.Qt);
         app = QApplication([])
     gg = initialize_graph_and_ib()
     gg.gen_graph(Parameters(
