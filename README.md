@@ -49,7 +49,7 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Display percentage change / percentage diff , from certain time / maximum / minimum 
 
-&nbsp;&nbsp;&nbsp;&nbsp; ✅ Pick only top stocks for graphs 
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Pick only top stocks for graphs / limit by value range
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
 
@@ -87,9 +87,9 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 ⚕️ All this in a web interface!
 
+🔴 Not planned - all these technical analysis nonsense..
 
  ###  <p align="center">  ✅ Completely free and open source! ✅  </p>
-
 
 ## Running Instructions
 
