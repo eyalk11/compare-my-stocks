@@ -109,6 +109,5 @@ I of course don't take responsibilty on the correctness of the displayed graphs.
 
 * If you have an idea about how it will be best integrated with active stock research using Jupyter Lab or something else, let me know. 
 
-
-Feel free to contact me at eyalk5@gmail.com.
+* Feel free to contact me at eyalk5@gmail.com.
 
