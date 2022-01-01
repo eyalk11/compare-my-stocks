@@ -36,7 +36,7 @@ def initialize_graph_and_ib():
     if config.INPUTSOURCE==InputSourceType.IB:
         ibmain(False)
 
-    gg = CompareEngine(config.FN)
+    gg = CompareEngine(config.PORTFOLIOFN)
     return  gg
 
 if __name__ == "__main__":

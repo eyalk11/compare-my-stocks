@@ -36,8 +36,15 @@ Define Currency for custom stocks. Use original name.
 STOCK_CURRENCY= {'VETH.DE':'EUR','VBTC1':'EUR'}
 
 INPUTSOURCE=InputSourceType.InvestPy
-FN = r''
-#FN= r'C:\Users\ekarni\mypy\prot2.csv'
+'''
+This is the file name of the portfolio. You may export the csv from my stocks portfolio.
+https://play.google.com/store/apps/details?id=co.peeksoft.stocks&hl=iw&gl=US 
+Or you can generate buy dictionary yourself...  
+'''
+PORTFOLIOFN = r''
+'''
+The name of the portfolio in the file. 
+'''
 DEF_PORTFOLIO = 'My Portfolio'
 MINCOLFORCOLUMS=20
 MIN=4000
@@ -63,6 +70,6 @@ GRAPHFN='mygraphs.json'
 
 BASECUR="USD"
 
-REVENUEFILE =None # r'C:\Users\ekarni\Downloads\tmpdat.json'
-INCOMEFILE = None #r'C:\Users\ekarni\Downloads\tmpinc.json'
-COMMONSTOCK= None #r'C:\Users\ekarni\Downloads\tmpcommonstock.json'
+REVENUEFILE =None
+INCOMEFILE = None
+COMMONSTOCK= None
