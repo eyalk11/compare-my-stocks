@@ -1,3 +1,4 @@
+
 # Compare My Stocks
 
 ## General 
@@ -5,6 +6,7 @@ Visualize the performance of stocks in your portfolio or that  you are intereste
 There is maximal control over charts, and a variaty of comparision options. 
 
 For instance: 
+
 
 You can divide the stocks into sectors, and compare the performance of different sector! 
 
@@ -23,29 +25,51 @@ The input data I currently have is a MyStockProtfolio CSV (any csv that describe
 The stocks historical prices are obtained from investpy (originally https://github.com/alvarobartt/investpy) .
 
 
-## Additional Features 
 
-* Compare performance with any stock
-* Selct stocks and graphs by groups
-* Unite groups by avg price/performance and see as one line.
-* Compare performance of stocks with entire protofolio 
+##  Features 
+⚕️	planned
+✅ working 
+
+✅ **Stocks from all over the world!** 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy (uses inversting.com)  
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Crypto support 
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ ETF support 
+
+✅ **connect with your portfolio!** 
+
+&nbsp;&nbsp;&nbsp;&nbsp;   (As it get exported transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks))  
+
+&nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
+
+**Maximum control over graphs:**
+
+ &nbsp;&nbsp;&nbsp;&nbsp; ✅ Compare performance of group of stocks vs other stock vs your portfolio! 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Many graph types ( Total Profit, Price, Realized Profit, etc...) 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Display percentage change / percentage diff , from certain time / maximum / minimum 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Pick only top stocks for graphs 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
 
 
-* Get price history from Investpy (uses inversting.com) 
-* Get transactions from My Stocks Protofolio (by simple file export) - https://play.google.com/store/apps/details?id=co.peeksoft.stocks 
-(Independent  from any broker/investments product)
-* Use jupyter to quickly change paramters of the graph! i.e. 
+✅ Save and load graphs 
+
+✅ Use Jupyter to display graphs inline (if you want) 
 ```
 gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
 ```
-* Completely free and open source. 
+ ✅✅✅ Completely free and open source. 
+ 
+ &nbsp;&nbsp;&nbsp;&nbsp; (Found many places in which they charge a lot for minimal features. )
 
 ## Planned
-* Bar graphs
+* Bar graphs 
 * Adjusted performance based on cash transactions / inflation. 
 * Introducing advanced features like P/E and price to sells, with all possible comparisions.  
 * Find corelations between sectors  
-* Interacts with Interactive Brokers to get transaction 
 * Exporting dataframes to jupyter (should be easy)
 * Crypto support(should be easy)
 
@@ -67,7 +91,7 @@ IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILIT
 
 I am in way affiliated with them. Please consult the corresponding sites' license before usage, and use it appropriately. See also the disclaimer https://github.com/eyalk11/investpy.
 
-I am also in no way affilated with `My Stocks Portfolio & Widget` by peeksoft. The sofware might use csvs obtained from them. 
+I am also in no way affilated with `My Stocks Portfolio & Widget` by peeksoft. The sofware might use csvs obtained from using their app. 
 
 ## Final words
 
