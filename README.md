@@ -25,6 +25,8 @@ For instance:
 ⚕️	Planned
 ✅ Working 
 ⚪ Present but not working yet
+
+ 
 ### **Stocks from all over the world!**
  
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy (uses inversting.com)  
@@ -72,8 +74,9 @@ For instance:
 gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
 ```
 
+✅ **Completely free and open source!** 
 
-### More Planned Features!
+## Planned Features
 
 ⚕️	Bar graphs 
 
@@ -89,7 +92,7 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 🔴 Not planned - all these technical analysis nonsense..
 
- ###  <p align="center">  ✅ Completely free and open source! ✅  </p>
+
 
 ## Running Instructions
 
