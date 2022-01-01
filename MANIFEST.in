@@ -1,1 +1,1 @@
-recursive-include . *.ui
+include compare_my_stocks/gui/mainwindows.ui
