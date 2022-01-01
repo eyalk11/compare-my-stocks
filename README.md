@@ -30,19 +30,21 @@ The stocks historical prices are obtained from investpy (originally https://gith
 ⚕️	planned
 ✅ working 
 
-✅ **Stocks from all over the world!** 
-
+### **Stocks from all over the world!**
+ 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy (uses inversting.com)  
+
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Crypto support 
+
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ ETF support 
 
-✅ **connect with your portfolio!** 
+### **connect with your portfolio!**
 
 &nbsp;&nbsp;&nbsp;&nbsp;   (As it get exported transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks))  
 
 &nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
 
-**Maximum control over graphs:**
+### **Maximum control over graphs!**
 
  &nbsp;&nbsp;&nbsp;&nbsp; ✅ Compare performance of group of stocks vs other stock vs your portfolio! 
 
@@ -54,24 +56,28 @@ The stocks historical prices are obtained from investpy (originally https://gith
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
 
+✅ Adjusted performance relative to a currency of your choice! 
 
 ✅ Save and load graphs 
+
+✅ Edit categories and groups (using a GUI interface)! 
+
+&nbsp;&nbsp;&nbsp;&nbsp;  i.e. Airlines stocks, Growth stocks. Can be compared as a group!
 
 ✅ Use Jupyter to display graphs inline (if you want) 
 ```
 gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
 ```
- ✅✅✅ Completely free and open source. 
+ ### Completely free and open source! 
  
  &nbsp;&nbsp;&nbsp;&nbsp; (Found many places in which they charge a lot for minimal features. )
 
-## Planned
-* Bar graphs 
-* Adjusted performance based on cash transactions / inflation. 
-* Introducing advanced features like P/E and price to sells, with all possible comparisions.  
-* Find corelations between sectors  
-* Exporting dataframes to jupyter (should be easy)
-* Crypto support(should be easy)
+### More Planned Featured!
+⚕️	Bar graphs 
+⚕️ Adjusted performance based on cash   inflation. 
+⚕️ Introducing advanced features like P/E and price to sells, with all possible comparisions.  
+⚕️ Find corelations between sectors  
+⚕️ Exporting dataframes to jupyter (should be easy)
 
 
 ## Running Instructions
