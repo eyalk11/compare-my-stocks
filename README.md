@@ -9,20 +9,16 @@ You can divide the stocks into sectors, and compare the performance of different
 
 For instance: 
 
-* chart of average price change of FANG vs interesting stock in China. 
+* **Chart of profit of stocks in your portfolio belonging to each sector.** 
 
-* chart of profit of stocks in your portfolio belonging to each sector. 
-
-* chart of specifc airline vs all the airlines and the Nasdaq 
+* **Chart of specifc airlines and the Nasdaq vs the airlines as a group**
  
 ![image](https://user-images.githubusercontent.com/72234965/147842609-bf1323af-a4dd-48e1-ae71-c7d95109b990.png)
 
-
-See full gui here: 
-
+* **Chart of average price change of FANG vs Biontech (full ui):** 
+ 
 ![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
 
-This is being developed in QT with matplotlib amd pandas.  
 
 
 ##  Features 
@@ -117,10 +113,15 @@ I am also in no way affilated with `My Stocks Portfolio & Widget` by peeksoft. T
 I of course don't take responsibilty on the correctness of the displayed graphs. 
 
 ## Final words
+* This is being developed in QT with matplotlib amd pandas. I tried to use advanced features of pandas and numpy for fast calculation(sometimes).
+
+
 
 * I belive this software is already usable and provide many useful features that are usually paid for. This despite doing this in short time, at my free time. I would very much apperiate community contributions. 
 
 * If you have an idea about how it will be best integrated with active stock research using Jupyter Lab or something else, let me know. 
 
+* The controls should be self explantory... Try it. 
+ 
 * Feel free to contact me at eyalk5@gmail.com.
 
