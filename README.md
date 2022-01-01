@@ -98,11 +98,16 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
 
- 1. Look at config/config.py and follow instructions there.
+ 1. Install Qt 
+ 2. Install using setup.py
+ 3. Look at config/config.py and follow instructions there (will work without it).
 
     Notice that you should provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
- 3. Depends on inverstpy. Please use https://github.com/eyalk11/investpy for it to work.
+ 
  4. Run main.py
+
+
+* Depends on inverstpy and json_editor. Needed https://github.com/eyalk11/investpy  https://github.com/eyalk11/json-editor 
 
 ## Legal Words
 
