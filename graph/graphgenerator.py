@@ -100,9 +100,9 @@ class GraphGenerator:
 
         mfig.set_size_inches(config.DEF_FIG_SIZE)
         #nice hack
-        def set_fig_size(my,def_fig_size,*args,**kwargs):
-            my.figsize= def_fig_size  #if anyone asks
-        mfig.set_size_inches=partial(set_fig_size, mfig, config.DEF_FIG_SIZE)
+        def set_fig_size(my,*args,**kwargs):
+            my.figsize= (my.canvas.window().width()*2/3, my.canvas.window().height()*2/3) #(tab_widget.width,tab_widget.height)  #if anyone asks
+        mfig.set_size_inches=partial(set_fig_size, mfig)
 
 
         #ar.set_size_inches(15.1,6.46)#(7*FACx, hi * 0.6*FACy)

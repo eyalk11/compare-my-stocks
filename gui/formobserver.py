@@ -12,9 +12,10 @@ from common.common import UniteType, Types
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
-
-from json_editor import json_editor_ui
-
+try:
+    from json_editor import json_editor_ui
+except:
+    import json_editor_ui
 
 class ListsObserver:
     @staticmethod

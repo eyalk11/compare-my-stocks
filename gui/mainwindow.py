@@ -77,10 +77,17 @@ class MainWindow(QMainWindow, FormInitializer):
         sc = MplCanvas(self._graphObj._linesandfig[-1][2])
         #sc.manager.window.move(1,1)
         toolbar = NavigationToolbar(sc, self.window)
-        layout = QVBoxLayout()
-        layout.addWidget(toolbar)
-        layout.addWidget(sc)
-        tabWidget.setLayout(layout)
+        #layout = QVBoxLayout()
+        #layout.addWidget(toolbar)
+        #layout.addWidget(sc)
+        self.window.gridLayout_8.addWidget(toolbar)
+        self.window.gridLayout_8.addWidget(sc)
+        self.window.tabWidget.setLayout(QVBoxLayout())
+        #self.window.tabWidget.setCenteralWidget()
+        #tabWidget.setCentralWidget(self.window.gridLayout_8)
+        #tabWidget.setLayout(layout)
+        #layoutq=QVBoxLayout()
+        #self.window.tab
 
     def prepare_sliders(self):
         self.window.max_num: QLabeledRangeSlider
