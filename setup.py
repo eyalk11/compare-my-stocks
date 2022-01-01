@@ -39,5 +39,7 @@ setup(
 "mplcursors==0.4",
 "Django==3.2.9"
     ],
-    include_package_data=True
+    include_package_data=True,
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
 )
