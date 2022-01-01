@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     gg = initialize_graph_and_ib()
     gg.gen_graph(Parameters(
-        type=Types.PRICE,unite_by_group=UniteType.ADDPROT,  isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
+        type=Types.TOTPROFIT,unite_by_group=UniteType.ADDPROT,  isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
         show_graph=False))#,adjust_to_currency=True,currency_to_adjust='ILS'))
 
     if not SIMPLEMODE:

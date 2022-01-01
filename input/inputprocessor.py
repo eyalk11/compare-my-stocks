@@ -187,7 +187,8 @@ class InputProcessor(TransactionHandler):
         _cur_relprofit_bystock = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         hh = pytz.UTC  # timezone('Israel')
-        self._fset=[]
+        if not partial_symbols_update:
+            self._fset=set()
         for t, dic in sorted(self._simp_hist_by_date.items()):
             if partial_symbols_update:
                 dic = dictfilt(dic, partial_symbols_update)
@@ -233,7 +234,7 @@ class InputProcessor(TransactionHandler):
                 self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
                 self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
-            self._fset+=[tim]
+            self._fset.add(tim)
         if cur_action:
             # run_cur_action(None)
             print('after, should update rel_prof... ')
@@ -335,7 +336,11 @@ class InputProcessor(TransactionHandler):
 
 
         for name, dic in zip(self.dicts_names,seldict):
-            df = pd.DataFrame(dic,index=combinedindex)
+            df = pd.DataFrame(dic, index=combinedindex)
+            #df = pd.DataFrame(dic,index=sorted(list(self._fset)))
+            # combined index is needed to adjust for the df, but maybe can do without... pass to return_df
+            #df = pd.DataFrame(dic, index=combinedindex)
+
 
             # df["Name"]= name
             df.columns = pd.MultiIndex.from_product([[name], list(df.columns)], names=['Name', 'Symbols'])
