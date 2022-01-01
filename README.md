@@ -41,6 +41,8 @@ This is being developed in QT with matplotlib amd pandas.
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Export your transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks) 
 
+&nbsp;&nbsp;&nbsp;&nbsp; (Doesn't matter which broker you work with. You can also adapt other transaction tables..)
+
 &nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
 
 ### **Maximum control over graphs!**
