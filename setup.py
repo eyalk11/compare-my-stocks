@@ -14,7 +14,8 @@ setup(
     version='1.0.0',
     packages=find_packages(),
     data_files=[
-        ( dir , ["compare_my_stocks/data/myconfig.py" , "compare_my_stocks/data/mygroups.json"])
+        ( dir , ["compare_my_stocks/data/myconfig.py" , "compare_my_stocks/data/mygroups.json"]),
+        ( "compare_my_stocks/gui" , ["compare_my_stocks/gui/mainwindow.ui"])
     ],
     entry_points={'console_scripts': ['compare-my-stocks = compare_my_stocks.__main__:main']},
     url='https://github.com/eyalk11/compare-my-stocks',
