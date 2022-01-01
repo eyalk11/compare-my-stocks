@@ -41,7 +41,7 @@ This is being developed in QT with matplotlib amd pandas.
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Export your transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks) 
 
-&nbsp;&nbsp;&nbsp;&nbsp; (Doesn't matter which broker you work with. You can also adapt other transaction tables..)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Doesn't matter which broker you work with. You can also adapt other transaction tables..)
 
 &nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
 
@@ -57,9 +57,9 @@ This is being developed in QT with matplotlib amd pandas.
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
 
-&nbsp;&nbsp;&nbsp;&nbsp; ⚪ Compare your profit to a theoretical situation in which you have bought the index
+&nbsp;&nbsp;&nbsp;&nbsp; ⚪ Compare your profit to a theoretical situation in which you have bought the index!
 
-&nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)!
+&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)
 
 
 ✅ Adjusted performance relative to a currency of your choice! 
@@ -68,7 +68,7 @@ This is being developed in QT with matplotlib amd pandas.
 
 ✅ Edit categories and groups (using a GUI interface)! 
 
-&nbsp;&nbsp;&nbsp;&nbsp;  i.e. Airlines stocks, Growth stocks. Can be compared as a group!
+&nbsp;&nbsp;&nbsp;&nbsp;  i.e. Airlines stocks, Growth stocks (Can be compared as a group)
 
 ✅ Use Jupyter to display graphs inline (if you want) 
 ```
