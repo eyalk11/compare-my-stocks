@@ -8,6 +8,11 @@ import sys
 from PySide6 import QtCore
 from PySide6.QtCore import  Signal
 
+def index_of(val, in_list):
+    try:
+        return in_list.index(val)
+    except ValueError:
+        return -1
 
 from enum import Flag, auto, Enum
 
@@ -86,7 +91,7 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     ls = list(getnan)
     if last:
         ls.reverse()
-    ind=ls.find(False)
+    ind=index_of(False,ls)
     return ( ind * (-1 if last else 1)) if ind!=-1 else -1
 
 class NoDataException(Exception):

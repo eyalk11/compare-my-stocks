@@ -45,10 +45,15 @@ def initialize_graph_and_ib():
 
     gg = CompareEngine(config.PORTFOLIOFN)
     return  gg
+def pd_ignore_warning():
+    import warnings
+    from pandas.core.common import SettingWithCopyWarning
+
+    warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 
 def main():
-
+    pd_ignore_warning()
 
     if USEQT:
         #QGuiApplication.setAttribute(Qt.Qt);

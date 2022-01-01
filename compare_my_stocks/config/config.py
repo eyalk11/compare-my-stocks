@@ -35,6 +35,8 @@ for f in FILE_LIST_TO_RES:
     fil=resolvefile(globals()[f])
     if fil==None:
         print(f'Invalid value {f}')
+    else:
+        print(f'{f} resolved to {fil}')
     globals()[f]=fil
 
 
