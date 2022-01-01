@@ -31,7 +31,7 @@ class InputProcessor(TransactionHandler):
         self.cached_used = None
         self._symbols_wanted = set()
         self.symbol_info = {}
-        self._usable_symbols = None
+        self._usable_symbols = set()
         self._bad_symbols = set()
         if config.INPUTSOURCE == InputSourceType.IB:
             self._inputsource: InputSource = IBSource()
@@ -106,14 +106,15 @@ class InputProcessor(TransactionHandler):
 
         b = collections.OrderedDict(sorted(self._buydic.items()))  # ordered
 
-        cur_action = b.popitem(False)
+        cur_action = b.popitem(False) if len(b)!=0 else None
 
 
         if self.params.transactions_fromdate == None:
             if not cur_action:
+                self.params.transactions_fromdate = config.DEFAULTFROMDATE
                 print('where to start?')
-                return
-            self.params.transactions_fromdate = cur_action[0] #start from first buy
+            else:
+                self.params.transactions_fromdate = cur_action[0] #start from first buy
 
 
         query_source = True

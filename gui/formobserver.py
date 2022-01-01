@@ -13,7 +13,7 @@ from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
 
-import json_editor_ui
+from json_editor import json_editor_ui
 
 
 class ListsObserver:

@@ -31,6 +31,8 @@ class TransactionHandler(SymbolsInterface):
     def populate_buydic(self):
         if self.try_to_use_cache():
             return
+        self._buydic = {}
+        self._buysymbols = set()
         try:
             x = pd.read_csv(self._fn)
         except Exception as e:
@@ -50,8 +52,6 @@ class TransactionHandler(SymbolsInterface):
                 print(e)
 
     def read_trasaction_table(self, x):
-        self._buydic = {}
-        self._buysymbols = set()
         #x = x[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
         #   x['TimeOfDay']
         for t in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],x['TimeOfDay']):

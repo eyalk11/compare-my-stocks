@@ -9,7 +9,7 @@ from common.common import InputSourceType, Types, UniteType
 from config import config
 from engine.compareengine import CompareEngine
 from engine.parameters import Parameters
-from ib.ibtest import main as ibmain
+
 
 from gui.mainwindow import MainWindow
 
@@ -34,6 +34,11 @@ def initialize_graph_and_ib():
         selectmode()
 
     if config.INPUTSOURCE==InputSourceType.IB:
+        try:
+            from ib.ibtest import main as ibmain
+        except:
+            print("no IB. install interactive-broker-python-web-api")
+            sys.exit(1)
         ibmain(False)
 
     gg = CompareEngine(config.PORTFOLIOFN)
