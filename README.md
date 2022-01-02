@@ -80,17 +80,20 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 ## Planned Features
 
-⚕️	Bar graphs 
-
-⚕️ Adjusted performance based on  inflation. 
-
 ⚪ Introducing advanced features like P/E and price to sells.
+
+⚪ Get price history from Interactive Brokers 
+
+⚕️	Bar graphs (hmmmm, not critical.. ) 
+
+⚕️ Adjusted performance based on inflation. 
 
 ⚕️ Find corelations between sectors  
 
 ⚕️ Close Integration  with jupyter (like export and import graph data) 
 
 ⚕️ All this in a web interface!
+
 
 🔴 Not planned - all these technical analysis nonsense..
 
