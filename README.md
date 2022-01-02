@@ -102,14 +102,13 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
 
- 1. Install Qt 
- 2. Install using setup.py
- 3. Look at config/config.py and follow instructions there (will work without it).
+ 1. Install [Qt6](https://www.qt.io/download) 
+ 2. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git
+ 3. Look at ~/.compare_my_stocks/myconfig.py and set it as you wish (will work without it).
 
-    Notice that you should provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
+    Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
  
- 4. Run main.py
-
+ 4. python -m compare_my_stocks 
 
 * Depends on inverstpy and json_editor. Needed https://github.com/eyalk11/investpy  https://github.com/eyalk11/json-editor 
 
