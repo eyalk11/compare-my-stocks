@@ -11,19 +11,18 @@ For instance:
 
 * **Chart of profit of stocks in your portfolio and of the entire portfolio relative to a certain point in time.** 
 
-![image](https://user-images.githubusercontent.com/72234965/147881533-0daef29a-5733-4e70-8f67-6e77ab422549.png)
+![image](https://user-images.githubusercontent.com/72234965/147881582-512126e0-dce8-4af8-a674-f8e21d527aef.png)
 
+(You won't see your portfolio unless you will upload your transactions)  
 
-* **Chart of specifc airlines and the Nasdaq vs the airlines as a group:**
+* **Chart of specific airlines and the Nasdaq vs the airlines as a group:**
  
  ![image](https://user-images.githubusercontent.com/72234965/147878217-ee9e064a-09b5-48a5-adcf-22ecbe68e96f.png)
  
 
-* **Chart of different  FANG stocks vs Nasdaq vs Biontech:** 
+* **Startup screen:** 
  
-![image](https://user-images.githubusercontent.com/72234965/137415199-b4d6d463-5ef0-4cc9-930c-58b086a94f5b.png)
-
-
+![image](https://user-images.githubusercontent.com/72234965/147881627-979b350b-573f-4498-880a-ad0730456296.png)
 
 ##  Features 
 ⚕️	Planned
