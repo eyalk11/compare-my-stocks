@@ -19,6 +19,7 @@ For instance:
  
 ![image](https://user-images.githubusercontent.com/72234965/147882856-86c4b8e7-a72c-4b9d-bba2-d4c4678a7e57.png)
 
+(The perfomance of ESYJY at this point is 30% less than the airlines as groups. This is example of an advanced usage.)
 
 ##  Features 
 ⚕️	Planned
