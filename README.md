@@ -9,11 +9,15 @@ You can divide the stocks into sectors, and compare the performance of different
 
 For instance: 
 
-* **Chart of profit of stocks in your portfolio belonging to each sector.** 
+* **Chart of profit of stocks in your portfolio and of the entire portfolio relative to a certain point in time.** 
+
+![image](https://user-images.githubusercontent.com/72234965/147881533-0daef29a-5733-4e70-8f67-6e77ab422549.png)
+
 
 * **Chart of specifc airlines and the Nasdaq vs the airlines as a group:**
  
-![image](https://user-images.githubusercontent.com/72234965/147842609-bf1323af-a4dd-48e1-ae71-c7d95109b990.png)
+ ![image](https://user-images.githubusercontent.com/72234965/147878217-ee9e064a-09b5-48a5-adcf-22ecbe68e96f.png)
+ 
 
 * **Chart of different  FANG stocks vs Nasdaq vs Biontech:** 
  
