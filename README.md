@@ -17,12 +17,8 @@ For instance:
 
 * **Chart of specific airlines and the Nasdaq vs the airlines as a group:**
  
- ![image](https://user-images.githubusercontent.com/72234965/147878217-ee9e064a-09b5-48a5-adcf-22ecbe68e96f.png)
- 
+![image](https://user-images.githubusercontent.com/72234965/147882856-86c4b8e7-a72c-4b9d-bba2-d4c4678a7e57.png)
 
-* **Startup screen:** 
- 
-![image](https://user-images.githubusercontent.com/72234965/147881627-979b350b-573f-4498-880a-ad0730456296.png)
 
 ##  Features 
 ⚕️	Planned
