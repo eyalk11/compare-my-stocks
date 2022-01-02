@@ -29,7 +29,7 @@ For instance:
  
 ### **Stocks from all over the world!**
  
-&nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy (uses inversting.com)  
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Crypto support 
 
@@ -118,7 +118,7 @@ Remark: **Not fully tested, and prerelease. Some features may not work correctly
 
 I would like to add that: 
 
-1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com( using investpy), as well as Interactive Brokers Api by this code. 
+1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com (using investpy), as well as Interactive Brokers Api by this code. 
 
 Please consult the corresponding sites' license before using this software, and use it accordingly. See also the disclaimer https://github.com/eyalk11/investpy.
 
