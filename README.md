@@ -9,9 +9,9 @@ You can divide the stocks into sectors, and compare the performance of different
 
 For instance: 
 
-* **Chart of profit of stocks in your portfolio and of the entire portfolio relative to a certain point in time.** 
+* **Chart of profit of sectors in your portfolio and of the entire portfolio relative to a certain point in time.** 
 
-![image](https://user-images.githubusercontent.com/72234965/147881582-512126e0-dce8-4af8-a674-f8e21d527aef.png)
+![image](https://user-images.githubusercontent.com/72234965/147883101-d565a1b1-eb57-4877-9a2c-706d63b48076.png)
 
 (You won't see your portfolio unless you will upload your transactions)  
 
