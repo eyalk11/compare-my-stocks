@@ -230,7 +230,7 @@
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
-                       <height>80</height>
+                       <height>78</height>
                       </size>
                      </property>
                      <property name="orientation">
@@ -507,13 +507,6 @@
                 </item>
                 <item row="2" column="1">
                  <layout class="QGridLayout" name="gridLayout_10">
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="tttt">
-                    <property name="text">
-                     <string>Select All/None</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="0">
                    <widget class="QPushButton" name="showhide">
                     <property name="text">
@@ -524,14 +517,35 @@
                   <item row="0" column="1">
                    <widget class="QPushButton" name="update_btn">
                     <property name="text">
-                     <string>Update</string>
+                     <string>Update Graph</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QPushButton" name="debug_btn">
+                    <property name="text">
+                     <string>Debug</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QPushButton" name="tttt">
+                    <property name="text">
+                     <string>Select All/None</string>
                     </property>
                    </widget>
                   </item>
                   <item row="1" column="1">
-                   <widget class="QPushButton" name="debug_btn">
+                   <widget class="QPushButton" name="refresh_stock">
                     <property name="text">
-                     <string>Debug</string>
+                     <string>Refresh Stocks</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QPushButton" name="pushButton">
+                    <property name="text">
+                     <string/>
                     </property>
                    </widget>
                   </item>

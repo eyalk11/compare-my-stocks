@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 from matplotlib import pyplot as plt
 from engine.compareengine import CompareEngine
 from engine.parameters import Parameters
-
+#import Qt
 from common.common import InputSourceType, Types, UniteType
 from config import config
 
@@ -45,6 +45,7 @@ def initialize_graph_and_ib():
 
     gg = CompareEngine(config.PORTFOLIOFN)
     return  gg
+
 def pd_ignore_warning():
     import warnings
     from pandas.core.common import SettingWithCopyWarning

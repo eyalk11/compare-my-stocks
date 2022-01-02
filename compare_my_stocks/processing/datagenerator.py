@@ -89,7 +89,7 @@ class DataGenerator(SymbolsInterface, InputData):
         self.tmp_colswithoutext=  set(colswithoutext).intersection(df.columns)
         self.after_filter_data=fulldf.copy()
 
-        return arr, df, type, fulldf
+        return arr, df, self.used_type, fulldf
 
     def get_df_by_type(self, div,unitetyp):
 

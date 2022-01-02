@@ -8,7 +8,7 @@ import PySide6.QtWidgets
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton,QLineEdit,QInputDialog
 from superqt.sliders._labeled import EdgeLabelMode
 
-from common.common import UniteType, Types
+from common.common import UniteType, Types, index_of
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
@@ -101,6 +101,14 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.json_editor = json_editor_ui.JSONEditorWindow(None)
         self.ignore_updates_for_now = False
         #self._toselectall=False
+
+    def refresh_stocks(self,*args):
+        wantitall = self._graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
+        toupdate= self._graphObj.required_syms(True,wantitall,True)
+        if len(toupdate)==0:
+            return
+        self._graphObj.process(set(toupdate))
+        self.update_graph(1,True)
 
     def update_graph(self,reset_ranges,force=False):
         self.window.last_status.setText('')
@@ -239,7 +247,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.window.findChild(QCheckBox, name="adjust_currency").toggled.connect(genobsReset('adjust_to_currency'))
         self.window.home_currency_combo.currentTextChanged.connect(genobsReset('currency_to_adjust'))
 
-
+        self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
             partial(self.update_graph,force=True,reset_ranges=1))
         self.window.use_groups.toggled.connect(self.use_groups)
@@ -335,7 +343,7 @@ class FormInitializer(FormObserver):
             wc = self.window.comparebox
 
             l=[wc.itemText(x) for x in range(wc.count())]
-            ind=l.index(self._graphObj.params.compare_with)
+            ind=index_of(self._graphObj.params.compare_with,l)
             self.window.comparebox.setCurrentIndex(ind)
             if ind==-1:
                 self.window.comparebox.setCurrentText(self._graphObj.params.compare_with)

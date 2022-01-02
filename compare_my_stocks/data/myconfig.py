@@ -1,6 +1,5 @@
 import datetime
 
-from common.common import InputSourceType, UseCache
 
 '''
 Config file for your project.
@@ -84,3 +83,5 @@ BASECUR="USD"
 REVENUEFILE =None
 INCOMEFILE = None
 COMMONSTOCK= None
+
+IGNORED_SYMBOLS=[]

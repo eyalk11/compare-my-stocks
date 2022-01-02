@@ -26,11 +26,44 @@ def show_annotation(sel,cls=None, ax=None):
 
 class GraphGenerator:
     def __init__(self):
-        self.params = None
+        #self.params = None
         self._linesandfig=[]
         self.last_stock_list=set()
         self.cur_shown_stock=set()
         self.adjust_date=False
+
+    def get_title(self):
+        type=self.params.type
+
+        def rel(type):
+            dic={} 
+            dic[Types.RELTOMAX] = 'Relative To Maximum '
+            dic[Types.RELTOMIN] = 'Relative To Minimum '
+            dic[Types.RELTOEND] = 'Relative To End '
+            dic[Types.RELTOSTART] =   '' if type & Types.COMPARE else 'Relative To Start Time '
+            return dic.get( type &   (Types.RELTOSTART | Types.RELTOMAX | Types.RELTOMIN | Types.RELTOEND) , '' )
+
+        def getbasetype(type):    
+            dic={} 
+            dic[Types.PROFIT]     =     'Profit'
+            dic[Types.VALUE]      =     'Value'
+            dic[Types.PRICE]      =     'Stock Price'
+            dic[Types.TOTPROFIT] = 'Total Profit'
+            dic[Types.PERATIO]  =  'PE Ratio'
+            dic[Types.PRICESELLS] = 'Price To Sells'
+            dic[Types.THEORTICAL_PROFIT] = 'Theortical'
+            return dic.get( type & ( Types.PROFIT | Types.VALUE | Types.PRICE | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT) ,dic[Types.PRICE])
+
+        dic={}
+        dic[Types.PRECENTAGE]  =     f'Percentage Change { rel(type)}Of %s'
+        dic[Types.PRECDIFF] = f'Percentage Change Difference {rel(type)}Of %s'
+        dic[Types.DIFF]       =     f'Difference {rel(type)}Of %s'
+        dic[Types.ABS ] = '%s'
+        basestr= dic.get( type &   ( Types.PRECENTAGE | Types.PRECDIFF | Types.DIFF) , dic[Types.ABS])
+        st = basestr % getbasetype(type)  
+        if type & Types.COMPARE:
+            st += ' Compared With ' + self.params.compare_with
+        return st
 
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         if not just_upd:
@@ -65,47 +98,8 @@ class GraphGenerator:
         box = ar.get_position()
         ar.set_position([0, box.y0, 6*FACx, box.height])
         mfig = ar.figure
-        st=''
-        if type & Types.RELTOMAX:
-            st = 'Precentage Down from Max Of '
-        if type & Types.PRECENTAGE:
-            st = 'Precentage Change In '
-        if type & Types.DIFF:
-            st = 'Change In '
-        if type & Types.PROFIT:
-            st += 'Profit'
-        if type & Types.VALUE:
-            st += 'Value'
-        if type & Types.PRICE:
-            st += 'Stock Price'
-        if type & Types.COMPARE:
-            st += ' Compared To ' + self.params.compare_with
-        ar.set_title(st)
 
-        # match type:
-        #     case type if type & Types.RELTOMAX:
-        #         st = 'Precentage Down from Max of '
-        #     case type if type & Types.PRECENTAGE:
-        #         st='Precentage Change of '
-        #     case type if type & Types.DIFF:
-        #         st = 'Change of '
-        #     case type if type & Types.PROFIT:
-        #         st+= 'Profit'
-        #     case type if type & Types.VALUE:
-        #         st+='Value'
-        #     case type if type & Types.PRICE:
-        #         st += 'Stock Price'
-        #ar.set_title(st)
-
-
-        #mfig.set_size_inches(config.DEF_FIG_SIZE)
-        #nice hack
-        #def set_fig_size(my,*args,**kwargs):
-        #    my.figsize= (my.canvas.window().width()*2/3, my.canvas.window().height()*2/3) #(tab_widget.width,tab_widget.height)  #if anyone asks
-        #mfig.set_size_inches=partial(set_fig_size, mfig)
-
-
-        #ar.set_size_inches(15.1,6.46)#(7*FACx, hi * 0.6*FACy)
+        ar.set_title(self.get_title() )
 
         # Put a legend to the right of the current aris
         if len(cols) >= config.MINCOLFORCOLUMS:

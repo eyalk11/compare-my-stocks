@@ -117,7 +117,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
         if self._usable_symbols and (not (set(requried_syms) <=self._usable_symbols)):
-            symbols_neeeded= set(requried_syms) - self._usable_symbols - self._bad_symbols
+            symbols_neeeded= set(requried_syms) - self._usable_symbols - self._bad_symbols  -set(config.IGNORED_SYMBOLS)
 
             if len(symbols_neeeded)>0:
                 reprocess=1
