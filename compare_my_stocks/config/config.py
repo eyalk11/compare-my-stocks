@@ -52,7 +52,7 @@ for f in FILE_LIST_TO_RES:
         continue
 
     if res==False:
-        print(f'Failed resolving {f}')
+        print(f'Failed resolving {f}. Using: {fil}')
     else:
         print(f'{f} resolved to {fil}')
 

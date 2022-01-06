@@ -840,7 +840,7 @@
                 <item row="1" column="1">
                  <widget class="QGroupBox" name="groupBox">
                   <property name="sizePolicy">
-                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>0</horstretch>
                     <verstretch>0</verstretch>
                    </sizepolicy>
@@ -848,7 +848,13 @@
                   <property name="minimumSize">
                    <size>
                     <width>100</width>
-                    <height>80</height>
+                    <height>90</height>
+                   </size>
+                  </property>
+                  <property name="baseSize">
+                   <size>
+                    <width>100</width>
+                    <height>90</height>
                    </size>
                   </property>
                   <property name="title">
@@ -869,6 +875,12 @@
                      <property name="verticalSpacing">
                       <number>20</number>
                      </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>10</number>
+                     </property>
                      <item row="1" column="0">
                       <widget class="QLabel" name="label_17">
                        <property name="text">
@@ -887,8 +899,14 @@
                       <widget class="QLabeledRangeSlider" name="max_num">
                        <property name="minimumSize">
                         <size>
-                         <width>70</width>
-                         <height>15</height>
+                         <width>90</width>
+                         <height>30</height>
+                        </size>
+                       </property>
+                       <property name="baseSize">
+                        <size>
+                         <width>90</width>
+                         <height>30</height>
                         </size>
                        </property>
                        <property name="orientation">
@@ -903,8 +921,14 @@
                       <widget class="QLabeledDoubleRangeSlider" name="min_crit">
                        <property name="minimumSize">
                         <size>
-                         <width>70</width>
-                         <height>15</height>
+                         <width>90</width>
+                         <height>30</height>
+                        </size>
+                       </property>
+                       <property name="baseSize">
+                        <size>
+                         <width>90</width>
+                         <height>30</height>
                         </size>
                        </property>
                        <property name="orientation">

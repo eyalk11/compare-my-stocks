@@ -260,6 +260,7 @@ class DataGenerator(SymbolsInterface, InputData):
         return nn
 
     def serialize_me(self):
+        print(f'writing serialized file to {config.SERIALIZEDFILE}')
         with open(config.SERIALIZEDFILE,'wb') as f:
             import pickle
             pickle.dump(Serialized(self.orig_df,self.bef_rem_data, self.after_filter_data, self.act), f)

@@ -51,7 +51,7 @@ This is the file name of the portfolio. You may export the csv from my stocks po
 https://play.google.com/store/apps/details?id=co.peeksoft.stocks&hl=iw&gl=US 
 Or you can generate buy dictionary yourself...  
 '''
-PORTFOLIOFN = r''
+PORTFOLIOFN = r'NOPORTFOLIO'
 '''
 The name of the portfolio in the file. 
 '''
@@ -80,8 +80,8 @@ GRAPHFN='mygraphs.json'
 
 BASECUR="USD"
 
-REVENUEFILE =None
-INCOMEFILE = None
-COMMONSTOCK= None
+REVENUEFILE ='NOEARNINGS'
+INCOMEFILE = 'NOEARNINGS'
+COMMONSTOCK= 'NOEARNINGS'
 
 IGNORED_SYMBOLS=[]
