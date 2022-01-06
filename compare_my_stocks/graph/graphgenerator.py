@@ -80,6 +80,7 @@ class GraphGenerator:
                     child.remove()
             ar= self._linesandfig[-1][2]
             if  getattr(self,'cursor',None):
+                self.cursor.remove()
                 self.cursor.disconnect('add',cb=self.cb)
                 del self.cursor
             #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
