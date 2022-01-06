@@ -381,6 +381,8 @@ class FormInitializer(FormObserver):
 
     def update_rangeb(self,minmax):
         self.disable_slider_values_updates=True
+        if minmax[0]==minmax[1]:
+            minmax = (minmax[0],minmax[0]+0.1)
         self.window.min_crit.setRange(minmax[0], minmax[1])
         self.window.min_crit.setValue(minmax)
         self.disable_slider_values_updates = False
@@ -404,8 +406,11 @@ class FormInitializer(FormObserver):
         if self._graphObj.minValue is None or self._graphObj.maxValue is None:
             self.disable_slider_values_updates = False
             return
-
-        self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue)
+        if self._graphObj.minValue==self._graphObj.maxValue and self._graphObj.maxValue==0:
+            print('bad range')
+            self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue+0.1)
+        else:
+            self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue)
 
         if initial:
             self.window.max_num.setValue((0, nuofoptions))

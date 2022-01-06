@@ -198,6 +198,8 @@ class DataGenerator(SymbolsInterface, InputData):
         df, Marr ,min_arr, type= self.get_data_by_type(self.params.type, self.params.compare_with)
 
         self.cols = df.columns
+        if df.isnull().all(axis=None):
+            raise NoDataException("Dataframe is empty")
 
         b=self.update_ranges(df)
         self.params.ignore_minmax= self.params.ignore_minmax or b

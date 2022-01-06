@@ -73,14 +73,16 @@ class GraphGenerator:
             #for ann in self._annotation:
             #    ann.remove()
                 #del ann
+            if  getattr(self,'cursor',None):
+                self.cursor.remove()
             for child in plt.gca().get_children():
                 if isinstance(child, matplotlib.lines.Line2D):
                     child.remove()
-                if isinstance(child, matplotlib.text.Annotation):
-                    child.remove()
+                # if isinstance(child, matplotlib.text.Annotation):
+                #     child.remove()
             ar= self._linesandfig[-1][2]
             if  getattr(self,'cursor',None):
-                self.cursor.remove()
+                #self.cursor.remove()
                 self.cursor.disconnect('add',cb=self.cb)
                 del self.cursor
             #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
