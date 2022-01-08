@@ -1,0 +1,47 @@
+[tool.briefcase]
+project_name = "Compare My Stocks"
+bundle = "com.example"
+version = "0.0.1"
+url = "https://github.com/eyalk11/compare-my-stocks"
+license = "GNU General Public License v3 (GPLv3)"
+author = 'Eyal Karni'
+author_email = "eyalk5@gmail.com"
+
+[tool.briefcase.app.compare-my-stocks]
+formal_name = "Compare My Stocks"
+description = "Compare stocks"
+icon = "src/compare_my_stocks/resources/compare-my-stocks"
+sources = ['src/compare_my_stocks']
+requires = [
+"Flask==2.0.2",
+"numpy==1.22.0",
+"requests==2.26.0",
+"PySide6==6.2.0",
+"matplotlib==3.5.1",
+"pandas==1.3.5",
+"python-dateutil==2.8.2",
+"pytz==2021.3",
+"json_editor @ git+https://github.com/eyalk11/json-editor.git#egg=json_editor-1.0.0",
+"investpy @ git+https://github.com/eyalk11/investpy.git#egg=investpy-1.0.7a",
+"superqt==0.2.5.post1",
+"mplcursors==0.4",
+"Django==3.2.9"
+    ]
+
+
+[tool.briefcase.app.compare-my-stocks.macOS]
+requires = []
+
+[tool.briefcase.app.compare-my-stocks.linux]
+requires = []
+system_requires = []
+
+[tool.briefcase.app.compare-my-stocks.windows]
+requires = []
+
+# Mobile deployments
+[tool.briefcase.app.compare-my-stocks.iOS]
+requires = []
+
+[tool.briefcase.app.compare-my-stocks.android]
+requires = []
