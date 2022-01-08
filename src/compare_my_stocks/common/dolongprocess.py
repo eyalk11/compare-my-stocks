@@ -17,9 +17,9 @@ class DoLongProcess(QObject):
 
     def run(self):
         self.started = True
-        print('xxxc')
+        print('bef real task')
         self._realtask()
-        print('xxxy')
+        print('post')
         self.finished.emit()
         self.started = False
 
@@ -27,6 +27,7 @@ class DoLongProcess(QObject):
     @property
     def is_started(self):
         return self.started
+
     def startit(self,*params):
 
         self._realtask= partial(self._task,*params)

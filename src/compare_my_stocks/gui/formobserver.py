@@ -19,6 +19,32 @@ except:
     import json_editor_ui
 
 class ListsObserver:
+    def process_elem(self,params):
+        while True:
+            ls = self.addqueue.copy()
+            self.window.last_status.setText('processing added stocks')
+            self._graphObj.process(set(ls),params) #blocks. should have mutex here
+            self.window.last_status.setText('finshed processing')
+            self.addqueue = list(set(self.addqueue) - set(ls))
+            if len(self.addqueue)==0:
+                break
+
+
+    def __init__(self):
+        self.addqueue=[]
+        self.grep_from_queue_task= DoLongProcess(self.process_elem)
+
+    def process_if_needed(self,stock):
+        if not stock in self._graphObj._usable_symbols:
+            self.addqueue+=[stock]
+
+            if not self.grep_from_queue_task.is_started:
+                params = copyit(self._graphObj.params)
+                params.transactions_todate = None  # datetime.now() #always till the end
+                self.grep_from_queue_task.startit(params)
+
+
+
     @staticmethod
     def del_selected(z):
         listItems = z.selectedItems()
@@ -45,12 +71,16 @@ class ListsObserver:
 
     def add_selected(self):
         org: QListWidget = self.window.orgstocks  # type:
-        org.addItem(self.window.addstock.currentText())
+        text = self.window.addstock.currentText()
+        self.process_if_needed(text)
+        org.addItem(text)
         self.update_graph(1)
 
     def add_reserved(self):
         org: QListWidget = self.window.refstocks  # type:
-        org.addItem(self.window.addstock.currentText())
+        text = self.window.addstock.currentText()
+        self.process_if_needed(text)
+        org.addItem(text)
         self.update_graph(1)
 
 
@@ -94,8 +124,11 @@ class GraphsHandler:
 
 class FormObserver(ListsObserver,GraphsHandler):
     def refresh_task(self,x,params):
+        self.window.last_status.setText('started refreshing')
         self._graphObj.process(set(x),params)
+        self.window.last_status.setText('finshed refreshing')
     def __init__(self):
+        ListsObserver.__init__(self)
         GraphsHandler.__init__(self)
         self._graphObj : SymbolsInterface = None
         self.window=None
@@ -109,6 +142,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         #task = lambda x: self._graphObj.process(set(x))
         self._refresh_stocks_task = DoLongProcess(self.refresh_task)
         self._refresh_stocks_task.finished.connect(lambda: self.update_graph(1, True))
+
 
     def refresh_stocks(self,*args):
         wantitall = self._graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
