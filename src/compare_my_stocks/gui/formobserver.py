@@ -1,7 +1,7 @@
 import json
 from abc import abstractmethod
 from functools import partial
-
+from PySide6.QtCore import QThread
 import PySide6.QtCore
 import PySide6.QtWidgets
 
@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton,
 from superqt.sliders._labeled import EdgeLabelMode
 
 from common.common import UniteType, Types, index_of
+from common.dolongprocess import DoLongProcess
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
@@ -90,7 +91,10 @@ class GraphsHandler:
         self.update_graph(1,force=True)
         self.setup_controls_from_params(0)
 
+
 class FormObserver(ListsObserver,GraphsHandler):
+    def refresh_task(self,x,params):
+        self._graphObj.process(set(x),params)
     def __init__(self):
         GraphsHandler.__init__(self)
         self._graphObj : SymbolsInterface = None
@@ -100,15 +104,27 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.disable_slider_values_updates=False
         self.json_editor = json_editor_ui.JSONEditorWindow(None)
         self.ignore_updates_for_now = False
+        #self._dolongprocess=DoLongProces()
         #self._toselectall=False
+        #task = lambda x: self._graphObj.process(set(x))
+        self._refresh_stocks_task = DoLongProcess(self.refresh_task)
+        self._refresh_stocks_task.finished.connect(lambda: self.update_graph(1, True))
 
     def refresh_stocks(self,*args):
         wantitall = self._graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
         toupdate= self._graphObj.required_syms(True,wantitall,True)
+        params= copyit(self._graphObj.params)
+        params.transactions_todate=None #datetime.now() #always till the end
         if len(toupdate)==0:
             return
-        self._graphObj.process(set(toupdate))
-        self.update_graph(1,True)
+
+        if self._refresh_stocks_task.is_started:
+            self.window.last_status.setText("already runnning another")
+            return
+        self._refresh_stocks_task.startit(toupdate,params)
+
+        #self._dolongprocess.run(set(toupdate))
+
 
     def update_graph(self,reset_ranges,force=False):
         self.window.last_status.setText('')

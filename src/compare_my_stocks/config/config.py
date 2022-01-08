@@ -19,7 +19,7 @@ def resolvefile(filename):
         if filename=='':
             return False,None
         if os.path.isabs(filename):
-            return filename
+            return os.path.exists(filename), filename
         for loc in os.curdir, PROJDIR , "/etc/"+MYPROJ, os.environ.get(PROJPATHENV,'didntfind'),datapath:
             fil=os.path.join( loc,filename)
             if os.path.exists(fil):

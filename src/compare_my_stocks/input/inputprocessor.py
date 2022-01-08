@@ -10,9 +10,11 @@ import numpy
 import pandas
 import pandas as pd
 import pytz
+from PySide6.QtCore import QRecursiveMutex
 
 from config import config
 from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
+from engine.parameters import copyit
 
 from input.inputsource import InputSource, IBSource, InvestPySource
 from engine.symbolsinterface import SymbolsInterface
@@ -24,6 +26,29 @@ from input.earningsinp import get_earnings
            'avg_cost_by_stock'])
 class InputProcessor(TransactionHandler):
 
+    @property
+    def reg_panel(self):
+        self._proccessing_mutex.lock()
+        x= self._reg_panel
+        self._proccessing_mutex.unlock()
+        return x
+
+    @reg_panel.setter
+    def reg_panel(self, value):
+        self._reg_panel=value
+        pass
+
+    @property
+    def adjusted_panel(self):
+        self._proccessing_mutex.lock()
+        x= self._adjusted_panel
+        self._proccessing_mutex.unlock()
+        return x
+
+    @adjusted_panel.setter
+    def adjusted_panel(self, value):
+        self._adjusted_panel=value #we are under lock
+        pass
 
     def __init__(self, filename):
         TransactionHandler.__init__(self, filename)
@@ -33,6 +58,7 @@ class InputProcessor(TransactionHandler):
         self.symbol_info = {}
         self._usable_symbols = set()
         self._bad_symbols = set()
+
         if config.INPUTSOURCE == InputSourceType.IB:
             self._inputsource: InputSource = IBSource()
         else:
@@ -44,6 +70,9 @@ class InputProcessor(TransactionHandler):
         self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
         self.currencyrange=None
+        self._proccessing_mutex = QRecursiveMutex()
+        self._reg_panel=None
+        self._adjusted_panel=None
 
 
     def resolve_currency(self, sym, l, hist, fromdate, enddate):
@@ -109,16 +138,16 @@ class InputProcessor(TransactionHandler):
         cur_action = b.popitem(False) if len(b)!=0 else None
 
 
-        if self.params.transactions_fromdate == None:
+        if self.process_params.transactions_fromdate == None:
             if not cur_action:
-                self.params.transactions_fromdate = config.DEFAULTFROMDATE
+                self.process_params.transactions_fromdate = config.DEFAULTFROMDATE
                 print('where to start?')
             else:
-                self.params.transactions_fromdate = cur_action[0] #start from first buy
+                self.process_params.transactions_fromdate = cur_action[0] #start from first buy
 
 
         query_source = True
-        if self.params.use_cache != UseCache.DONT and not partial_symbols_update:
+        if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
             query_source = self.load_cache()
 
 
@@ -126,23 +155,25 @@ class InputProcessor(TransactionHandler):
         if query_source:
             self.get_data_from_source(partial_symbols_update)
             self.save_data()
-
+        print('finish initi')
         self.simplify_hist(partial_symbols_update)
-
+        print('finish simpl')
         self.process_hist_internal(b, cur_action, partial_symbols_update)
-
+        print('finish internal')
         self.convert_dicts_to_df_and_add_earnings()
+        print('fin convert')
         self.adjust_for_currency()
+        print('last')
 
     def load_cache(self):
         query_source = True
         try:
             hist_by_date, self.symbol_info, self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
-            if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.params.use_cache == UseCache.FORCEUSE:
+            if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
             self.update_usable_symbols()
             print(f'cache symbols used {sorted(list(self._usable_symbols))}')
-            if not self.params.use_cache == UseCache.FORCEUSE:
+            if not self.process_params.use_cache == UseCache.FORCEUSE:
                 query_source = not (set(self._symbols_wanted) <= set(
                     self._usable_symbols))  # all the buy and required are in there
             else:
@@ -195,7 +226,7 @@ class InputProcessor(TransactionHandler):
                 dic = dictfilt(dic, partial_symbols_update)
             t = hh.localize(t, True)
             # t=pytz.normalize(t,cur_action[0].tzinfo())#t.replace(tzinfo=pytz.UTC)
-            if self.params.transactions_todate and t > self.params.transactions_todate:
+            if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
                 break
             while cur_action and (t > cur_action[0]):
                 update_curholding()
@@ -263,14 +294,14 @@ class InputProcessor(TransactionHandler):
         else:
             self._bad_symbols=self._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
         for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
-            todate = self.params.transactions_todate if self.params.transactions_todate is not None else datetime.datetime.now()
+            todate = self.process_params.transactions_todate if self.process_params.transactions_todate is not None else datetime.datetime.now()
 
             todate = localize_me(todate)
-            transactions_fromdate = localize_me(self.params.transactions_fromdate)
+            transactions_fromdate = localize_me(self.process_params.transactions_fromdate)
             numdays = (todate - transactions_fromdate).days
             sym_corrected = config.TRANSLATEDIC.get(sym, sym)
 
-            l, hist = self._inputsource.get_symbol_history(sym_corrected, self.params.transactions_fromdate, todate,
+            l, hist = self._inputsource.get_symbol_history(sym_corrected, self.process_params.transactions_fromdate, todate,
                                                            iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
             self.symbol_info_tmp[sym] = l
             if hist is None:
@@ -338,6 +369,8 @@ class InputProcessor(TransactionHandler):
 
         for name, dic in zip(self.dicts_names,seldict):
             df = pd.DataFrame(dic, index=combinedindex)
+            if name=='alldates':
+                df = df.fillna(method='ffill', axis=1)
             #df = pd.DataFrame(dic,index=sorted(list(self._fset)))
             # combined index is needed to adjust for the df, but maybe can do without... pass to return_df
             #df = pd.DataFrame(dic, index=combinedindex)
@@ -358,8 +391,7 @@ class InputProcessor(TransactionHandler):
             traceback.print_exc()
             print('earnings calc failed ')
 
-        self.reg_panel = pd.concat(dataframes,axis=1)
-        self.reg_panel=self.reg_panel
+        self._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
     def return_df(df, cur,commonstock_df,name):
@@ -389,7 +421,7 @@ class InputProcessor(TransactionHandler):
             self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
         dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
 
-        self.adjusted_panel=self.get_adjusted_df_for_currency(dic)
+        self._adjusted_panel=self.get_adjusted_df_for_currency(dic)
 
     def init_input(self):
         #todo: make dataframe... but it is 3d...
@@ -412,17 +444,17 @@ class InputProcessor(TransactionHandler):
 
 
         multiIndex = pd.MultiIndex.from_product([InputProcessor.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
-        df = pd.DataFrame(index=self.reg_panel.index, columns=multiIndex)
+        df = pd.DataFrame(index=self._reg_panel.index, columns=multiIndex)
         for x in InputProcessor.TOADJUST:
             for k, v in dic.items():
                 df.loc[:, (x, k)] = dic[k]
 
-        nn=pd.DataFrame(index=self.reg_panel.index, columns=self.reg_panel.columns)#[ (c,d)  for (c,d) in   self.reg_panel.columns if c!='tot_profit_by_stock']  )
+        nn=pd.DataFrame(index=self._reg_panel.index, columns=self._reg_panel.columns)#[ (c,d)  for (c,d) in   self.reg_panel.columns if c!='tot_profit_by_stock']  )
         for x in SymbolsInterface.TOKEEP:
-            if x in self.reg_panel:
-                nn[x] = self.reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
+            if x in self._reg_panel:
+                nn[x] = self._reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
 
-        uu = self.reg_panel[multiIndex].mul(df)
+        uu = self._reg_panel[multiIndex].mul(df)
         nn[multiIndex] = uu
        # nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
         #nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)
@@ -433,7 +465,7 @@ class InputProcessor(TransactionHandler):
 
 
 
-        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not in self.TOADJUSTLONG]]
+        nn = nn[[(c, d) for (c, d) in self._reg_panel.columns if c not in self.TOADJUSTLONG]]
         n1= return_subpanel('value',self._adjusted_value)
         n2= return_subpanel('alldates', self._alldates_adjusted)
         n3 = return_subpanel('unrel_profit',self._unrel_profit_adjusted)
@@ -457,7 +489,15 @@ class InputProcessor(TransactionHandler):
         for t, dic in self._hist_by_date.items():
             self._usable_symbols.update(set(dic.keys()))
 
-    def process(self, partial_symbol_update=set()):
+    def process(self, partial_symbol_update=set(),params=None):
+        print('entering lock')
+        self._proccessing_mutex.lock()
+        print('entered')
+        if params==None:
+            params= copyit(self.params) #For now on , under lock..
+
+        self.process_params = params
+
         t = time.process_time()
         if not self._initial_process_done:
             self.populate_buydic()
@@ -465,7 +505,7 @@ class InputProcessor(TransactionHandler):
         elapsed_time = time.process_time() - t
         print('elasped populating : %s' % elapsed_time)
         if not partial_symbol_update:
-            self.used_unitetype = self.params.unite_by_group
+            self.used_unitetype = self.process_params.unite_by_group
             required=set(self.required_syms(True,True))
             if config.DOWNLOADDATAFORPROT:
                 self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
@@ -478,5 +518,6 @@ class InputProcessor(TransactionHandler):
         # do some stuff
         elapsed_time = time.process_time() - t
         print('elasped : %s' % elapsed_time)
+        self._proccessing_mutex.unlock()
 
 
