@@ -1,36 +1,69 @@
 import math
+import time
+from contextlib import suppress
 from functools import partial
 
 import matplotlib
 import mplcursors
-from matplotlib import pyplot as plt
+from PySide6.QtCore import QMutex, QRecursiveMutex
+#from matplotlib import pyplot as plt
 import numpy
 from config import config
 USEQT=config.USEQT
 from common.common import Types
-plt.rcParams["figure.autolayout"] = False
+#plt.rcParams["figure.autolayout"] = False
 
 
-def show_annotation(sel,cls=None, ax=None):
-    xi = sel.target[0]
-    vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
-    sel.extras.append(vertical_line)
+def show_annotation(sel,cls=None, ax=None,generation=None):
 
-    val=[  ( round(numpy.interp(xi, ll._x, ll._y),2),ll._visible,ll==sel[0])  for ll in ax.lines ]
-    names= [ k._label for k in ax.legend_.legendHandles  ]
-    annotation_str = '\n'.join([    ('%s' if not targ else r' $\bf{ %s }$')  % (f'{n}: {v1}') for n,(v1,vis,targ) in zip(names,val) if vis and not math.isnan(v1)  ])
-    annotation_str+='\n'+str(matplotlib.dates.num2date(xi).strftime('%Y-%m-%d'))
+    cls.generation_mutex.lock()
+    print('show locked')
+    try:
+        #
+        # if cls.generation!=generation:
+        #     print('ignoring diff generation')
+        #     with suppress(ValueError):
+        #         sel.annotation.remove()
+        #     for artist in sel.extras:
+        #         with suppress(ValueError):
+        #             artist.remove()
+        #     # try:
+        #     #     for sel in cls.cursor.selections:
+        #     #         cls.cursor.remove_selection(sel)
+        #     # except:
+        #     #     pass
+        #     return
 
-    sel.annotation.set_text(annotation_str)
+        xi = sel.target[0]
+        vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
+        sel.extras.append(vertical_line)
+
+        val=[  ( round(numpy.interp(xi, ll._x, ll._y),2),ll._visible,ll==sel[0])  for ll in ax.lines ]
+        names= [ k._label for k in ax.legend_.legendHandles  ]
+        annotation_str = '\n'.join([    ('%s' if not targ else r' $\bf{ %s }$')  % (f'{n}: {v1}') for n,(v1,vis,targ) in zip(names,val) if vis and not math.isnan(v1)  ])
+        annotation_str+='\n'+str(matplotlib.dates.num2date(xi).strftime('%Y-%m-%d'))
+
+        sel.annotation.set_text(annotation_str)
+        cls.anotation_list+=[sel]
+
+    finally:
+        print('show unlock')
+        cls.generation_mutex.unlock()
     #cls._annotation+=ann
 
 class GraphGenerator:
-    def __init__(self):
+    def __init__(self,axes):
         #self.params = None
+        self._axes=axes
         self._linesandfig=[]
         self.last_stock_list=set()
         self.cur_shown_stock=set()
         self.adjust_date=False
+        self.generation_mutex = QRecursiveMutex()
+        self.generation=0
+        self.anotation_list=[]
+        self.cursor = None
+
 
     def get_title(self):
         type=self.params.type
@@ -66,90 +99,98 @@ class GraphGenerator:
         return st
 
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
-        if not just_upd:
-            self.cur_shown_stock = set()
-        if just_upd:
-            #plt.cla()
-            #for ann in self._annotation:
-            #    ann.remove()
-                #del ann
-            if  getattr(self,'cursor',None):
-                self.cursor.remove()
-            for child in plt.gca().get_children():
-                if isinstance(child, matplotlib.lines.Line2D):
-                    child.remove()
-                # if isinstance(child, matplotlib.text.Annotation):
-                #     child.remove()
-            ar= self._linesandfig[-1][2]
-            if  getattr(self,'cursor',None):
-                #self.cursor.remove()
-                self.cursor.disconnect('add',cb=self.cb)
-                del self.cursor
-            #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
-            dt.plot.line(reuse_plot=True, ax=ar)
-            #ar.legend_.figure.canvas.clear()
-            #ar.legend_.figure.canvas.draw()
-        else:
-
-            if not isline:
-                ar = dt.plot.area( stacked=False)
-            else:
-                #mplfinance.plot(dt, figsize=(16, 10), type='candle')
-                ar = dt.plot.line()
-        FACy = 1.2
-        FACx = 2.4
-        box = ar.get_position()
-        ar.set_position([0, box.y0, 6*FACx, box.height])
-        mfig = ar.figure
-
-        ar.set_title(self.get_title() )
-
-        # Put a legend to the right of the current aris
-        if len(cols) >= config.MINCOLFORCOLUMS:
-
-            ar.legend(loc='center left', bbox_to_anchor=B, ncol=len(cols) // config.MINCOLFORCOLUMS, handleheight=2.4, labelspacing=0.05)
-        else:
-            ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
-        if isline:
-            (lined, fig) = self.handle_line(ar, starthidden,just_upd)
-
-        if self.params.increase_fig or len(self._linesandfig)==0:
-            # plt.figure(len(self.graphs))
-            if isline:
-                self._linesandfig += [(lined, fig,ar)]
-        else:
-            if isline:
-                self._linesandfig[-1] = (lined, fig,ar)
-        if 1:
-            plt.gcf().autofmt_xdate()
-
-             #plt.subplots_adjust(right=0.9)
-            #plt.tight_layout(rect=[0, 0, 0.9, 1])
-            ax=ar
-            #ax.set_ylim(auto=True)
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
-            #ax.xaxis.set_major_formatter(plt.FuncFormatter(hhmmss_formatter))  # show x-axis as hh:mm:ss
-            #ax.xaxis.set_major_locator(plt.MultipleLocator(2 * 60 * 60))  # set ticks every two hours
-
-            self.cursor = mplcursors.cursor(hover=True)
-            self.cb= self.cursor.connect('add', partial(show_annotation,cls=self,ax=ar))
-            plt.grid(visible=True)
-            #self._ax=ax
+        self.generation_mutex.lock()
+        print('generation locked')
+        #plt.sca(self._axes)
+        try:
+            if not just_upd:
+                self.cur_shown_stock = set()
+                print('not  justupdate')
+                self.remove_all_anotations()
             if just_upd:
-                #with self._out:
+                print('calledreomve!')
+                #import ipdb
+                #ipdb.set_trace()
+                #plt.cla()
+                #for ann in self._annotation:
+                #    ann.remove()
+                    #del ann
+                self.remove_all_anotations()
+                ar = self._axes
+                dt.plot.line(reuse_plot=True, ax=ar,grid=True)
+                if not self.cursor:
+                    self.cursor = mplcursors.cursor(ar.figure, hover=True)
+                    self.generation += 1
+                    self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar,
+                                                                 generation=self.generation))
 
-                self.update_limit(ar, fig, mfig, lined.values())
-                if self.adjust_date:
-                    f,t = plt.xlim()
-                    fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
-                    todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
-                    plt.xlim([fromdateNum,todateNum])
-                    plt.grid(b=True)
-                    self.adjust_date=False
-                    #plt.draw()
-            elif self.params.show_graph:
-                print('strange')
-                pass#plt.show()
+                #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
+
+                #ar.legend_.figure.canvas.clear()
+                #ar.legend_.figure.canvas.draw()
+            else:
+
+                if not isline:
+                    ar = dt.plot.area( stacked=False)
+                else:
+                    #mplfinance.plot(dt, figsize=(16, 10), type='candle')
+                    ar = self._axes
+                    dt.plot.line(reuse_plot=True, ax=ar,grid=True)
+            FACy = 1.2
+            FACx = 2.4
+            box = ar.get_position()
+            ar.set_position([0, box.y0, 6*FACx, box.height])
+            mfig = ar.figure
+
+            ar.set_title(self.get_title() )
+
+            # Put a legend to the right of the current aris
+            if len(cols) >= config.MINCOLFORCOLUMS:
+
+                ar.legend(loc='center left', bbox_to_anchor=B, ncol=len(cols) // config.MINCOLFORCOLUMS, handleheight=2.4, labelspacing=0.05)
+            else:
+                ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
+            if isline:
+                (lined, fig) = self.handle_line(ar, starthidden,just_upd)
+
+            if self.params.increase_fig or len(self._linesandfig)==0:
+                # plt.figure(len(self.graphs))
+                if isline:
+                    self._linesandfig += [(lined, fig,ar)]
+            else:
+                if isline:
+                    self._linesandfig[-1] = (lined, fig,ar)
+            if 1:
+                mfig.autofmt_xdate()
+
+                ax=ar
+                ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
+
+
+
+
+
+                #plt.grid(visible=True)
+                #self._ax=ax
+                if just_upd:
+                    #with self._out:
+
+                    self.update_limit(ar, fig, mfig, lined.values())
+                    if self.adjust_date:
+                        f,t = self._axes.get_xlim()
+                        fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
+                        todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
+                        self._axes.set_xlim([fromdateNum,todateNum])
+                        #plt.grid(b=True)
+                        self.adjust_date=False
+                        #plt.draw()
+                elif self.params.show_graph:
+                    print('strange')
+                    pass#plt.show()
+            #self.remove_all_anotations()
+        finally:
+            print('generation unlocked')
+            self.generation_mutex.unlock()
                     #from IPython.core.display import display
                     #display(mfig)
                     #plt.gcf().set_size_inches(13.57,  5.8 )
@@ -159,6 +200,52 @@ class GraphGenerator:
                 #plt.show(block=False)
             #print('aftershow')
         #time.sleep(2)
+
+    def remove_all_anotations(self):
+        # for x in self.anotation_list:
+        #     try:
+        #         x.remove()
+        #     except:
+        #         pass
+        #if getattr(self, 'cursor', None):
+            #self.cursor.remove()
+            #self.cursor.disconnect('add', cb=self.cb)
+        # for x in self.anotation_list:
+        #     try:
+        #         self.cursor.remove_selection(x)
+        #         print('removed sel')
+        #     except:
+        #         pass
+        if getattr(self, 'cursor', None):
+            #self.cursor.remove()
+
+            time.sleep(0.2)
+            #self.cursor.disconnect('add', cb=self.cb)
+            #self.cb=lambda :None
+            print(self.cursor._callbacks)
+            #self.cursor._callbacks['add'] = {}
+            for t in self.cursor.selections:
+                self.cursor.remove_selection(t)
+        if len( self._linesandfig)>0:
+            for child in self._linesandfig[-1][2].get_children():
+                if isinstance(child, matplotlib.lines.Line2D):
+                    child.remove()
+
+                # if isinstance(child, matplotlib.text.Annotation):
+                #
+                #     try:
+                #         child.remove()
+                #     except:
+                #         print('zzs')
+                #         pass
+
+
+        if getattr(self, 'cursor', None):
+            pass# self.cursor.remove()
+            #self.cursor.disconnect('add', cb=self.cb)
+            #self.cb
+            #del self.cursor
+
 
     def handle_line(self,ar,starthidden,just_upd):
         lined=dict()

@@ -1,18 +1,29 @@
 import json
 from abc import abstractmethod
 from functools import partial
+
 from PySide6.QtCore import QThread
 import PySide6.QtCore
 import PySide6.QtWidgets
 
-from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton,QLineEdit,QInputDialog
+from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton, QLineEdit, QInputDialog, QSizePolicy
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 from superqt.sliders._labeled import EdgeLabelMode
 
 from common.common import UniteType, Types, index_of
-from common.dolongprocess import DoLongProcess
+from common.dolongprocess import DoLongProcess, DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
+
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self):
+        self.fig = Figure()
+        self.ax = self.fig.add_subplot(111)
+        FigureCanvasQTAgg.__init__(self, self.fig)
+        FigureCanvasQTAgg.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        FigureCanvasQTAgg.updateGeometry(self)
 try:
     from json_editor import json_editor_ui
 except:
@@ -123,10 +134,17 @@ class GraphsHandler:
 
 
 class FormObserver(ListsObserver,GraphsHandler):
+    def update_task(self,params):
+        # self.window.last_status.setText('started refreshing')
+        self._graphObj.update_graph(params)
+        # self.window.last_status.setText('finshed refreshing')
+
     def refresh_task(self,x,params):
         self.window.last_status.setText('started refreshing')
         self._graphObj.process(set(x),params)
+        self.update_graph(1, True)
         self.window.last_status.setText('finshed refreshing')
+
     def __init__(self):
         ListsObserver.__init__(self)
         GraphsHandler.__init__(self)
@@ -141,7 +159,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._toselectall=False
         #task = lambda x: self._graphObj.process(set(x))
         self._refresh_stocks_task = DoLongProcess(self.refresh_task)
-        self._refresh_stocks_task.finished.connect(lambda: self.update_graph(1, True))
+        self._update_graph_task = DoLongProcessSlots(self.update_task)
 
 
     def refresh_stocks(self,*args):
@@ -166,7 +184,8 @@ class FormObserver(ListsObserver,GraphsHandler):
             return
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
-                self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
+                self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),))
+                # self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
                 self.update_ranges(reset_ranges)
         except:
             print('failed updating graph')
@@ -342,14 +361,35 @@ class FormObserver(ListsObserver,GraphsHandler):
 
 
 class FormInitializer(FormObserver):
+
     def __init__(self):
 
         super().__init__()
+
+    @property
+    def figure(self):
+        return self._canvas.figure
+
+    @property
+    def axes(self):
+        return self._canvas.ax
+        return
+    def prepare_graph_widget(self):
+        #tabWidget = self.window.tabWidget_8Page1  # type: QTabWidget
+
+        self._canvas = MplCanvas()
+        #sc.manager.window.move(1,1)
+        toolbar = NavigationToolbar(self._canvas, self.window)
+        #layout = QVBoxLayout()
+        self.window.graph_groupbox.layout().addWidget(toolbar)
+        self.window.graph_groupbox.layout().addWidget(self._canvas)
+
 
     def after_load(self):
         self.rad_types = self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,
                                                                                            name="unite_ADDPROT") + self.window.findChildren(
             QCheckBox, name="unite_ADDTOTAL") + self.window.findChildren(QCheckBox, name="COMPARE")
+        self.prepare_graph_widget()
 
     def set_all_toggled_value(self):
         type= self._graphObj.params.type
@@ -496,4 +536,16 @@ class FormInitializer(FormObserver):
             elif isinitial:
                 org.clear()
                 org.addItems(self._graphObj.params.selected_stocks)
+
+
+
+    #self.window.gridLayout_8.addWidget(toolbar)
+    #self.window.gridLayout_8.addWidget(sc)
+    #self.window.tabWidget.setLayout(QVBoxLayout())
+    #self.window.tabWidget.setCenteralWidget()
+    #tabWidget.setCentralWidget(self.window.gridLayout_8)
+    #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
+    #layoutq=QVBoxLayout()
+    #self.window.tab
+
 

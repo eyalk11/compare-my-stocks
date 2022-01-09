@@ -1,5 +1,6 @@
 import json
 
+from common.dolongprocess import DoLongProcess
 from config import config
 from common.common import NoDataException, UniteType, Types
 from engine.symbolsinterface import SymbolsInterface
@@ -67,8 +68,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             traceback.print_exc()
             print('exception in  groups file') #raise Exception("error reading groups")
 
-    def __init__(self,filename):
-        super(CompareEngine, self).__init__()
+    def __init__(self,filename,axes=None):
+        super(CompareEngine, self).__init__(axes)
         InputProcessor.__init__(self, filename)
         DataGenerator.__init__(self)
 
@@ -76,11 +77,13 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         self._cache_date=None
         self.params=None
 
+
         #self._groups = config.GROUPS
         self._categories=None
         self._cur_category = None
         self._groups_by_cat = {}
         self.read_groups_from_file()
+
 
 
     def  required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
@@ -146,18 +149,17 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
                 pass#raise
             return
 
+        self.call_graph_generator(B, just_upd, type)
 
+    def call_graph_generator(self, B, just_upd, type):
         try:
-            self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden, just_upd, type)
+            self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden,
+                                  just_upd, type)
             self.statusChanges.emit("Generated Graph :)")
         except TypeError as e:
-            e=e
+            e = e
             print("failed generating graph ")
             self.statusChanges.emit(f"failed generating graph {e}")
-
-
-
-
 
     # makes the entire graph from the default attributes.
     def update_graph(self, params: Parameters = Parameters()):

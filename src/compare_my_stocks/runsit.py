@@ -31,7 +31,7 @@ def selectmode():
         matplotlib.use('TKAgg')
 
 
-def initialize_graph_and_ib():
+def initialize_graph_and_ib(axes=None):
     if SIMPLEMODE:
         selectmode()
 
@@ -43,7 +43,7 @@ def initialize_graph_and_ib():
             sys.exit(1)
         ibmain(False)
 
-    gg = CompareEngine(config.PORTFOLIOFN)
+    gg = CompareEngine(config.PORTFOLIOFN,axes)
     return  gg
 
 def pd_ignore_warning():
@@ -59,15 +59,22 @@ def main():
     if USEQT:
         #QGuiApplication.setAttribute(Qt.Qt);
         app = QApplication([])
-    gg = initialize_graph_and_ib()
+
+    if not SIMPLEMODE:
+        mainwindow = MainWindow()
+
+
+
+    gg = initialize_graph_and_ib(mainwindow.axes if not SIMPLEMODE else None)
+
     gg.gen_graph(Parameters(
         type=Types.PRICE, unite_by_group=UniteType.ADDPROT, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
         show_graph=False))  # ,adjust_to_currency=True,currency_to_adjust='ILS'))
-    if not SIMPLEMODE:
-        mainwindow = MainWindow(gg)
-        mainwindow.run()
-    else:
+
+    if SIMPLEMODE:
         plt.draw()  # no app , bitches
+    else:
+        mainwindow.run(gg)
     if USEQT:
         sys.exit(app.exec_())
         a = 1

@@ -4,17 +4,14 @@ from pathlib import Path
 import sys
 
 import PySide6
-from PySide6.QtWidgets import QMainWindow,QTabWidget,QVBoxLayout
+from PySide6.QtWidgets import QMainWindow
 from PySide6.QtCore import QFile
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
 
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
-from superqt.sliders._labeled import LabelPosition
-
 from gui.daterangeslider import QDateRangeSlider
-from gui.formobserver import FormObserver, FormInitializer
+from gui.formobserver import FormInitializer
 
 try:
     from config import config
@@ -26,19 +23,12 @@ except Exception as e :
 from superqt import QLabeledDoubleRangeSlider
 
 
-class MplCanvas(FigureCanvasQTAgg):
-
-    def __init__(self,axes):
-        self.axes = axes
-        super(MplCanvas, self).__init__(axes.figure)
-
-
 class MainWindow(QMainWindow, FormInitializer):
-    def __init__(self,graphObj):
+    def __init__(self):
 
         super(MainWindow, self).__init__()
         FormInitializer.__init__(self)
-        self._graphObj = graphObj
+
         self.load_ui()
 
 
@@ -57,7 +47,9 @@ class MainWindow(QMainWindow, FormInitializer):
         self.setCentralWidget(self.window)
         self.after_load()
 
-    def run(self):
+
+    def run(self,graphObj):
+        self._graphObj = graphObj
         if self._graphObj==None:
             return
 
@@ -65,29 +57,7 @@ class MainWindow(QMainWindow, FormInitializer):
         self.setup_controls_from_params()
         self.setup_observers()
 
-        self.prepare_graph_widget()
-
         self.show()
-
-    def prepare_graph_widget(self):
-        #tabWidget = self.window.tabWidget_8Page1  # type: QTabWidget
-        if len(self._graphObj._linesandfig)==0:
-            print('no cant do. No initial graph generated.')
-            return
-        sc = MplCanvas(self._graphObj._linesandfig[-1][2])
-        #sc.manager.window.move(1,1)
-        toolbar = NavigationToolbar(sc, self.window)
-        #layout = QVBoxLayout()
-        self.window.graph_groupbox.layout().addWidget(toolbar)
-        self.window.graph_groupbox.layout().addWidget(sc)
-        #self.window.gridLayout_8.addWidget(toolbar)
-        #self.window.gridLayout_8.addWidget(sc)
-        #self.window.tabWidget.setLayout(QVBoxLayout())
-        #self.window.tabWidget.setCenteralWidget()
-        #tabWidget.setCentralWidget(self.window.gridLayout_8)
-        #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
-        #layoutq=QVBoxLayout()
-        #self.window.tab
 
     #from PySide6.QtWidgets import QGroupBox
     #self.window.findChild(QGroupBox, name='graph_groupbox')
