@@ -490,14 +490,27 @@ class InputProcessor(TransactionHandler):
             self._usable_symbols.update(set(dic.keys()))
 
     def process(self, partial_symbol_update=set(),params=None):
-        print('entering lock')
-        self._proccessing_mutex.lock()
-        print('entered')
+
+
+
         if params==None:
             params= copyit(self.params) #For now on , under lock..
 
         self.process_params = params
+        try:
+            print('entering lock')
+            self._proccessing_mutex.lock()
+            print('entered')
+            self.process_internal(partial_symbol_update)
+        except Exception as e:
+            print('exception in processing', e )
+            self.statusChanges.emit(f'Exception in processing {e}' )
+        finally:
+            self._proccessing_mutex.unlock()
+            print('exit proc lock')
 
+
+    def process_internal(self, partial_symbol_update):
         t = time.process_time()
         if not self._initial_process_done:
             self.populate_buydic()
@@ -506,18 +519,19 @@ class InputProcessor(TransactionHandler):
         print('elasped populating : %s' % elapsed_time)
         if not partial_symbol_update:
             self.used_unitetype = self.process_params.unite_by_group
-            required=set(self.required_syms(True,True))
+            required = set(self.required_syms(True, True))
             if config.DOWNLOADDATAFORPROT:
                 self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
             else:
-                self._symbols_wanted= required.copy()
+                self._symbols_wanted = required.copy()
         else:
-            self._symbols_wanted.update(partial_symbol_update) #will try also the symbols wanted. That are generally only updated first..
+            self._symbols_wanted.update(
+                partial_symbol_update)  # will try also the symbols wanted. That are generally only updated first..
         t = time.process_time()
         self.process_history(partial_symbol_update)
         # do some stuff
         elapsed_time = time.process_time() - t
         print('elasped : %s' % elapsed_time)
-        self._proccessing_mutex.unlock()
+    #self._proccessing_mutex.unlock()
 
 

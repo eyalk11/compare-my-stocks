@@ -160,6 +160,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             e = e
             print("failed generating graph ")
             self.statusChanges.emit(f"failed generating graph {e}")
+            raise
 
     # makes the entire graph from the default attributes.
     def update_graph(self, params: Parameters = Parameters()):

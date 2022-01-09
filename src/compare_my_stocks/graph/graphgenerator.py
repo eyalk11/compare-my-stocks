@@ -17,22 +17,18 @@ from common.common import Types
 def show_annotation(sel,cls=None, ax=None,generation=None):
 
     cls.generation_mutex.lock()
-    print('show locked')
+    #print('show locked')
     try:
-        #
-        # if cls.generation!=generation:
-        #     print('ignoring diff generation')
-        #     with suppress(ValueError):
-        #         sel.annotation.remove()
-        #     for artist in sel.extras:
-        #         with suppress(ValueError):
-        #             artist.remove()
-        #     # try:
-        #     #     for sel in cls.cursor.selections:
-        #     #         cls.cursor.remove_selection(sel)
-        #     # except:
-        #     #     pass
-        #     return
+
+        if cls.generation!=generation:
+            print('ignoring diff generation')
+            with suppress(ValueError):
+                sel.annotation.remove()
+            for artist in sel.extras:
+                with suppress(ValueError):
+                    artist.remove()
+
+            return
 
         xi = sel.target[0]
         vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
@@ -47,7 +43,7 @@ def show_annotation(sel,cls=None, ax=None,generation=None):
         cls.anotation_list+=[sel]
 
     finally:
-        print('show unlock')
+        #print('show unlock')
         cls.generation_mutex.unlock()
     #cls._annotation+=ann
 
@@ -62,8 +58,6 @@ class GraphGenerator:
         self.generation_mutex = QRecursiveMutex()
         self.generation=0
         self.anotation_list=[]
-        self.cursor = None
-
 
     def get_title(self):
         type=self.params.type
@@ -101,6 +95,7 @@ class GraphGenerator:
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         self.generation_mutex.lock()
         print('generation locked')
+
         #plt.sca(self._axes)
         try:
             if not just_upd:
@@ -118,11 +113,11 @@ class GraphGenerator:
                 self.remove_all_anotations()
                 ar = self._axes
                 dt.plot.line(reuse_plot=True, ax=ar,grid=True)
-                if not self.cursor:
-                    self.cursor = mplcursors.cursor(ar.figure, hover=True)
-                    self.generation += 1
-                    self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar,
-                                                                 generation=self.generation))
+                #fig=
+                #if just_upd:
+                #    fig.canvas.mpl_disconnect(self.cid)
+
+
 
                 #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
 
@@ -136,6 +131,7 @@ class GraphGenerator:
                     #mplfinance.plot(dt, figsize=(16, 10), type='candle')
                     ar = self._axes
                     dt.plot.line(reuse_plot=True, ax=ar,grid=True)
+                    self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
             FACy = 1.2
             FACx = 2.4
             box = ar.get_position()
@@ -151,42 +147,42 @@ class GraphGenerator:
             else:
                 ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
             if isline:
-                (lined, fig) = self.handle_line(ar, starthidden,just_upd)
-
-            if self.params.increase_fig or len(self._linesandfig)==0:
-                # plt.figure(len(self.graphs))
-                if isline:
-                    self._linesandfig += [(lined, fig,ar)]
-            else:
-                if isline:
-                    self._linesandfig[-1] = (lined, fig,ar)
-            if 1:
-                mfig.autofmt_xdate()
-
-                ax=ar
-                ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
+                self.handle_line(ar, starthidden,just_upd)
+            #
+            # if self.params.increase_fig or len(self._linesandfig)==0:
+            #     # plt.figure(len(self.graphs))
+            #
+            #
+            # else:
 
 
+            mfig.autofmt_xdate()
+
+            ax=ar
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
 
+            self.cursor = mplcursors.cursor(mfig, hover=True)
+            self.generation += 1
+            self.cb= self.cursor.connect('add', partial(show_annotation,cls=self,ax=ar,generation=self.generation))
 
-                #plt.grid(visible=True)
-                #self._ax=ax
-                if just_upd:
-                    #with self._out:
+            #plt.grid(visible=True)
+            #self._ax=ax
+            if just_upd:
+                #with self._out:
 
-                    self.update_limit(ar, fig, mfig, lined.values())
-                    if self.adjust_date:
-                        f,t = self._axes.get_xlim()
-                        fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
-                        todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
-                        self._axes.set_xlim([fromdateNum,todateNum])
-                        #plt.grid(b=True)
-                        self.adjust_date=False
-                        #plt.draw()
-                elif self.params.show_graph:
-                    print('strange')
-                    pass#plt.show()
+                self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
+                if self.adjust_date:
+                    f,t = self._axes.get_xlim()
+                    fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
+                    todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
+                    self._axes.set_xlim([fromdateNum,todateNum])
+                    #plt.grid(b=True)
+                    self.adjust_date=False
+                    #plt.draw()
+            elif self.params.show_graph:
+                print('strange')
+                pass#plt.show()
             #self.remove_all_anotations()
         finally:
             print('generation unlocked')
@@ -217,19 +213,17 @@ class GraphGenerator:
         #     except:
         #         pass
         if getattr(self, 'cursor', None):
-            #self.cursor.remove()
+            self.cursor.remove()
 
-            time.sleep(0.2)
-            #self.cursor.disconnect('add', cb=self.cb)
+            #time.sleep(0.2)
+            self.cursor.disconnect('add', cb=self.cb)
             #self.cb=lambda :None
             print(self.cursor._callbacks)
-            #self.cursor._callbacks['add'] = {}
-            for t in self.cursor.selections:
-                self.cursor.remove_selection(t)
-        if len( self._linesandfig)>0:
-            for child in self._linesandfig[-1][2].get_children():
-                if isinstance(child, matplotlib.lines.Line2D):
-                    child.remove()
+            self.cursor._callbacks['add'] = {}
+
+        for child in self._axes.get_children():
+            if isinstance(child, matplotlib.lines.Line2D):
+                child.remove()
 
                 # if isinstance(child, matplotlib.text.Annotation):
                 #
@@ -241,10 +235,12 @@ class GraphGenerator:
 
 
         if getattr(self, 'cursor', None):
-            pass# self.cursor.remove()
+            # self.cursor.remove()
             #self.cursor.disconnect('add', cb=self.cb)
             #self.cb
-            #del self.cursor
+            self._axes.figure.canvas.callbacks.disconnect(self.cb)
+            del self.cursor
+
 
 
     def handle_line(self,ar,starthidden,just_upd):
@@ -266,13 +262,9 @@ class GraphGenerator:
             self.cur_shown_stock=self.params.shown_stock
 
 
-        if just_upd:
-            fig.canvas.mpl_disconnect(self.cid)
-            fig.canvas.flush_events()
-        self.cid=fig.canvas.mpl_connect('pick_event',partial(GraphGenerator.onpick,self) )
         for origline, legline in zip(ar.lines, leg.get_lines()):
             legline.set_picker(5)  # 5 pts tolerance
-            lined[legline] = origline
+
             if not istrivial:
                 hide=   legline._label not in self.params.shown_stock #act based on shown_stock
             else:
@@ -303,10 +295,13 @@ class GraphGenerator:
                 minline = min(minline, min(y))
             #self.maxValue=0 if maxline==(-1)* MAX  V else maxline
             #self.minValue=0 if minline== MAXV else minline
-        try:
-            ar.set_ylim(ymin=minline-0.12*abs(max(minline,maxline-minline)), ymax=maxline+0.12*abs(max(maxline,maxline-minline)))
-        except ValueError:
-            print('val error')
+        if maxline== minline:
+            ar.set_ylim(ymin=minline - 0.12*minline,ymax=maxline+0.12*maxline)
+        else:
+            try:
+                ar.set_ylim(ymin=minline-0.12*abs(max(minline,maxline-minline)), ymax=maxline+0.12*abs(max(maxline,maxline-minline)))
+            except ValueError:
+                print('val error')
 
         #fig.canvas.draw()
         #ofig.canvas.draw()
@@ -315,12 +310,13 @@ class GraphGenerator:
     def onpick(self,event):
         # on the pick event, find the orig line corresponding to the
         # legend proxy line, and toggle the visibility
-        legline = event.artist
+        #legline = event.artist
         b=False
-
-        for lined, fig,ar in self._linesandfig:
-            if legline in lined:
-                origline = lined[legline]
+        ar=self._axes
+        fig=ar.legend_.figure
+        for origline, legline in zip(ar.lines, ar.legend_.get_lines()):
+            if legline==event.artist:
+                #origline = lined[legline]
                 vis = not origline.get_visible()
                 origline.set_visible(vis)
 
@@ -333,15 +329,16 @@ class GraphGenerator:
                     legline.set_alpha(0.2)
                     self.cur_shown_stock.remove(legline._label)
                 b=True
+                break
         if b:
-            self.update_limit(ar,fig,origline.figure, lined.values())
+            self.update_limit(ar,fig,origline.figure, ar.lines)
             if USEQT:
                 fig.canvas.draw()  # draw
         else:
             print("onpick failed")
         #self._ax=
     def show_hide(self,toshow):
-        ar = self._linesandfig[-1][2]
+        ar = self._axes
         leg = ar.legend_
         fig = leg.figure
         for origline, legline in zip(ar.lines, leg.get_lines()):
