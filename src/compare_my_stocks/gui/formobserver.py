@@ -145,6 +145,9 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.update_graph(1, True)
         self.window.last_status.setText('finshed refreshing')
 
+    def decrease(self):
+        self._update_graph_task.command_waiting = self._update_graph_task.command_waiting - 1
+
     def __init__(self):
         ListsObserver.__init__(self)
         GraphsHandler.__init__(self)
@@ -159,7 +162,12 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._toselectall=False
         #task = lambda x: self._graphObj.process(set(x))
         self._refresh_stocks_task = DoLongProcess(self.refresh_task)
+
+        #self._refresh_stocks_task.postinit()
+        #self._refresh_stocks_task.moveToThread(self._refresh_stocks_task.thread)
         self._update_graph_task = DoLongProcessSlots(self.update_task)
+        #self.command_waiting=0
+        self._update_graph_task.finished.connect(self.decrease)
 
 
     def refresh_stocks(self,*args):
@@ -179,14 +187,26 @@ class FormObserver(ListsObserver,GraphsHandler):
 
 
     def update_graph(self,reset_ranges,force=False):
+        def call():
+            self.decrease()
+            self.update_ranges(reset_ranges)
+
         self.window.last_status.setText('')
         if self.ignore_updates_for_now:
             return
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
+                self._update_graph_task.command_waiting+=1
+                if self._update_graph_task.command_waiting >=3:
+                    print('update waiting')
+                    self.window.last_status.setText('Update is waiting (generating graph probably)')
+
+
+                self._update_graph_task.finished.disconnect()
+                self._update_graph_task.finished.connect(call)
                 self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),))
                 # self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
-                self.update_ranges(reset_ranges)
+
         except:
             print('failed updating graph')
             self.window.last_status.setText('failed updating graph')

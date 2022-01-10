@@ -1,7 +1,8 @@
 from functools import partial
 
-from PySide6.QtCore import QObject, Signal, QThread, QMutex, QRecursiveMutex
-from PySide6.QtCore import Slot
+import PySide6
+from PySide6.QtCore import QObject, Signal, QThread, QMutex, Slot   , QRecursiveMutex
+from PySide6.QtCore import Qt
 
 class DoLongProcess(QObject):
     finished = Signal()
@@ -12,9 +13,10 @@ class DoLongProcess(QObject):
         self.started=False
         self.thread = QThread()
         self.moveToThread(self.thread)
-        self.thread.started.connect(self.run)
+        self.thread.started.connect(self.run,Qt.QueuedConnection)
         self.finished.connect(self.thread.quit)
 
+    @Slot()
     def run(self):
         self.started = True
         print('bef real task')
@@ -50,6 +52,7 @@ class DoLongProcessSlots(QObject):
         self.command.connect(self.process_command)
         self.thread.start()
         self.mutex=QRecursiveMutex()
+        self.command_waiting=0
 
         #self.thread.started.connect(self.run)
         #self.finished.connect(self.thread.quit)

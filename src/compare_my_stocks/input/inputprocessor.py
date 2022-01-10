@@ -160,10 +160,17 @@ class InputProcessor(TransactionHandler):
         print('finish simpl')
         self.process_hist_internal(b, cur_action, partial_symbols_update)
         print('finish internal')
-        self.convert_dicts_to_df_and_add_earnings()
-        print('fin convert')
-        self.adjust_for_currency()
-        print('last')
+        try:
+            print('entering lock')
+            self._proccessing_mutex.lock()
+            print('entered')
+            self.convert_dicts_to_df_and_add_earnings()
+            print('fin convert')
+            self.adjust_for_currency()
+            print('last')
+        finally:
+            self._proccessing_mutex.unlock()
+            print('exit proc lock')
 
     def load_cache(self):
         query_source = True
@@ -498,16 +505,10 @@ class InputProcessor(TransactionHandler):
 
         self.process_params = params
         try:
-            print('entering lock')
-            self._proccessing_mutex.lock()
-            print('entered')
             self.process_internal(partial_symbol_update)
         except Exception as e:
             print('exception in processing', e )
             self.statusChanges.emit(f'Exception in processing {e}' )
-        finally:
-            self._proccessing_mutex.unlock()
-            print('exit proc lock')
 
 
     def process_internal(self, partial_symbol_update):
