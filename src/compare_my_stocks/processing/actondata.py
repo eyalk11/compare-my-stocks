@@ -129,10 +129,14 @@ class ActOnData:
         if self.type & Types.COMPARE:
             ign = self.handle_compare()
 
-        self.Marr = np.nanmax(self.arr, axis=1)
-        self.min_arr = np.nanmin(self.arr, axis=1)
+
 
         if ign:
-            self.df.loc[:, self.df.columns] = self.fixinf(self.transpose_arr)
+            self.newarr = self.fixinf(self.transpose_arr)
         else:
-            self.df.loc[:, self.df.columns] = self.fixinf(self.handle_operation())
+            self.newarr = self.fixinf(self.handle_operation())
+
+        self.df.loc[:, self.df.columns] =self.newarr
+
+        self.Marr = np.nanmax(self.newarr, axis=0)
+        self.min_arr = np.nanmin(self.newarr, axis=0)

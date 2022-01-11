@@ -9,7 +9,7 @@ import dateutil
 import numpy
 
 from config import config
-from common.common import Types, UseCache, UniteType
+from common.common import Types, UseCache, UniteType, LimitType
 
 
 def paramaware(klass):
@@ -79,6 +79,7 @@ class Parameters:
     adjust_to_currency : bool= True
     currency_to_adjust: str = None
     cur_category:str = None
+    limit_by : LimitType = LimitType.RANGE
 
     @classmethod
     def load_from_json_dict(cls,dic):

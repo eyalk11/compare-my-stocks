@@ -45,6 +45,10 @@ class UseCache(int,Enum):
     USEIFAVALIABLE=1
     FORCEUSE=2
 
+class LimitType(int,Flag):
+    RANGE=0
+    MIN=auto()
+    MAX=auto()
 
 class UniteType(int,Flag):
     NONE=0

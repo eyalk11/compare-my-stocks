@@ -12,8 +12,8 @@ class DoLongProcess(QObject):
         self._realtask=None
         self.started=False
         self.thread = QThread()
-        self.moveToThread(self.thread)
-        self.thread.started.connect(self.run,Qt.QueuedConnection)
+
+
         self.finished.connect(self.thread.quit)
 
     @Slot()
@@ -37,6 +37,8 @@ class DoLongProcess(QObject):
         #self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
+        self.moveToThread(self.thread)
+        self.thread.started.connect(self.run)
 
 
 class DoLongProcessSlots(QObject):
@@ -79,6 +81,11 @@ class DoLongProcessSlots(QObject):
             print('bef real task long')
             realtask()
             print('post long')
+        except:
+            print('excpetion in real task')
+            import traceback
+            traceback.print_exc()
+            #to update status
         finally:
             self.mutex.unlock()
         self.finished.emit()

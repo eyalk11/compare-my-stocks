@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolba
 from matplotlib.figure import Figure
 from superqt.sliders._labeled import EdgeLabelMode
 
-from common.common import UniteType, Types, index_of
+from common.common import UniteType, Types, index_of, LimitType
 from common.dolongprocess import DoLongProcess, DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
@@ -161,7 +161,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._dolongprocess=DoLongProces()
         #self._toselectall=False
         #task = lambda x: self._graphObj.process(set(x))
-        self._refresh_stocks_task = DoLongProcess(self.refresh_task)
+        self._refresh_stocks_task = DoLongProcessSlots(self.refresh_task)
 
         #self._refresh_stocks_task.postinit()
         #self._refresh_stocks_task.moveToThread(self._refresh_stocks_task.thread)
@@ -181,7 +181,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         if self._refresh_stocks_task.is_started:
             self.window.last_status.setText("already runnning another")
             return
-        self._refresh_stocks_task.startit(toupdate,params)
+        self._refresh_stocks_task.command.emit((toupdate,params))
 
         #self._dolongprocess.run(set(toupdate))
 
@@ -214,28 +214,25 @@ class FormObserver(ListsObserver,GraphsHandler):
             traceback.print_exc()
 
     def type_unite_toggled(self, name, value):
-        unite_ref=False
-        if name.startswith('unite'):
-            name=name[len('unite')+1:]
-            unite_ref=True
-
-
-        curType=UniteType[name] if unite_ref else  Types[name]
-
-        if unite_ref :
-            if value:
-                self._graphObj.params.unite_by_group |= curType
-            else:
-                self._graphObj.params.unite_by_group &= ~curType
-
+        types_dic = {
+            'unite': (UniteType,'unite_by_group',1),
+            'limit' : (LimitType,'limit_by',0),
+            '':(Types,'type',1)
+        }
+        for k in types_dic:
+            if name.startswith(k):
+                if len(k)>0:
+                    name=name[len(k)+1:] #account for _
+                curType = types_dic[k][0][name]
+                curpar=types_dic[k][1]
+                update_ranges = types_dic[k][2]
+                break
+        if value:
+            setattr(self._graphObj.params,curpar,getattr(self._graphObj.params,curpar) | curType)
         else:
-            if value:
-                self._graphObj.params.type |= curType
-            else:
-                self._graphObj.params.type &= ~curType
+            setattr(self._graphObj.params, curpar, getattr(self._graphObj.params, curpar) & ~curType)
 
-
-        self.update_graph(1)
+        self.update_graph(update_ranges)
 
     def attribute_set(self, attr, value, reset_ranges=0):
         if attr in ['valuerange','numrange'] and  self.disable_slider_values_updates:
@@ -414,11 +411,15 @@ class FormInitializer(FormObserver):
     def set_all_toggled_value(self):
         type= self._graphObj.params.type
         unite = self._graphObj.params.unite_by_group
+        limit_by= self._graphObj.params.limit_by
         for rad in self.rad_types:
             name=rad.objectName()
             #func= rad.setChecked if type(rad)==QCheckBox else rad.setCheckState
             #x : QCheckBox
-            if name.startswith('unite'):
+            if name.startswith('limit'):
+                name = name[len('limit') + 1:]
+                rad.setChecked(bool(limit_by & getattr(LimitType,name)))
+            elif name.startswith('unite'):
                 name = name[len('unite') + 1:]
                 rad.setChecked( bool(unite &  getattr(UniteType,name)))
             else:

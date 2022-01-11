@@ -6,7 +6,8 @@ import pandas
 
 
 
-from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized
+from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized, \
+    LimitType
 #from compareengine import CompareEngine
 from config import config
 from processing.actondata import ActOnData
@@ -204,11 +205,17 @@ class DataGenerator(SymbolsInterface, InputData):
         b=self.update_ranges(df)
         self.params.ignore_minmax= self.params.ignore_minmax or b
 
-        mainlst= sorted(list(zip(Marr, min_arr, self.colswithoutext)), key=lambda x: x[0], reverse=True)
+        mainlst= sorted(list(zip(Marr, min_arr, df.columns)), key=lambda x: x[0], reverse=True)
 
 
-        sordlist = [stock for (max,min, stock) in mainlst  if
-                    (min >= self.params.valuerange[0] and max<= self.params.valuerange[1]) or (self.params.ignore_minmax) ]
+        condrange= lambda min,max :  (min >= self.params.valuerange[0] and max<= self.params.valuerange[1])
+        condmin= lambda min,max :  (min >= self.params.valuerange[0] and min<= self.params.valuerange[1])
+        condmax = lambda min,max :  (max >= self.params.valuerange[0] and max<= self.params.valuerange[1])
+        conddic={LimitType.MIN : condmin, LimitType.MAX:condmax,LimitType.RANGE:condrange}
+
+        cond=conddic[self.params.limit_by]
+        sordlist = [stock for (max,min, stock) in mainlst  if cond(min,max) or (self.params.ignore_minmax) ]
+
         restofcols= set(df.columns) - set(self.colswithoutext)
         if not self.params.ignore_minmax:
             rang =  (self.params.numrange[0],  self.params.numrange[1])
