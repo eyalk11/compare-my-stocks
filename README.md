@@ -59,6 +59,30 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)
 
+
+### **Close Integration With Jupyter!**
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅  Display your jupyter notebook with graph !! 
+
+&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;  Find corelations in your graph (a single line of code. presented by default)
+```
+mydata.act.df.corr(method='pearson')
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ - mainipulate data easily in runtime and display graph externally
+
+
+&nbsp;&nbsp;&nbsp;&nbsp; ⚪ Use Jupyter to display graphs inline (if you want) 
+```
+gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0))
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Edit/reload notebook directly
+
+
+
+
+
 ### Misc features 
 
 ✅ Adjusted performance relative to a currency of your choice! 
@@ -69,12 +93,9 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp;  i.e. Airlines stocks, Growth stocks (Can be compared as a group)
 
-✅ Use Jupyter to display graphs inline (if you want) 
-```
-gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  starthidden=0)
-```
 
 ✅ Extendable input sources (for stock history), and transaction handlers (for transactions and portfolios)
+
 
 ✅ **Completely free and open source!** 
 
@@ -88,9 +109,9 @@ gen_graph(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=["FANG"],  
 
 ⚕️ Adjusted performance based on inflation. 
 
-⚕️ Find corelations between sectors  
 
-⚕️ Close Integration  with jupyter (like export and import graph data) 
+
+
 
 ⚕️ All this in a web interface!
 
