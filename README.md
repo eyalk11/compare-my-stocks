@@ -27,7 +27,7 @@ For instance:
 ⚪ Present but not working yet
 
  
-### **Stocks from all over the world!**
+### **Stocks from all over the world**
  
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy
 
@@ -35,7 +35,7 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ ETF support 
 
-### **Connect with your portfolio!**
+### **Connect with your portfolio**
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Export your transactions from [My Stocks Protofolio](https://play.google.com/store/apps/details?id=co.peeksoft.stocks) 
 
@@ -43,7 +43,7 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
 
-### **Maximum control over graphs!**
+### **Maximum control over graphs**
 
  &nbsp;&nbsp;&nbsp;&nbsp; ✅ Compare performance of group of stocks vs other stock vs your portfolio! 
 
@@ -60,16 +60,16 @@ For instance:
 &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)
 
 
-### **Close Integration With Jupyter!**
+### **Close Integration With Jupyter**
 
-&nbsp;&nbsp;&nbsp;&nbsp; ✅  Display your jupyter notebook with graph !! 
+&nbsp;&nbsp;&nbsp;&nbsp; ✅  Display your jupyter notebook with graph! 
 
-&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;  Find corelations in your graph (a single line of code. presented by default)
+&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;  i.e. find corelations in your graph (a single line of code. presented by default)
 ```
 mydata.act.df.corr(method='pearson')
 ```
 
-&nbsp;&nbsp;&nbsp;&nbsp; ✅ - mainipulate data easily in runtime and display graph externally
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Mainipulate data easily in runtime and display graph externally
 
 
 &nbsp;&nbsp;&nbsp;&nbsp; ⚪ Use Jupyter to display graphs inline (if you want) 
