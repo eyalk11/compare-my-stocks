@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1806</width>
+    <width>1812</width>
     <height>1211</height>
    </rect>
   </property>
@@ -358,6 +358,52 @@
              </layout>
             </widget>
            </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>50</height>
+              </size>
+             </property>
+             <property name="title">
+              <string>Show Mode</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_13">
+              <item row="0" column="3">
+               <widget class="QRadioButton" name="full_mode">
+                <property name="text">
+                 <string>Full Mode</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QRadioButton" name="jupyter_mode">
+                <property name="text">
+                 <string>Jupyter Mode</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QRadioButton" name="minimal_mode">
+                <property name="text">
+                 <string>Minimal Mode</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QRadioButton" name="nojpy_mode">
+                <property name="text">
+                 <string>No Jupyter</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>
@@ -372,7 +418,7 @@
        </widget>
       </item>
       <item row="1" column="0" colspan="2">
-       <widget class="QFrame" name="frame_5">
+       <widget class="QFrame" name="buttom_frame">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -398,16 +444,16 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_11">
            <item>
-            <widget class="QGroupBox" name="groupBox">
+            <widget class="QGroupBox" name="main_group">
              <property name="minimumSize">
               <size>
-               <width>1000</width>
+               <width>850</width>
                <height>380</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>16777215</width>
+               <width>850</width>
                <height>360</height>
               </size>
              </property>
@@ -950,7 +996,7 @@
                  </widget>
                 </item>
                 <item row="2" column="1">
-                 <widget class="QFrame" name="">
+                 <widget class="QFrame" name="frame">
                   <layout class="QGridLayout" name="gridLayout_10">
                    <item row="0" column="2">
                     <widget class="QPushButton" name="refresh_stock">
@@ -980,20 +1026,13 @@
                      </property>
                     </widget>
                    </item>
-                   <item row="2" column="1">
-                    <widget class="QPushButton" name="debug_btn">
-                     <property name="text">
-                      <string>Debug</string>
-                     </property>
-                    </widget>
-                   </item>
                   </layout>
                  </widget>
                 </item>
                </layout>
               </item>
               <item row="1" column="0">
-               <widget class="QGroupBox" name="">
+               <widget class="QGroupBox" name="groupBox">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                   <horstretch>1</horstretch>
@@ -1121,33 +1160,66 @@
             </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
+            <widget class="QGroupBox" name="note_group">
+             <property name="maximumSize">
               <size>
-               <width>40</width>
-               <height>20</height>
+               <width>1500</width>
+               <height>16777215</height>
               </size>
              </property>
-            </spacer>
+             <property name="title">
+              <string>Your Notebook</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <widget class="QtVoila" name="voila_widget" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>250</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>1500</width>
+                  <height>700</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QGridLayout" name="gridLayout_17">
+                <item row="0" column="0">
+                 <widget class="QPushButton" name="reload_notebook">
+                  <property name="text">
+                   <string>Reload</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QPushButton" name="debug_btn">
+                  <property name="text">
+                   <string>Open In Jupyter</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QPushButton" name="pushButton">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Switch Notebook</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupBox_8">
+            <widget class="QGroupBox" name="adjust_group">
              <property name="minimumSize">
               <size>
                <width>600</width>
@@ -1196,7 +1268,7 @@
                 <widget class="QWidget" name="layoutWidget_2">
                  <layout class="QGridLayout" name="gridLayout_11">
                   <item row="0" column="1" colspan="2">
-                   <widget class="QGroupBox" name="">
+                   <widget class="QGroupBox" name="groupBox">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                       <horstretch>1</horstretch>
@@ -1242,7 +1314,7 @@
                    </widget>
                   </item>
                   <item row="1" column="2">
-                   <widget class="QGroupBox" name="">
+                   <widget class="QGroupBox" name="groupBox">
                     <property name="title">
                      <string>Adjustments</string>
                     </property>
@@ -1370,6 +1442,12 @@
    <class>QLabeledDoubleRangeSlider</class>
    <extends>QSlider</extends>
    <header location="global">mainwindow2</header>
+  </customwidget>
+  <customwidget>
+   <class>QtVoila</class>
+   <extends>QWidget</extends>
+   <header location="global">mainwindow2</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>

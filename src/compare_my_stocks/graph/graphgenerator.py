@@ -48,6 +48,7 @@ def show_annotation(sel,cls=None, ax=None,generation=None):
     #cls._annotation+=ann
 
 class GraphGenerator:
+
     def __init__(self,axes):
         #self.params = None
         self._axes=axes

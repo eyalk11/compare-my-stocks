@@ -9,9 +9,11 @@ from PySide6.QtCore import QFile, Qt
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
+from qtvoila import QtVoila
 
+from engine.symbolsinterface import SymbolsInterface
 from gui.daterangeslider import QDateRangeSlider
-from gui.formobserver import FormInitializer
+from gui.forminitializer import FormInitializer
 
 try:
     from config import config
@@ -34,26 +36,38 @@ class MainWindow(QMainWindow, FormInitializer):
 
         #self.window.resize(w,h)
 
+    def closeEvent(self, event):
+        self.window.voila_widget.close_renderer()
+
+
+    @property
+    def graphObj(self) -> SymbolsInterface:
+        return self._graphObj
+
+    @graphObj.setter
+    def graphObj(self, value):
+        self._graphObj = value
 
     def load_ui(self):
         loader = QUiLoader()
         loader.registerCustomWidget(QDateRangeSlider)
         loader.registerCustomWidget(QLabeledRangeSlider)
         loader.registerCustomWidget(QLabeledDoubleRangeSlider)
+        loader.registerCustomWidget(QtVoila)
         path = os.fspath(Path(__file__).resolve().parent / "mainwindow.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
 
         self.window= loader.load(ui_file, None)
-
+        self.window.closeEvent= self.closeEvent
         ui_file.close()
         self.setCentralWidget(self.window)
         self.after_load()
 
 
-    def run(self,graphObj):
-        self._graphObj = graphObj
-        if self._graphObj==None:
+    def run(self,graphObj : SymbolsInterface):
+        self.graphObj = graphObj
+        if self.graphObj==None:
             return
 
         self.prepare_sliders()
@@ -61,6 +75,8 @@ class MainWindow(QMainWindow, FormInitializer):
         self.setup_observers()
 
         self.showMaximized()
+
+        self.update_graph(1)
 
     #from PySide6.QtWidgets import QGroupBox
     #self.window.findChild(QGroupBox, name='graph_groupbox')

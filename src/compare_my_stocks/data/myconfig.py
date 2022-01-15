@@ -14,7 +14,8 @@ import datetime
 import pytz
 
 from common.common import InputSourceType, UseCache
-
+SKIP_EARNINGS=1
+DATAFILEPTR= 'DATA_FILE'
 USEWX=0
 USEWEB=0
 USEQT=1
@@ -25,6 +26,7 @@ MAXCACHETIMESPAN=datetime.timedelta(days=1)
 HIST_F = r'hist_file.cache'
 HIST_F_BACKUP = HIST_F+'.back'
 BUYDICTCACHE=r'mybuydicn.cache'
+DEFAULTNOTEBOOK=r'jupyter\defaultnotebook.ipynb'
 REGULAR_ACCOUNT = '' #your interactive broker account
 REGULAR_USERNAME = '' #your username
 PORT = 4001#5050

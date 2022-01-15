@@ -9,7 +9,7 @@ import dateutil
 import numpy
 
 from config import config
-from common.common import Types, UseCache, UniteType, LimitType
+from common.common import Types, UseCache, UniteType, LimitType, dictnfilt
 
 
 def paramaware(klass):
@@ -88,6 +88,10 @@ class Parameters:
             if 'date' in d and dic[d]:
                 dic[d]= dateutil.parser.parse(dic[d])
         return Parameters(**dic)
+
+    def __getstate__(self):
+        return dictnfilt(self.__dict__,set(['_baseclass']))
+
     def __post_init__(self,baseclass=None):
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass

@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Generic, Set
 
 from engine.parameters import Parameters
 
@@ -37,4 +38,8 @@ class SymbolsInterface(metaclass=ABCMeta):
 
     @abstractmethod
     def get_portfolio_stocks(self):
+        ...
+
+    @abstractmethod
+    def process(self,  partial_symbol_update=Set,params=None):
         ...

@@ -155,6 +155,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden,
                                   just_upd, type)
             self.statusChanges.emit("Generated Graph :)")
+            self.finishedGeneration.emit(1)
         except TypeError as e:
             e = e
             print("failed generating graph ")

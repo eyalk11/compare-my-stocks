@@ -3,44 +3,41 @@ from abc import abstractmethod
 from enum import Enum
 from functools import partial
 
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread,QTimer
 import PySide6.QtCore
 import PySide6.QtWidgets
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton, QLineEdit, QInputDialog, QSizePolicy
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
+from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit, QInputDialog,QGroupBox,QRadioButton,QSizePolicy
 from superqt.sliders._labeled import EdgeLabelMode
 
-from common.common import UniteType, Types, index_of, LimitType
+from common.common import UniteType, Types, LimitType
 from common.dolongprocess import DoLongProcess, DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
+from gui.jupyterhandler import JupyterHandler
 
+class DisplayModes(int,Enum):
+    MINIMAL=0,
+    JUPYTER=1,
+    NOJUPYTER = 2,
+    FULL=3
 class ResetRanges(int,Enum):
     DONT=0
     IfAPROP=1
     FORCE=2
 
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self):
-        self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        FigureCanvasQTAgg.__init__(self, self.fig)
-        FigureCanvasQTAgg.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        FigureCanvasQTAgg.updateGeometry(self)
+
 try:
     from json_editor import json_editor_ui
 except:
     import json_editor_ui
 
-class ListsObserver:
+class ListsObserver():
     def process_elem(self,params):
         while True:
             ls = self.addqueue.copy()
             self.window.last_status.setText('processing added stocks')
-            self._graphObj.process(set(ls),params) #blocks. should have mutex here
+            self.graphObj.process(set(ls),params) #blocks. should have mutex here
             self.window.last_status.setText('finshed processing')
             self.addqueue = list(set(self.addqueue) - set(ls))
             if len(self.addqueue)==0:
@@ -52,11 +49,11 @@ class ListsObserver:
         self.grep_from_queue_task= DoLongProcess(self.process_elem)
 
     def process_if_needed(self,stock):
-        if not stock in self._graphObj._usable_symbols:
+        if not stock in self.graphObj._usable_symbols:
             self.addqueue+=[stock]
 
             if not self.grep_from_queue_task.is_started:
-                params = copyit(self._graphObj.params)
+                params = copyit(self.graphObj.params)
                 params.transactions_todate = None  # datetime.now() #always till the end
                 self.grep_from_queue_task.startit(params)
 
@@ -126,7 +123,7 @@ class GraphsHandler:
         "Graph name:",QLineEdit.Normal,
                                                   self.lastgraphtext)
         if ok and text:
-            self.graphs[text]= copyit(self._graphObj.params)
+            self.graphs[text]= copyit(self.graphObj.params)
             self.lastgraphtext=text
         json.dump(self.graphs,open(config.GRAPHFN,'wt'),cls=EnhancedJSONEncoder)
         self.update_graph_list()
@@ -134,20 +131,20 @@ class GraphsHandler:
 
     def load_graph(self):
         text=self.window.graphList.currentItem().text()
-        self._graphObj.params = copyit(self.graphs[text])
+        self.graphObj.params = copyit(self.graphs[text])
         self.update_graph(ResetRanges.FORCE,force=True)
         self.setup_controls_from_params(0)
 
 
-class FormObserver(ListsObserver,GraphsHandler):
+class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def update_task(self,params):
         # self.window.last_status.setText('started refreshing')
-        self._graphObj.update_graph(params)
+        self.graphObj.update_graph(params)
         # self.window.last_status.setText('finshed refreshing')
 
     def refresh_task(self,x,params):
         self.window.last_status.setText('started refreshing')
-        self._graphObj.process(set(x),params)
+        self.graphObj.process(set(x),params)
         self.update_graph(1, True)
         self.window.last_status.setText('finshed refreshing')
 
@@ -157,7 +154,8 @@ class FormObserver(ListsObserver,GraphsHandler):
     def __init__(self):
         ListsObserver.__init__(self)
         GraphsHandler.__init__(self)
-        self._graphObj : SymbolsInterface = None
+        JupyterHandler.__init__(self)
+        self.graphObj : SymbolsInterface = None
         self.window=None
         self._toshow=True
         self._initiated=False
@@ -166,7 +164,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.ignore_updates_for_now = False
         #self._dolongprocess=DoLongProces()
         #self._toselectall=False
-        #task = lambda x: self._graphObj.process(set(x))
+        #task = lambda x: self.graphObj.process(set(x))
         self._refresh_stocks_task = DoLongProcessSlots(self.refresh_task)
 
         #self._refresh_stocks_task.postinit()
@@ -177,9 +175,9 @@ class FormObserver(ListsObserver,GraphsHandler):
 
 
     def refresh_stocks(self,*args):
-        wantitall = self._graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
-        toupdate= self._graphObj.required_syms(True,wantitall,True)
-        params= copyit(self._graphObj.params)
+        wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
+        toupdate= self.graphObj.required_syms(True,wantitall,True)
+        params= copyit(self.graphObj.params)
         params.transactions_todate=None #datetime.now() #always till the end
         if len(toupdate)==0:
             return
@@ -211,7 +209,7 @@ class FormObserver(ListsObserver,GraphsHandler):
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
                 self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),))
-                # self._graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
+                # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 
         except:
             print('failed updating graph')
@@ -234,20 +232,20 @@ class FormObserver(ListsObserver,GraphsHandler):
                 update_ranges = types_dic[k][2]
                 break
         if value:
-            setattr(self._graphObj.params,curpar,getattr(self._graphObj.params,curpar) | curType)
+            setattr(self.graphObj.params,curpar,getattr(self.graphObj.params,curpar) | curType)
         else:
-            setattr(self._graphObj.params, curpar, getattr(self._graphObj.params, curpar) & ~curType)
+            setattr(self.graphObj.params, curpar, getattr(self.graphObj.params, curpar) & ~curType)
 
         self.update_graph(update_ranges)
 
     def attribute_set(self, attr, value, reset_ranges=0):
         if attr in ['valuerange','numrange'] and  self.disable_slider_values_updates:
             return
-        setattr(self._graphObj.params, attr, value)
+        setattr(self.graphObj.params, attr, value)
         self.update_graph(reset_ranges)
 
     def groups_changed(self):
-        self._graphObj.params.groups= gr= [t.text() for t in self.window.groups.selectedItems()]
+        self.graphObj.params.groups= gr= [t.text() for t in self.window.groups.selectedItems()]
         self.update_stock_list()
         self.update_graph(ResetRanges.IfAPROP)
 
@@ -256,8 +254,8 @@ class FormObserver(ListsObserver,GraphsHandler):
     def date_changed(self, value):
         self.window.startdate.setDateTime(value[0])
         self.window.enddate.setDateTime(value[1])
-        self._graphObj.params.fromdate=value[0]
-        self._graphObj.params.todate = value[1]
+        self.graphObj.params.fromdate=value[0]
+        self.graphObj.params.todate = value[1]
         self.update_graph(1)
 
     @staticmethod
@@ -272,7 +270,7 @@ class FormObserver(ListsObserver,GraphsHandler):
 
     def showhide(self):
         self._toshow= not self._toshow
-        self._graphObj.show_hide( self._toshow)
+        self.graphObj.show_hide( self._toshow)
 
     def do_select(self):
         gr : QListWidget= self.window.groups
@@ -285,18 +283,18 @@ class FormObserver(ListsObserver,GraphsHandler):
     def compare_changed(self,num):
 
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
-        self._graphObj.params.compare_with=self.window.comparebox.currentText()
-        self._graphObj.params.type=self._graphObj.params.type | Types.COMPARE
+        self.graphObj.params.compare_with=self.window.comparebox.currentText()
+        self.graphObj.params.type=self.graphObj.params.type | Types.COMPARE
         self.update_graph(ResetRanges.FORCE)
 
     def selected_changed(self,*args,**kw):
-        self._graphObj.params.selected_stocks=[self.window.orgstocks.item(x).text()  for x in range(self.window.orgstocks.count())]
+        self.graphObj.params.selected_stocks=[self.window.orgstocks.item(x).text()  for x in range(self.window.orgstocks.count())]
         if not self.window.use_groups.isChecked():
             self.update_graph(1)
 
     def refernced_changed(self,*args,**kw):
-        #befext=self._graphObj.params.ext
-        self._graphObj.params.ext=[self.window.refstocks.item(x).text()  for x in range(self.window.refstocks.count())]
+        #befext=self.graphObj.params.ext
+        self.graphObj.params.ext=[self.window.refstocks.item(x).text()  for x in range(self.window.refstocks.count())]
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
             self.update_graph(1)
 
@@ -316,14 +314,14 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.json_editor.set_json_path(config.JSONFILENAME)
         self.json_editor.show()
     def on_json_closed(self,*args):
-        self._graphObj.read_groups_from_file()
+        self.graphObj.read_groups_from_file()
         self.set_groups_values(0)
 
     def category_changed(self,num):
         if self.ignore_cat_changes:
             return
         category= self.window.categoryCombo.itemText(num)
-        self._graphObj.cur_category=category
+        self.graphObj.cur_category=category
         self.set_groups_values(0)
 
     def limit_port_changed(self,val):
@@ -363,231 +361,78 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
         self.window.categoryCombo.currentIndexChanged.connect(self.category_changed)
-        self.window.debug_btn.pressed.connect(self._graphObj.serialize_me)
+
         self.window.save_graph_btn.pressed.connect(self.save_graph)
         self.window.load_graph_btn.pressed.connect(self.load_graph)
 
 
         for rad in self.rad_types:
-            rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
+            if not '_mode' in rad.objectName():
+                rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
 
         #PySide6.QObject
         #connect()
 
 
-        self._graphObj.minMaxChanged.connect(self.update_rangeb)
-        self._graphObj.namesChanged.connect(self.update_range_num)
-        self._graphObj.statusChanges.connect(self.update_status)
+        self.graphObj.minMaxChanged.connect(self.update_rangeb)
+        self.graphObj.namesChanged.connect(self.update_range_num)
+        self.graphObj.statusChanges.connect(self.update_status)
 
         self.json_editor.onCloseEvent.connect(self.on_json_closed)
         self._initiated=True
 
+        self.load_jupyter_observers()
+
+        self.window.findChild(QRadioButton, name="minimal_mode").toggled.connect(partial(self.change_mode, DisplayModes.MINIMAL))
+        self.window.findChild(QRadioButton, name="full_mode").toggled.connect(
+            partial(self.change_mode, DisplayModes.FULL))
+        self.window.findChild(QRadioButton, name="nojpy_mode").toggled.connect(
+            partial(self.change_mode, DisplayModes.NOJUPYTER))
+
+        self.window.findChild(QRadioButton, name="jupyter_mode").toggled.connect(
+            partial(self.change_mode, DisplayModes.JUPYTER))
+
+    def change_mode(self,mode,val):
+        def update_sizes():
+            but=[self.window.adjust_group,            self.window.main_group,            self.window.note_group]
+            for x in but:
+                if not x.isHidden():
+                    x.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Maximum)
+                    x.resize(x.maximumSize())
+            self.window.resize(self.window.minimumSizeHint())
+
+        if val==False:
+            return
+        if mode==DisplayModes.MINIMAL:
+
+            self.window.buttom_frame.hide()
+            self.window.adjust_group : QGroupBox
+            self.window.adjust_group.hide()
+            self.window.main_group.hide()
+            self.window.note_group.hide()
+        elif mode==DisplayModes.FULL:
+            self.window.buttom_frame.show()
+            self.window.adjust_group.show()
+            self.window.main_group.show()
+            self.window.note_group.show()
+        elif mode == DisplayModes.NOJUPYTER:
+            self.window.buttom_frame.show()
+            self.window.adjust_group.show()
+            self.window.main_group.show()
+            self.window.note_group.hide()
+        else:
+            #self.window.findChild(QSpacerItem,name='horizontalSpacer').hide()
+            #self.window.findChild(QSpacerItem,name='horizontalSpacer_2').hide()
+            self.window.buttom_frame.show()
+            self.window.adjust_group.hide()
+            self.window.main_group.hide()
+            self.window.note_group.show()
+        timer=QTimer()
+        timer.singleShot(1,update_sizes)
 
     @abstractmethod
     def update_stock_list(self):
         pass
-
-
-class FormInitializer(FormObserver):
-
-    def __init__(self):
-
-        super().__init__()
-
-    @property
-    def figure(self):
-        return self._canvas.figure
-
-    @property
-    def axes(self):
-        return self._canvas.ax
-        return
-    def prepare_graph_widget(self):
-        #tabWidget = self.window.tabWidget_8Page1  # type: QTabWidget
-
-        self._canvas = MplCanvas()
-        #sc.manager.window.move(1,1)
-        toolbar = NavigationToolbar(self._canvas, self.window)
-        #layout = QVBoxLayout()
-        self.window.graph_groupbox.layout().addWidget(toolbar)
-        self.window.graph_groupbox.layout().addWidget(self._canvas)
-
-
-    def after_load(self):
-        self.rad_types = self.window.findChildren(QRadioButton) + self.window.findChildren(QCheckBox,
-                                                                                           name="unite_ADDPROT") + self.window.findChildren(
-            QCheckBox, name="unite_ADDTOTAL") + self.window.findChildren(QCheckBox, name="COMPARE")
-        self.prepare_graph_widget()
-
-
-
-
-    def set_all_toggled_value(self):
-        type= self._graphObj.params.type
-        unite = self._graphObj.params.unite_by_group
-        limit_by= self._graphObj.params.limit_by
-        for rad in self.rad_types:
-            name=rad.objectName()
-            #func= rad.setChecked if type(rad)==QCheckBox else rad.setCheckState
-            #x : QCheckBox
-            if name.startswith('limit'):
-                name = name[len('limit') + 1:]
-                rad.setChecked(bool(limit_by & getattr(LimitType,name)))
-            elif name.startswith('unite'):
-                name = name[len('unite') + 1:]
-                rad.setChecked( bool(unite &  getattr(UniteType,name)))
-            else:
-                try:
-                    rad.setChecked(bool(type & getattr(Types, name)))
-                except:
-                    pass
-
-    def setup_controls_from_params(self,initial=True):
-        self.ignore_cat_changes = False
-        self.ignore_updates_for_now=True
-        self.set_groups_values(isinitialforstock=initial)
-
-        self.window.daterangepicker.update_prop()
-        self.window.startdate.setDateTime(self._graphObj.mindate)
-        self.window.enddate.setDateTime(self._graphObj.maxdate)
-        self.window.daterangepicker.start=self._graphObj.mindate
-        self.window.daterangepicker.end = self._graphObj.maxdate
-        self.window.daterangepicker.update_obj()
-        if not initial:
-            self.window.daterangepicker.datevalue= (self._graphObj.params.fromdate,self._graphObj.params.todate)
-        else:
-            self.window.daterangepicker.dateValueChanged.connect(self.date_changed)
-        self.window.use_groups.setChecked(self._graphObj.params.use_groups)
-        self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
-        self.window.findChild(QCheckBox, name="limit_to_port").setChecked(self._graphObj.params.limit_to_portfolio)
-
-        self.window.home_currency_combo.clear()
-        self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
-
-        self.set_all_toggled_value()
-        if not initial and self._graphObj.params.compare_with:
-            wc = self.window.comparebox
-
-            l=[wc.itemText(x) for x in range(wc.count())]
-            ind=index_of(self._graphObj.params.compare_with,l)
-            self.window.comparebox.setCurrentIndex(ind)
-            if ind==-1:
-                self.window.comparebox.setCurrentText(self._graphObj.params.compare_with)
-
-        if initial:
-            self.load_existing_graphs()
-        self.ignore_updates_for_now = False
-
-    def set_groups_values(self, isinit=1,isinitialforstock=1):
-        b=False
-        wc= self.window.categoryCombo
-        if self._graphObj.Categories!=[wc.itemText(x) for x in range(wc.count())]:
-            b=True
-            self.ignore_cat_changes=True
-            wc.clear()
-            wc.addItems(self._graphObj.Categories) #sorry
-            self.ignore_cat_changes = False
-
-        options = list(self._graphObj.Groups.keys())
-        value = self._graphObj.params.groups if self._graphObj.params.groups != None else list()
-        wc= self.window.groups
-        if options != [wc.item(x).text() for x in range(wc.count())]:
-            b=True
-            wc.clear()
-            wc.addItems(options)  # sorry
-        if not b and not isinit:
-            return
-        #self.window.groups.addItems(options)
-        self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
-        # self.groups_changed()
-        self.update_stock_list(isinitialforstock and isinit)
-        self.update_ranges(isinit+1) #if intial then force
-        if isinit:
-            self.select_rows(self.window.groups, [options.index(v) for v in value])
-
-    def update_rangeb(self,minmax):
-        self.disable_slider_values_updates=True
-        if minmax[0]==minmax[1]:
-            minmax = (minmax[0],minmax[0]+0.1)
-        self.window.min_crit.setRange(minmax[0], minmax[1])
-        self.window.min_crit.setValue(minmax)
-        self.disable_slider_values_updates = False
-
-    def update_range_num(self,nuofoptions):
-        if nuofoptions==0:
-            nuofoptions=1
-        self.disable_slider_values_updates=True
-        self.window.max_num.setRange(0, nuofoptions)
-        self.window.max_num.setValue((0, nuofoptions))
-        self.disable_slider_values_updates = False
-
-    def update_ranges(self,reset_type=ResetRanges.IfAPROP):
-        nuofoptions = len(self._graphObj.colswithoutext)
-
-        self.disable_slider_values_updates=True
-        if nuofoptions==0:
-            nuofoptions =1
-        self.window.max_num.setRange(0, nuofoptions)
-
-        if self._graphObj.minValue is None or self._graphObj.maxValue is None:
-            self.disable_slider_values_updates = False
-            return
-        if self._graphObj.minValue==self._graphObj.maxValue and self._graphObj.maxValue==0:
-            print('bad range')
-            self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue+0.1)
-        else:
-            self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue)
-
-        if reset_type==ResetRanges.FORCE:
-            self.window.max_num.setValue((0, nuofoptions))
-            self.window.min_crit.setValue((self._graphObj.minValue, self._graphObj.maxValue))
-        self.disable_slider_values_updates = False
-
-    def update_stock_list(self,isinitial=0,justorgs=False):
-        org: QListWidget = self.window.orgstocks  # type:
-
-        if  self.window.unite_NONE.isChecked():
-            if self._graphObj.params.use_groups:
-                org.clear()
-                org.addItems(self._graphObj.get_options_from_groups(self._graphObj.params.groups))
-            elif isinitial:
-                org.clear()
-                org.addItems(self._graphObj.params.selected_stocks)
-        if justorgs:
-            return
-
-        if self.window.fromall.isChecked():
-            alloptions = self
-        else:
-            alloptions= sorted(list(self._graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
-
-        #self._last_choice=  self.window.comparebox.currentText()
-        if isinitial:
-            for comp in  [self.window.comparebox,self.window.addstock] :
-                comp.clear()
-                comp.addItems(alloptions)
-
-
-
-
-
-        #org.addItems(self._graphObj.cols)
-        refs: QListWidget = self.window.refstocks  # type:
-        refs.clear()
-        refs.addItems(self._graphObj.params.ext)
-
-
-
-
-
-    #self.window.gridLayout_8.addWidget(toolbar)
-    #self.window.gridLayout_8.addWidget(sc)
-    #self.window.tabWidget.setLayout(QVBoxLayout())
-    #self.window.tabWidget.setCenteralWidget()
-    #tabWidget.setCentralWidget(self.window.gridLayout_8)
-    #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
-    #layoutq=QVBoxLayout()
-    #self.window.tab
 
 
 

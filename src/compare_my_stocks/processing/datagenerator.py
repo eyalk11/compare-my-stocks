@@ -18,6 +18,7 @@ class DataGenerator(SymbolsInterface, InputData):
     minMaxChanged=MySignal(tuple)
     namesChanged = MySignal(int)
     statusChanges= MySignal(str)
+    finishedGeneration=MySignal(int)
     def __init__(self):
         #DataGenerator.minMaxChanged.initemit()
         self.colswithoutext=[]
@@ -280,8 +281,11 @@ class DataGenerator(SymbolsInterface, InputData):
         nn = pandas.concat([nn, t], axis=1)
         return nn
 
-    def serialize_me(self):
+    def serialize_me(self,filepath=config.SERIALIZEDFILE):
         print(f'writing serialized file to {config.SERIALIZEDFILE}')
-        with open(config.SERIALIZEDFILE,'wb') as f:
+        with open(filepath,'wb') as f:
             import pickle
-            pickle.dump(Serialized(self.orig_df,self.bef_rem_data, self.after_filter_data, self.act), f)
+            pickle.dump(self.serialized_data(), f)
+
+    def serialized_data(self):
+        return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act,self.params)
