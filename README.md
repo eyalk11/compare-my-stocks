@@ -20,7 +20,7 @@ For instance:
 ![image](https://user-images.githubusercontent.com/72234965/149631950-742d1a08-06f7-43ba-a1a3-fa7785f84edf.png)
 
 
-(The difference in percentage-wise since 04/01/2021 between ESYJY and the nasdaq is  48% at this point at time, signficantly lower than the airlines as a group. This is example of an advanced usage.)
+(The difference in the change percentage-wise since 04/01/2021 between ESYJY and the nasdaq is ~48% at this point at time, signficantly lower than the airlines as a group. This is example of an advanced usage.)
 
 ##  Features 
 ⚕️	Planned
