@@ -15,12 +15,12 @@ For instance:
 
 (You won't see your portfolio unless you will upload your transactions)  
 
-* **Chart of specific airlines and the Nasdaq vs the airlines as a group:**
+* **Chart of specific airlines and the airlines as a group compared with nasdaq:**
  
 ![image](https://user-images.githubusercontent.com/72234965/149631950-742d1a08-06f7-43ba-a1a3-fa7785f84edf.png)
 
 
-(The performance of ESYJY at this point is 30% less than the airlines as groups. This is example of an advanced usage.)
+(The difference in percentage-wise since 04/01/2021 between ESYJY and the nasdaq is  48% at this point at time, signficantly lower than the airlines as a group. This is example of an advanced usage.)
 
 ##  Features 
 ⚕️	Planned
