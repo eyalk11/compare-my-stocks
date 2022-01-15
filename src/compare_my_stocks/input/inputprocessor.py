@@ -377,7 +377,7 @@ class InputProcessor(TransactionHandler):
         for name, dic in zip(self.dicts_names,seldict):
             df = pd.DataFrame(dic, index=combinedindex)
             if name=='alldates':
-                df = df.fillna(method='ffill', axis=1)
+                df = df.fillna(method='ffill', axis=0)
             #df = pd.DataFrame(dic,index=sorted(list(self._fset)))
             # combined index is needed to adjust for the df, but maybe can do without... pass to return_df
             #df = pd.DataFrame(dic, index=combinedindex)

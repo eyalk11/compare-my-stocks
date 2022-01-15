@@ -80,6 +80,7 @@ class Parameters:
     currency_to_adjust: str = None
     cur_category:str = None
     limit_by : LimitType = LimitType.RANGE
+    limit_to_portfolio : bool =False
 
     @classmethod
     def load_from_json_dict(cls,dic):

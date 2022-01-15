@@ -5,7 +5,6 @@ import pandas
 
 
 
-
 from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized, \
     LimitType
 #from compareengine import CompareEngine
@@ -30,8 +29,8 @@ class DataGenerator(SymbolsInterface, InputData):
         self.act=None
 
     def get_data_by_type(self, type= Types.RELTOMAX, compare_with=None):
-        arr, df, type, fulldf = self.generate_initial_data(compare_with, type)
-        act= ActOnData(arr, df, type, fulldf,compare_with,self)
+        params = self.generate_initial_data(compare_with, type)
+        act= ActOnData(*params,compare_with,self)
         self.act=act
         act.do()
 
@@ -75,11 +74,22 @@ class DataGenerator(SymbolsInterface, InputData):
         fulldf = fulldf.drop(list(
             df.index[list((np.all(np.isnan(arr), axis=0)))]))  # to check drop dates in which all stocks are none.
 
+        self.use_relative = False
         if self.used_type & (Types.COMPARE | Types.PRECENTAGE | Types.DIFF):
             fullarr = np.array(fulldf).transpose() #again...
-            fulldf = fulldf.iloc[get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE):]
+            goodind = get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE)
+            if goodind == -1:
+                print('there is no location where all are good')
+                self.use_relative=True
+            else:
+                fulldf = fulldf.iloc[goodind:]
             if self.used_type & (Types.RELTOEND):
-                fulldf = fulldf.iloc[:get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE, last=1)]
+                goodind=get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE, last=1)
+                if goodind == -1:
+                    print('there is no location where all are good')
+                    self.use_relative = True
+                else:
+                    fulldf = fulldf.iloc[:goodind]
 
         df = fulldf[sorted(list(cols - comp_set))]
         arr = np.array(df).transpose()  # will just work with arr
@@ -128,10 +138,9 @@ class DataGenerator(SymbolsInterface, InputData):
             df = df['pricesells']
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
-        else:
-            #print('default!!') #price
+        else:            #print('default!!') #price
             df = df['alldates']
-            df = df.fillna(method='ffill', axis=1)  # understand more before?
+            df = df.fillna(method='ffill', axis=0)  # understand more before?
             if ( unitetyp & UniteType.ADDPROT) and (unitetyp & ~UniteType.ADDTOTALS ==0 )  and (div & Types.PRECDIFF ==  0): #(div& ~Types.COMPARE) and
                 unitetypeff = unitetypeff & ~UniteType.ADDPROT
         if df.isnull().all(axis=None):
@@ -191,6 +200,7 @@ class DataGenerator(SymbolsInterface, InputData):
         cols = set([x for x in data])
         selected=self.required_syms(True).union(set(['All','Portfolio'])) #always include All if there is all..
         withoutext=self.required_syms(False).union(set(['All','Portfolio']))
+
         return cols.intersection(selected),cols.intersection(withoutext)
 
     def generate_data(self):
@@ -203,29 +213,33 @@ class DataGenerator(SymbolsInterface, InputData):
             raise NoDataException("Dataframe is empty")
 
         b=self.update_ranges(df)
-        self.params.ignore_minmax= self.params.ignore_minmax or b
 
-        mainlst= sorted(list(zip(Marr, min_arr, df.columns)), key=lambda x: x[0], reverse=True)
-
-
-        condrange= lambda min,max :  (min >= self.params.valuerange[0] and max<= self.params.valuerange[1])
-        condmin= lambda min,max :  (min >= self.params.valuerange[0] and min<= self.params.valuerange[1])
-        condmax = lambda min,max :  (max >= self.params.valuerange[0] and max<= self.params.valuerange[1])
-        conddic={LimitType.MIN : condmin, LimitType.MAX:condmax,LimitType.RANGE:condrange}
-
-        cond=conddic[self.params.limit_by]
-        sordlist = [stock for (max,min, stock) in mainlst  if cond(min,max) or (self.params.ignore_minmax) ]
-
-        restofcols= set(df.columns) - set(self.colswithoutext)
-        if not self.params.ignore_minmax:
-            rang =  (self.params.numrange[0],  self.params.numrange[1])
-        else:
-            rang=(None,None)
-
-        df = df[sorted(list(restofcols))+ sordlist[rang[0]:rang[1]]  ]  # rearrange columns by max, and include rest
+        df = self.filter_ranges(Marr, b, df, min_arr)
         df.rename({y: matplotlib.dates.num2date(y) for y in df.index},axis=0,inplace=1) #problematicline
 
         return df,type
+
+    def filter_ranges(self, Marr, b, df, min_arr):
+        self.params.ignore_minmax = self.params.ignore_minmax or b
+        mainlst= list(x for x in  zip(Marr, min_arr, df.columns) if x[2] in self.colswithoutext)
+        mainlst = sorted(mainlst, key=lambda x: x[0],
+                         reverse=(self.params.limit_by == LimitType.MIN))
+        condrange = lambda min, max: (min >= self.params.valuerange[0] and max <= self.params.valuerange[1])
+        condmin = lambda min, max: (min >= self.params.valuerange[0] and min <= self.params.valuerange[1])
+        condmax = lambda min, max: (max >= self.params.valuerange[0] and max <= self.params.valuerange[1])
+        conddic = {LimitType.MIN: condmin, LimitType.MAX: condmax, LimitType.RANGE: condrange}
+        cond = conddic[self.params.limit_by]
+        sordlist = [stock for (max, min, stock) in mainlst if cond(min, max) or (self.params.ignore_minmax)]
+
+        if not self.params.ignore_minmax:
+            rang = (self.params.numrange[0], self.params.numrange[1])
+        else:
+            rang = (None, None)
+        sordlist=sordlist[rang[0]:rang[1]]
+        restofcols = set(df.columns) - set(self.colswithoutext)
+
+        df = df[sorted(list(restofcols)) + sordlist]  # rearrange columns by max, and include rest
+        return df
 
     def update_ranges(self, df):
         upd1=self.tmp_colswithoutext!=self.colswithoutext

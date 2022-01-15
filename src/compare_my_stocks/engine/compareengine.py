@@ -10,20 +10,15 @@ from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
 
 
-def params():
-    doc = "The params property."
-
-    def fget(self):
-        return self._params
-
-    def fset(self, value):
-        self._params = value
-
-    return locals()
-
 
 class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterface):
-    params = property(**params())
+    @property
+    def params(self) -> Parameters:
+        return self._params
+
+    @params.setter
+    def params(self,value : Parameters):
+        self._params = value
 
     @property
     def Categories(self):
@@ -54,7 +49,11 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         s = set()
         for g in ls:
             s = s.union(set(self.Groups[g]))
+        if self.params.limit_to_portfolio:
+            s=s.intersection(set(self.get_portfolio_stocks()))
         return list(s)
+
+
 
     def read_groups_from_file(self):
         try:

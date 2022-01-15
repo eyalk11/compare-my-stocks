@@ -5,7 +5,7 @@ import sys
 
 import PySide6
 from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QFile
+from PySide6.QtCore import QFile, Qt
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
@@ -29,7 +29,10 @@ class MainWindow(QMainWindow, FormInitializer):
         super(MainWindow, self).__init__()
         FormInitializer.__init__(self)
 
+
         self.load_ui()
+
+        #self.window.resize(w,h)
 
 
     def load_ui(self):
@@ -57,7 +60,7 @@ class MainWindow(QMainWindow, FormInitializer):
         self.setup_controls_from_params()
         self.setup_observers()
 
-        self.show()
+        self.showMaximized()
 
     #from PySide6.QtWidgets import QGroupBox
     #self.window.findChild(QGroupBox, name='graph_groupbox')

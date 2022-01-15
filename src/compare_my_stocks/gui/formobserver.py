@@ -1,11 +1,12 @@
 import json
 from abc import abstractmethod
+from enum import Enum
 from functools import partial
 
 from PySide6.QtCore import QThread
 import PySide6.QtCore
 import PySide6.QtWidgets
-
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QRadioButton, QLineEdit, QInputDialog, QSizePolicy
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg,NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -16,6 +17,11 @@ from common.dolongprocess import DoLongProcess, DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
+
+class ResetRanges(int,Enum):
+    DONT=0
+    IfAPROP=1
+    FORCE=2
 
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self):
@@ -129,7 +135,7 @@ class GraphsHandler:
     def load_graph(self):
         text=self.window.graphList.currentItem().text()
         self._graphObj.params = copyit(self.graphs[text])
-        self.update_graph(1,force=True)
+        self.update_graph(ResetRanges.FORCE,force=True)
         self.setup_controls_from_params(0)
 
 
@@ -186,7 +192,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         #self._dolongprocess.run(set(toupdate))
 
 
-    def update_graph(self,reset_ranges,force=False):
+    def update_graph(self,reset_ranges : ResetRanges ,force=False):
         def call():
             self.decrease()
             self.update_ranges(reset_ranges)
@@ -215,9 +221,9 @@ class FormObserver(ListsObserver,GraphsHandler):
 
     def type_unite_toggled(self, name, value):
         types_dic = {
-            'unite': (UniteType,'unite_by_group',1),
+            'unite': (UniteType,'unite_by_group',ResetRanges.FORCE),
             'limit' : (LimitType,'limit_by',0),
-            '':(Types,'type',1)
+            '':(Types,'type',ResetRanges.FORCE)
         }
         for k in types_dic:
             if name.startswith(k):
@@ -243,7 +249,7 @@ class FormObserver(ListsObserver,GraphsHandler):
     def groups_changed(self):
         self._graphObj.params.groups= gr= [t.text() for t in self.window.groups.selectedItems()]
         self.update_stock_list()
-        self.update_graph(1)
+        self.update_graph(ResetRanges.IfAPROP)
 
 
 
@@ -281,7 +287,7 @@ class FormObserver(ListsObserver,GraphsHandler):
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
         self._graphObj.params.compare_with=self.window.comparebox.currentText()
         self._graphObj.params.type=self._graphObj.params.type | Types.COMPARE
-        self.update_graph(1)
+        self.update_graph(ResetRanges.FORCE)
 
     def selected_changed(self,*args,**kw):
         self._graphObj.params.selected_stocks=[self.window.orgstocks.item(x).text()  for x in range(self.window.orgstocks.count())]
@@ -320,22 +326,27 @@ class FormObserver(ListsObserver,GraphsHandler):
         self._graphObj.cur_category=category
         self.set_groups_values(0)
 
+    def limit_port_changed(self,val):
+
+        self.attribute_set('limit_to_portfolio',val,reset_ranges=1)
+        self.update_stock_list(justorgs=True)
 
     def setup_observers(self):
-        genobs=lambda x:partial(self.attribute_set, x)
+        genobs=lambda x:partial(self.attribute_set, x,reset_ranges=ResetRanges.DONT)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
+        genobsResetForce = lambda x: partial(self.attribute_set, x, reset_ranges=ResetRanges.FORCE)
         self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
         self.window.min_crit.valueChanged.connect(genobs('valuerange'))
         self.window.max_num.valueChanged.connect(genobs('numrange'))
-
-        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsReset('use_ext'))
+        self.window.findChild(QCheckBox, name="limit_to_port").toggled.connect(self.limit_port_changed)
+        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsResetForce('use_ext'))
         self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
-        self.window.findChild(QCheckBox, name="adjust_currency").toggled.connect(genobsReset('adjust_to_currency'))
-        self.window.home_currency_combo.currentTextChanged.connect(genobsReset('currency_to_adjust'))
+        self.window.findChild(QCheckBox, name="adjust_currency").toggled.connect(genobsResetForce('adjust_to_currency'))
+        self.window.home_currency_combo.currentTextChanged.connect(genobsResetForce('currency_to_adjust'))
 
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
-            partial(self.update_graph,force=True,reset_ranges=1))
+            partial(self.update_graph,force=True,reset_ranges=ResetRanges.FORCE))
         self.window.use_groups.toggled.connect(self.use_groups)
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)
@@ -408,6 +419,9 @@ class FormInitializer(FormObserver):
             QCheckBox, name="unite_ADDTOTAL") + self.window.findChildren(QCheckBox, name="COMPARE")
         self.prepare_graph_widget()
 
+
+
+
     def set_all_toggled_value(self):
         type= self._graphObj.params.type
         unite = self._graphObj.params.unite_by_group
@@ -445,6 +459,7 @@ class FormInitializer(FormObserver):
             self.window.daterangepicker.dateValueChanged.connect(self.date_changed)
         self.window.use_groups.setChecked(self._graphObj.params.use_groups)
         self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self._graphObj.params.use_ext)
+        self.window.findChild(QCheckBox, name="limit_to_port").setChecked(self._graphObj.params.limit_to_portfolio)
 
         self.window.home_currency_combo.clear()
         self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
@@ -486,7 +501,7 @@ class FormInitializer(FormObserver):
         self.window.groups.setSelectionMode(PySide6.QtWidgets.QAbstractItemView.SelectionMode.MultiSelection)
         # self.groups_changed()
         self.update_stock_list(isinitialforstock and isinit)
-        self.update_ranges(isinit)
+        self.update_ranges(isinit+1) #if intial then force
         if isinit:
             self.select_rows(self.window.groups, [options.index(v) for v in value])
 
@@ -506,7 +521,7 @@ class FormInitializer(FormObserver):
         self.window.max_num.setValue((0, nuofoptions))
         self.disable_slider_values_updates = False
 
-    def update_ranges(self,initial=1):
+    def update_ranges(self,reset_type=ResetRanges.IfAPROP):
         nuofoptions = len(self._graphObj.colswithoutext)
 
         self.disable_slider_values_updates=True
@@ -523,12 +538,24 @@ class FormInitializer(FormObserver):
         else:
             self.window.min_crit.setRange(self._graphObj.minValue, self._graphObj.maxValue)
 
-        if initial:
+        if reset_type==ResetRanges.FORCE:
             self.window.max_num.setValue((0, nuofoptions))
             self.window.min_crit.setValue((self._graphObj.minValue, self._graphObj.maxValue))
         self.disable_slider_values_updates = False
 
-    def update_stock_list(self,isinitial=0):
+    def update_stock_list(self,isinitial=0,justorgs=False):
+        org: QListWidget = self.window.orgstocks  # type:
+
+        if  self.window.unite_NONE.isChecked():
+            if self._graphObj.params.use_groups:
+                org.clear()
+                org.addItems(self._graphObj.get_options_from_groups(self._graphObj.params.groups))
+            elif isinitial:
+                org.clear()
+                org.addItems(self._graphObj.params.selected_stocks)
+        if justorgs:
+            return
+
         if self.window.fromall.isChecked():
             alloptions = self
         else:
@@ -543,20 +570,13 @@ class FormInitializer(FormObserver):
 
 
 
-        gr=self._graphObj.params.groups
-        org: QListWidget = self.window.orgstocks  # type:
+
         #org.addItems(self._graphObj.cols)
         refs: QListWidget = self.window.refstocks  # type:
         refs.clear()
         refs.addItems(self._graphObj.params.ext)
 
-        if  self.window.unite_NONE.isChecked():
-            if self._graphObj.params.use_groups:
-                org.clear()
-                org.addItems(self._graphObj.get_options_from_groups(self._graphObj.params.groups))
-            elif isinitial:
-                org.clear()
-                org.addItems(self._graphObj.params.selected_stocks)
+
 
 
 
@@ -568,5 +588,6 @@ class FormInitializer(FormObserver):
     #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
     #layoutq=QVBoxLayout()
     #self.window.tab
+
 
 

@@ -96,6 +96,9 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     if last:
         ls.reverse()
     ind=index_of(False,ls)
+
+
+
     return ( ind * (-1 if last else 1)) if ind!=-1 else -1
 
 class NoDataException(Exception):

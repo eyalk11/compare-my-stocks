@@ -76,7 +76,7 @@ class InvestPySource(InputSource):
                     print('using unmatch sym. n : %s o: %s ' % (tmpl['symbol'],sym))
                     l=tmpl
                 if l:
-                    print(f'not  right exchange {sym}, picking {l}' )
+                    print(f'not right exchange {sym}, picking {l}' )
                 else:
                     print('nothing for %s ' % sym )
                     return l,None
