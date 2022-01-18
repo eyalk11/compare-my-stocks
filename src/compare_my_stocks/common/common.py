@@ -116,7 +116,7 @@ class MySignal:
         self.emitter.signal.connect(slot)
 
 
-Serialized=namedtuple('Serialized', ['origdata','beforedata','afterdata','act','parameters'])
+Serialized=namedtuple('Serialized', ['origdata','beforedata','afterdata','act','parameters','Groups'])
 dictfilt = lambda x, y: dict([(i, x[i]) for i in x if i in set(y)])
 dictnfilt = lambda x, y: dict([(i, x[i]) for i in x if not(i in set(y))])
 

@@ -3,11 +3,13 @@ from abc import abstractmethod
 from enum import Enum
 from functools import partial
 
-from PySide6.QtCore import QThread,QTimer
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtCore import QThread,QTimer,QDateTime,QTime,QDate
 import PySide6.QtCore
 import PySide6.QtWidgets
-from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit, QInputDialog,QGroupBox,QRadioButton,QSizePolicy
+from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit,QDateEdit, QInputDialog,QGroupBox,QRadioButton,QSizePolicy
 from superqt.sliders._labeled import EdgeLabelMode
+import pytz
 
 from common.common import UniteType, Types, LimitType
 from common.dolongprocess import DoLongProcess, DoLongProcessSlots
@@ -172,6 +174,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self._update_graph_task = DoLongProcessSlots(self.update_task)
         #self.command_waiting=0
         self._update_graph_task.finished.connect(self.decrease)
+        self.current_mode=DisplayModes.FULL
+        self.placeholder=QGroupBox()
 
 
     def refresh_stocks(self,*args):
@@ -251,9 +255,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
 
 
-    def date_changed(self, value):
-        self.window.startdate.setDateTime(value[0])
-        self.window.enddate.setDateTime(value[1])
+    def date_changed(self, value,toupdate=True):
+        if toupdate:
+            self.window.startdate.setDateTime(value[0])
+            self.window.enddate.setDateTime(value[1])
         self.graphObj.params.fromdate=value[0]
         self.graphObj.params.todate = value[1]
         self.update_graph(1)
@@ -361,7 +366,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
         self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
         self.window.categoryCombo.currentIndexChanged.connect(self.category_changed)
-
+        self.window.startdate : QDateEdit
+        self.window.startdate.editingFinished.connect(self.update_from_datefields)
+        self.window.enddate.editingFinished.connect(self.update_from_datefields)
         self.window.save_graph_btn.pressed.connect(self.save_graph)
         self.window.load_graph_btn.pressed.connect(self.load_graph)
 
@@ -391,24 +398,82 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.window.findChild(QRadioButton, name="jupyter_mode").toggled.connect(
             partial(self.change_mode, DisplayModes.JUPYTER))
+    def update_from_datefields(self):
+        def todatetime(x):
+            return pytz.UTC.localize( QDateTime(x,QTime(0,0,0)).toPython(), True)
 
+        self.window.daterangepicker.start=todatetime(self.window.startdate.date())
+        self.window.daterangepicker.end = todatetime(self.window.enddate.date())
+        pair=(self.window.startdate.date(),self.window.enddate.date())
+        #QDateTime(value[0], QTime())
+        self.date_changed(list(map(todatetime,pair)),False )
     def change_mode(self,mode,val):
         def update_sizes():
             but=[self.window.adjust_group,            self.window.main_group,            self.window.note_group]
             for x in but:
                 if not x.isHidden():
-                    x.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Maximum)
+                    x.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
                     x.resize(x.maximumSize())
             self.window.resize(self.window.minimumSizeHint())
+        def switch_adjust(tosize=True):
 
+            x = self.window.frame_9
+
+
+            self.window.main_group.hide()
+            if tosize:
+                self.window.horz_buttom.removeWidget(self.window.adjust_group)
+                self.window.stock_vert.addWidget(self.window.adjust_group)
+                self.window.savedgraph_group.hide()
+                #self.window.currencygroup.hide()
+                self.window.currencygroup.hide()
+                self.window.gridLayout_11.removeWidget(self.window.currencygroup)
+                #self.window.gridLayout_11.removeWidget(self.window.groupBox)
+                self.window.gridLayout_11.removeWidget(self.window.savedgraph_group)
+
+                #mylayout = QHBoxLayout()
+                #mylayout.addWidget(self.window.groups_lay2)
+                #mylayout.addWidget(self.window.groupBox)
+                #self.window.adjust_group.setLayou(mylayout)
+                self.window.gridLayout_9.replaceWidget(self.window.groupBox_datepicker,self.placeholder)
+                #self.window.gridLayout_9.removeWidget(self.window.groupBox_datepicker)
+                self.window.gridLayout_2.removeWidget(self.window.buttom_frame)
+                self.window.gridLayout_2.addWidget(self.window.groupBox_datepicker,1, 0, 1, 2)
+
+
+            else:
+                self.window.horz_buttom.addWidget(self.window.adjust_group)
+                self.window.stock_vert.removeWidget(self.window.adjust_group)
+                self.window.gridLayout_11.addWidget(self.window.currencygroup, 0, 1, 1, 2)
+                #self.window.gridLayout_11.addWidget(self.groupBox5, 1, 2, 1, 1)
+                self.window.gridLayout_11.addWidget(self.window.savedgraph_group, 1, 0, 1, 2)
+
+                self.window.gridLayout_2.removeWidget(self.window.groupBox_datepicker)
+                self.window.gridLayout_2.addWidget(self.window.buttom_frame, 1, 0, 1, 2)
+                #self.window.gridLayout_9.addWidget(self.window.groupBox_datepicker, 0, 0, 1, 2)
+                self.window.gridLayout_9.replaceWidget(self.placeholder,self.window.groupBox_datepicker)
+
+                self.window.savedgraph_group.show()
+                self.window.currencygroup.show()
+
+                #self.window.currencygroup.show()
+            if tosize:
+                self.window.frame_9.setMaximumSize(450, 900)
+                #x.resize(x.maximumSize())
+            else:
+                self.window.frame_9.setMaximumSize(500,400)
         if val==False:
             return
+        if self.current_mode == DisplayModes.MINIMAL:
+            switch_adjust(False)
+
         if mode==DisplayModes.MINIMAL:
 
             self.window.buttom_frame.hide()
-            self.window.adjust_group : QGroupBox
-            self.window.adjust_group.hide()
-            self.window.main_group.hide()
+
+            self.window.adjust_group.show()
+            switch_adjust(True)
+
             self.window.note_group.hide()
         elif mode==DisplayModes.FULL:
             self.window.buttom_frame.show()
@@ -427,6 +492,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.adjust_group.hide()
             self.window.main_group.hide()
             self.window.note_group.show()
+        self.current_mode = mode
         timer=QTimer()
         timer.singleShot(1,update_sizes)
 

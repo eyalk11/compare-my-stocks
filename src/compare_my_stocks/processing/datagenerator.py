@@ -288,4 +288,4 @@ class DataGenerator(SymbolsInterface, InputData):
             pickle.dump(self.serialized_data(), f)
 
     def serialized_data(self):
-        return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act,self.params)
+        return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act,self.params,self.Groups)

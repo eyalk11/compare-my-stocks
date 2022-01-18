@@ -1,5 +1,6 @@
 import sys
 import time
+from functools import partial
 
 import matplotlib
 #from matplotlib import pyplot as plt
@@ -65,6 +66,7 @@ def main():
 
 
 
+
     gg = initialize_graph_and_ib(mainwindow.axes if not SIMPLEMODE else None)
 
     gg.gen_graph(Parameters(
@@ -75,6 +77,10 @@ def main():
         plt.draw()  # no app , bitches
     else:
         mainwindow.run(gg)
+        #import QCore
+        app.aboutToQuit.connect(partial(mainwindow.closeEvent,0))
+        #import Qt
+        #Qt.QtCo
     if USEQT:
         sys.exit(app.exec_())
         a = 1

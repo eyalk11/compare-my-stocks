@@ -166,7 +166,10 @@ class InputProcessor(TransactionHandler):
             print('entered')
             self.convert_dicts_to_df_and_add_earnings()
             print('fin convert')
-            self.adjust_for_currency()
+            if config.IGNORE_ADJUST:
+                self.adjusted_panel=self.reg_panel.copy()
+            else:
+                self.adjust_for_currency()
             print('last')
         finally:
             self._proccessing_mutex.unlock()
