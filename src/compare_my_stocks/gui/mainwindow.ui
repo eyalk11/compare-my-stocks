@@ -579,18 +579,6 @@
                 </item>
                 <item row="1" column="0" rowspan="2">
                  <widget class="QFrame" name="frame">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>500</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>600</width>
-                    <height>500</height>
-                   </size>
-                  </property>
                   <layout class="QHBoxLayout" name="horizontalLayout_15">
                    <item>
                     <widget class="QGroupBox" name="groupBox">
