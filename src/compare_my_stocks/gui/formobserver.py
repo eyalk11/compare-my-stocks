@@ -1,5 +1,6 @@
 import json
 from abc import abstractmethod
+from datetime import datetime
 from enum import Enum
 from functools import partial
 
@@ -48,7 +49,7 @@ class ListsObserver():
 
     def __init__(self):
         self.addqueue=[]
-        self.grep_from_queue_task= DoLongProcess(self.process_elem)
+        self.grep_from_queue_task= DoLongProcessSlots(self.process_elem)
 
     def process_if_needed(self,stock):
         if not stock in self.graphObj._usable_symbols:
@@ -57,7 +58,7 @@ class ListsObserver():
             if not self.grep_from_queue_task.is_started:
                 params = copyit(self.graphObj.params)
                 params.transactions_todate = None  # datetime.now() #always till the end
-                self.grep_from_queue_task.startit(params)
+                self.grep_from_queue_task.command.emit((params,))
 
 
 
@@ -179,10 +180,16 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
 
     def refresh_stocks(self,*args):
+        TOLLERANCEGETIT=5
         wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
         toupdate= self.graphObj.required_syms(True,wantitall,True)
         params= copyit(self.graphObj.params)
-        params.transactions_todate=None #datetime.now() #always till the end
+        print(f'refreshing {toupdate} from {params.fromdate} to {params.todate}')
+        if params.todate<datetime.now() and (datetime.now()- params.todate).days < TOLLERANCEGETIT:
+            params.todate=None
+        #if self.window.enddate.date().toPy-datetime.
+        #params.transactions_todate=None #datetime.now() #always till the end
+        print('updating stocks from ')
         if len(toupdate)==0:
             return
 
@@ -409,7 +416,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.date_changed(list(map(todatetime,pair)),False )
     def change_mode(self,mode,val):
         def update_sizes():
-            but=[self.window.adjust_group,            self.window.main_group,            self.window.note_group]
+            but=[self.window.adjust_group,            self.window.main_group,            self.window.note_group,self.window.graph_groupbox]
             for x in but:
                 if not x.isHidden():
                     x.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
@@ -435,8 +442,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 #mylayout.addWidget(self.window.groups_lay2)
                 #mylayout.addWidget(self.window.groupBox)
                 #self.window.adjust_group.setLayou(mylayout)
-                self.window.gridLayout_9.replaceWidget(self.window.groupBox_datepicker,self.placeholder)
-                #self.window.gridLayout_9.removeWidget(self.window.groupBox_datepicker)
+                #self.window.gridLayout_9.replaceWidget(self.window.groupBox_datepicker,self.placeholder)
+                self.window.gridLayout_9.removeWidget(self.window.groupBox_datepicker)
                 self.window.gridLayout_2.removeWidget(self.window.buttom_frame)
                 self.window.gridLayout_2.addWidget(self.window.groupBox_datepicker,1, 0, 1, 2)
 
@@ -449,19 +456,20 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 self.window.gridLayout_11.addWidget(self.window.savedgraph_group, 1, 0, 1, 2)
 
                 self.window.gridLayout_2.removeWidget(self.window.groupBox_datepicker)
+                self.window.gridLayout_9.addWidget(self.window.groupBox_datepicker, 0, 0, 1, 2)
                 self.window.gridLayout_2.addWidget(self.window.buttom_frame, 1, 0, 1, 2)
-                #self.window.gridLayout_9.addWidget(self.window.groupBox_datepicker, 0, 0, 1, 2)
-                self.window.gridLayout_9.replaceWidget(self.placeholder,self.window.groupBox_datepicker)
+
+                #self.window.gridLayout_9.replaceWidget(self.placeholder,self.window.groupBox_datepicker)
 
                 self.window.savedgraph_group.show()
                 self.window.currencygroup.show()
 
                 #self.window.currencygroup.show()
             if tosize:
-                self.window.frame_9.setMaximumSize(450, 900)
+                self.window.frame_9.setMaximumSize(400, 900)
                 #x.resize(x.maximumSize())
             else:
-                self.window.frame_9.setMaximumSize(500,400)
+                self.window.frame_9.setMaximumSize(400,400)
         if val==False:
             return
         if self.current_mode == DisplayModes.MINIMAL:

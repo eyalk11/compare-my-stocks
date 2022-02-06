@@ -76,7 +76,7 @@ class InputProcessor(TransactionHandler):
 
 
     def resolve_currency(self, sym, l, hist, fromdate, enddate):
-
+        #very inefficient . but for few..
         if 'Currency' in hist:
             currency = hist['Currency'][0]
         else:
@@ -145,6 +145,12 @@ class InputProcessor(TransactionHandler):
             else:
                 self.process_params.transactions_fromdate = cur_action[0] #start from first buy
 
+        if  partial_symbols_update:
+            todate=self.process_params.todate
+            fromdate=self.process_params.fromdate
+        else:
+            fromdate=self.process_params.transactions_fromdate
+            todate=self.process_params.transactions_todate
 
         query_source = True
         if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
@@ -153,7 +159,7 @@ class InputProcessor(TransactionHandler):
 
         self.currency_hist= {}
         if query_source:
-            self.get_data_from_source(partial_symbols_update)
+            self.get_data_from_source(partial_symbols_update,fromdate,todate)
             self.save_data()
         print('finish initi')
         self.simplify_hist(partial_symbols_update)
@@ -294,7 +300,35 @@ class InputProcessor(TransactionHandler):
                               lambda: (dica['Close'] + dica['Open']) / 2)
                 self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
 
-    def get_data_from_source(self, partial_symbols_update):
+    def get_data_from_source(self, partial_symbols_update,fromdate,todate):
+        TOLLERENCE=5 #config
+
+        def get_range_gap(dates,fromdate,todate):
+
+            #yields the gaps in data between dates ..
+            dates=sorted(list(dates))
+            if len(dates)<2 or dates[-1]<=fromdate:
+                yield  fromdate,todate
+            reachedfrom=False
+            for da,af  in zip( dates[:-1],dates[1:]):
+                if da<=fromdate:
+                    if da==fromdate:
+                        reachedfrom=True
+                    continue
+                #we are >=fromdate
+                if da>fromdate and (da-fromdate).days>TOLLERENCE :
+                    if not reachedfrom:
+                        yield fromdate,da #days missing befor we reached
+                        reachedfrom=True
+                if da>=todate:
+                    break
+                if (af-da).days>TOLLERENCE: #gap
+                    yield da,min(af,todate) #we miss all the days inbetween
+
+            if af<todate and (todate-af).days>TOLLERENCE:
+                yield af,  todate
+
+
         self.symbol_info_tmp={}
         localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
         if not partial_symbols_update:
@@ -303,45 +337,57 @@ class InputProcessor(TransactionHandler):
             self._hist_by_date = collections.OrderedDict()  # like all dates but by
         else:
             self._bad_symbols=self._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
+        todate = todate if todate is not None else datetime.datetime.now()
+
+        todate = localize_me(todate)
+
+        fromdate = localize_me(fromdate)
+
+
         for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
-            todate = self.process_params.transactions_todate if self.process_params.transactions_todate is not None else datetime.datetime.now()
 
-            todate = localize_me(todate)
-            transactions_fromdate = localize_me(self.process_params.transactions_fromdate)
-            numdays = (todate - transactions_fromdate).days
+
             sym_corrected = config.TRANSLATEDIC.get(sym, sym)
+            skipget=False
+            ls = get_range_gap(list(self._hist_by_date[sym].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
+            okdays=0
+            requireddays=0
+            try:
+                for (mindate,maxdate) in  ls:
+                    okdays+=self.get_hist_sym(mindate, maxdate, sym, sym_corrected)
+                    requireddays+=(maxdate-mindate).days
 
-            l, hist = self._inputsource.get_symbol_history(sym_corrected, self.process_params.transactions_fromdate, todate,
-                                                           iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
-            self.symbol_info_tmp[sym] = l
-            if hist is None:
+            except AttributeError:
                 print('bad %s' % sym)
                 self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
-            self.symbol_info[sym] = l
+            if requireddays/okdays<0.5:
+                print(f'mostly problematic {sym}')
 
-            adjusted, currency = self.resolve_currency(sym, l, hist, transactions_fromdate, todate)
-            if not (self.symbol_info[sym] is None):
-                self.symbol_info[sym]['currency'] = currency
-            else:
-                self.symbol_info[sym] = {'currency': currency}
+    def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
+        l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
+                                                       iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
+        self.symbol_info_tmp[sym] = l
+        if hist is None:
+            raise AttributeError("bad symbol")
 
-            hist = hist.to_dict('index')
-            if adjusted is not None:
-                adjusted = adjusted.to_dict('index')
-            prec = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
-            #if prec / numdays < config.MINIMALPRECREQ and numdays > config.MINCHECKREQ:
-            #    print('not enough days %s %f' % (sym, prec / numdays))
-            #    continue
-            self._usable_symbols.add(sym)
+        adjusted, currency = self.resolve_currency(sym, l, hist, mindate, maxdate)
+        if sym in self.symbol_info and not (self.symbol_info[sym] is None):
+            self.symbol_info[sym]['currency'] = currency
+        else:
+            self.symbol_info[sym] = {'currency': currency}
+        hist = hist.to_dict('index')
+        if adjusted is not None:
+            adjusted = adjusted.to_dict('index')
+        okdays = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
 
-            for date, dic in hist.items():
-                if not date in self._hist_by_date:
-                    self._hist_by_date[date] = {}
+        self._usable_symbols.add(sym)
+        for date, dic in hist.items():
+            if not date in self._hist_by_date:
+                self._hist_by_date[date] = {}
 
-                self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
-
-
+            self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
+        return okdays
     def save_data(self):
         import shutil
         try:
