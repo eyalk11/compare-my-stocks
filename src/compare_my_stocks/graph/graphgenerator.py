@@ -94,6 +94,7 @@ class GraphGenerator:
         return st
 
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
+        additional_options=config.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         print('generation locked')
 
@@ -113,7 +114,7 @@ class GraphGenerator:
                     #del ann
                 self.remove_all_anotations()
                 ar = self._axes
-                dt.plot.line(reuse_plot=True, ax=ar,grid=True)
+                dt.plot.line(reuse_plot=True, ax=ar,grid=True,**additional_options)
                 #fig=
                 #if just_upd:
                 #    fig.canvas.mpl_disconnect(self.cid)
@@ -131,7 +132,7 @@ class GraphGenerator:
                 else:
                     #mplfinance.plot(dt, figsize=(16, 10), type='candle')
                     ar = self._axes
-                    dt.plot.line(reuse_plot=True, ax=ar,grid=True)
+                    dt.plot.line(reuse_plot=True, ax=ar,grid=True,**additional_options)
                     self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
             FACy = 1.2
             FACx = 2.4

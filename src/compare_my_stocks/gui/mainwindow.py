@@ -75,8 +75,8 @@ class MainWindow(QMainWindow, FormInitializer):
         self.setup_observers()
 
         self.showMaximized()
-
-        self.update_graph(1)
+        if not self.load_last_if_needed(): 
+            self.update_graph(1)
 
     #from PySide6.QtWidgets import QGroupBox
     #self.window.findChild(QGroupBox, name='graph_groupbox')

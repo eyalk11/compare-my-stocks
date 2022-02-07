@@ -1,5 +1,6 @@
 import PySide6.QtWidgets
-from PySide6.QtWidgets import QRadioButton, QCheckBox, QListWidget, QSizePolicy
+
+from PySide6.QtWidgets import QRadioButton, QCheckBox, QListWidget, QSizePolicy,QComboBox
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -63,10 +64,10 @@ class FormInitializer(FormObserver):
                 except:
                     pass
 
-    def setup_controls_from_params(self,initial=True):
+    def setup_controls_from_params(self,initial=True,isinitialforstock=None):
         self.ignore_cat_changes = False
         self.ignore_updates_for_now=True
-        self.set_groups_values(isinitialforstock=initial)
+        self.set_groups_values(isinitialforstock=initial if isinitialforstock==None else isinitialforstock)
 
         self.window.daterangepicker.update_prop()
         self.window.startdate.setDateTime(self.graphObj.mindate)
@@ -101,13 +102,17 @@ class FormInitializer(FormObserver):
 
     def set_groups_values(self, isinit=1,isinitialforstock=1):
         b=False
-        wc= self.window.categoryCombo
+        wc: QComboBox= self.window.categoryCombo
+        self.ignore_cat_changes = True
         if self.graphObj.Categories!=[wc.itemText(x) for x in range(wc.count())]:
             b=True
-            self.ignore_cat_changes=True
+
             wc.clear()
             wc.addItems(self.graphObj.Categories) #sorry
-            self.ignore_cat_changes = False
+
+        if isinitialforstock and self.graphObj.params.cur_category:
+            wc.setCurrentIndex(index_of( self.graphObj.params.cur_category ,self.graphObj.Categories) )
+        self.ignore_cat_changes = False
 
         options = list(self.graphObj.Groups.keys())
         value = self.graphObj.params.groups if self.graphObj.params.groups != None else list()
@@ -167,13 +172,14 @@ class FormInitializer(FormObserver):
     def update_stock_list(self,isinitial=0,justorgs=False):
         org: QListWidget = self.window.orgstocks  # type:
 
-        if  self.window.unite_NONE.isChecked():
+        if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
             if self.graphObj.params.use_groups:
                 org.clear()
                 org.addItems(self.graphObj.get_options_from_groups(self.graphObj.params.groups))
             elif isinitial:
                 org.clear()
                 org.addItems(self.graphObj.params.selected_stocks)
+
         if justorgs:
             return
 

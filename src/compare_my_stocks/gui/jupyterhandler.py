@@ -24,6 +24,7 @@ class JupyterHandler(FormInterface):
         self.graphObj.finishedGeneration.connect(self.finished_generation)
         self.window.debug_btn.pressed.connect(self.launch_notebook)
         self.window.reload_notebook.pressed.connect( self.window.voila_widget.reload)
+
     def finished_generation(self,number):
         if self.already_running:
             print('already')

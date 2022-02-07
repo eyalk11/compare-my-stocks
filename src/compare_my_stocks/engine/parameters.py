@@ -104,7 +104,7 @@ class Parameters:
     @todate.setter
     def todate(self, value):
         self._todate=value
-        if (not self.transactions_todate) or  (self.transactions_todate and value > self.transactions_todate):
+        if (value is None) or (not self.transactions_todate) or  (self.transactions_todate and value > self.transactions_todate):
             self.transactions_todate = value
 
         if self._baseclass:

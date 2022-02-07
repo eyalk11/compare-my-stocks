@@ -126,17 +126,33 @@ class GraphsHandler:
         "Graph name:",QLineEdit.Normal,
                                                   self.lastgraphtext)
         if ok and text:
-            self.graphs[text]= copyit(self.graphObj.params)
-            self.lastgraphtext=text
-        json.dump(self.graphs,open(config.GRAPHFN,'wt'),cls=EnhancedJSONEncoder)
+            self.internal_save(text)
+
+    def internal_save(self, text,upd=True):
+        self.graphs[text] = copyit(self.graphObj.params)
+        if upd:
+            self.lastgraphtext = text
+        json.dump(self.graphs, open(config.GRAPHFN, 'wt'), cls=EnhancedJSONEncoder)
         self.update_graph_list()
 
-
-    def load_graph(self):
-        text=self.window.graphList.currentItem().text()
+    def load_graph(self,text=None):
+        if text==None:
+            if not self.window.graphList.currentItem():
+                return
+            text=self.window.graphList.currentItem().text()
         self.graphObj.params = copyit(self.graphs[text])
         self.update_graph(ResetRanges.FORCE,force=True)
-        self.setup_controls_from_params(0)
+        self.setup_controls_from_params(0,1)
+
+    def save_last_graph(self):
+        if config.LASTGRAPHNAME:
+            self.internal_save(config.LASTGRAPHNAME,upd=False)
+
+    def load_last_if_needed(self):
+        if config.LOADLASTATBEGIN:
+            self.load_graph(config.LASTGRAPHNAME)
+        return config.LOADLASTATBEGIN
+        
 
 
 class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
@@ -185,7 +201,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         toupdate= self.graphObj.required_syms(True,wantitall,True)
         params= copyit(self.graphObj.params)
         print(f'refreshing {toupdate} from {params.fromdate} to {params.todate}')
-        if params.todate<datetime.now() and (datetime.now()- params.todate).days < TOLLERANCEGETIT:
+        now= datetime.now(tz=params.todate.tzinfo)
+        if params.todate<now and (now- params.todate).days < TOLLERANCEGETIT:
             params.todate=None
         #if self.window.enddate.date().toPy-datetime.
         #params.transactions_todate=None #datetime.now() #always till the end
@@ -405,6 +422,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.window.findChild(QRadioButton, name="jupyter_mode").toggled.connect(
             partial(self.change_mode, DisplayModes.JUPYTER))
+
+        self.graphObj.finishedGeneration.connect(self.save_last_graph)
+
     def update_from_datefields(self):
         def todatetime(x):
             return pytz.UTC.localize( QDateTime(x,QTime(0,0,0)).toPython(), True)
