@@ -8,15 +8,16 @@ from dateutil import parser
 from config import config
 from engine.symbolsinterface import SymbolsInterface
 
-
+from collections import defaultdict
 class TransactionHandler(SymbolsInterface):
     def __init__(self, filename):
         self._fn = filename
         self._buysymbols = set()
+        self.symbol_info=defaultdict(dict)
 
     def try_to_use_cache(self):
         try:
-            (self._buydic, self._buysymbols) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
+            (self._buydic, self._buysymbols, self.symbol_info) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
             if len(self._buydic)==0:
                 return 0
             return 1
@@ -30,6 +31,7 @@ class TransactionHandler(SymbolsInterface):
 
     def populate_buydic(self):
         if self.try_to_use_cache():
+            print('using buydict cache ')
             return
         self._buydic = {}
         self._buysymbols = set()
@@ -46,7 +48,7 @@ class TransactionHandler(SymbolsInterface):
 
         if config.BUYDICTCACHE:
             try:
-                pickle.dump((self._buydic, self._buysymbols), open(config.BUYDICTCACHE, 'wb'))
+                pickle.dump((self._buydic, self._buysymbols, self.symbol_info), open(config.BUYDICTCACHE, 'wb'))
                 print('dumpted')
             except Exception as e:
                 print(e)
@@ -54,7 +56,8 @@ class TransactionHandler(SymbolsInterface):
     def read_trasaction_table(self, x):
         #x = x[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
         #   x['TimeOfDay']
-        for t in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],x['TimeOfDay']):
+        for q in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],x['TimeOfDay'],x['Currency']):
+            t=q[:-1]
             #   x['TimeOfDay']):
             # if not math.isnan(t[1]):
             #    self._symbols.add(t[1])
@@ -81,3 +84,5 @@ class TransactionHandler(SymbolsInterface):
             # dt=dt.replace(tzinfo=None)
             self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1])  # Qty,cost,sym
             self._buysymbols.add(t[1])
+            if q[-1]:
+                self.symbol_info[t[1]] = {'currency': q[-1]}

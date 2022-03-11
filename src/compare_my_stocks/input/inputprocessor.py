@@ -55,7 +55,7 @@ class InputProcessor(TransactionHandler):
         self._income, self._revenue, = None,None
         self.cached_used = None
         self._symbols_wanted = set()
-        self.symbol_info = {}
+        #self.symbol_info = {}
         self._usable_symbols = set()
         self._bad_symbols = set()
 
@@ -75,7 +75,7 @@ class InputProcessor(TransactionHandler):
         self._adjusted_panel=None
 
 
-    def resolve_currency(self, sym, l, hist, fromdate, enddate):
+    def resolve_currency(self, sym, l, hist):
         #very inefficient . but for few..
         if 'Currency' in hist:
             currency = hist['Currency'][0]
@@ -90,24 +90,23 @@ class InputProcessor(TransactionHandler):
             currency = config.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             print(f'unk currency for {sym}')
+        return currency
 
-        if currency != config.BASECUR and currency != 'unk':
-            print('adjusted %s %s ' % (sym, currency))
-            currency_df = self.get_currency_hist(currency, fromdate,enddate )
-            inc=['Open', 'High', 'Low', 'Close']
-            currency_df=currency_df[inc]
-            hh= hist[inc].mul(currency_df, fill_value=numpy.NaN)
-            if len(set(hist.index)-set(currency_df.index))>0:
-                print( ' missing ', set(hist.index)-(set(currency_df.index)))
-            #from scipy.interpolate import interp1d
-            #missing = hh.isna().any(axis=1)
-            #if len(missing)>0:
-            #    for ij in inc:
-            #        f = interp1d(currency_df.index, currency_df[ij])
-            #        hh[missing]['Open'].mul(f(hh[missing].index))
-            return hh ,currency
-        else:
-            return None , currency
+    def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
+        print('adjusted %s %s ' % (sym, currency))
+        currency_df = self.get_currency_hist(currency, fromdate, enddate)
+        inc = ['Open', 'High', 'Low', 'Close']
+        currency_df = currency_df[inc]
+        hh = hist[inc].mul(currency_df, fill_value=numpy.NaN)
+        if len(set(hist.index) - set(currency_df.index)) > 0:
+            print(' missing ', set(hist.index) - (set(currency_df.index)))
+        # from scipy.interpolate import interp1d
+        # missing = hh.isna().any(axis=1)
+        # if len(missing)>0:
+        #    for ij in inc:
+        #        f = interp1d(currency_df.index, currency_df[ij])
+        #        hh[missing]['Open'].mul(f(hh[missing].index))
+        return hh
 
     def get_currency_hist(self, currency, fromdate, enddate):
         pair = (config.BASECUR, currency)
@@ -365,17 +364,23 @@ class InputProcessor(TransactionHandler):
                 print(f'mostly problematic {sym}')
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
+        print(f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}')
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
-        self.symbol_info_tmp[sym] = l
+        self.symbol_info_tmp[sym] = l #just for debug I think
         if hist is None:
             raise AttributeError("bad symbol")
-
-        adjusted, currency = self.resolve_currency(sym, l, hist, mindate, maxdate)
-        if sym in self.symbol_info and not (self.symbol_info[sym] is None):
-            self.symbol_info[sym]['currency'] = currency
+        if not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
+            currency = self.resolve_currency(sym, l, hist)
+            self.symbol_info[sym].update( {'currency': currency})
         else:
-            self.symbol_info[sym] = {'currency': currency}
+            currency= self.symbol_info[sym]['currency']
+
+        if currency != config.BASECUR and currency != 'unk':
+            adjusted =  self.adjust_sym_for_currency(currency, maxdate, mindate, hist, sym)
+        else:
+            adjusted=None
+
         hist = hist.to_dict('index')
         if adjusted is not None:
             adjusted = adjusted.to_dict('index')

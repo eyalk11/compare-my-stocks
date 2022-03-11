@@ -13,7 +13,6 @@ from gui.formobserver import FormObserver, ResetRanges
 class FormInitializer(FormObserver):
 
     def __init__(self):
-
         super().__init__()
 
     @property
@@ -23,7 +22,7 @@ class FormInitializer(FormObserver):
     @property
     def axes(self):
         return self._canvas.ax
-        return
+
     def prepare_graph_widget(self):
         #tabWidget = self.window.tabWidget_8Page1  # type: QTabWidget
 
