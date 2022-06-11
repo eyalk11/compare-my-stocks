@@ -154,7 +154,7 @@ Please consult the corresponding sites' license before using this software, and 
 
 
 
-* I belive this software is already usable and provide many useful features that are usually paid for. This despite developing this in a short period, on my spare time. I would very much apperiate community contribution. And welcome you to contribute, send bugs and discuss (will open gitter when appropriate). 
+* I belive this software provides many useful features that are usually paid for. This despite developing this in a short period, on my spare time. I would very much apperiate community contribution. And welcome you to contribute, send bugs and discuss (will open gitter when appropriate). 
 
 * If you have an idea about how it will be best integrated with active stock research using Jupyter Lab or something else, let me know. 
 
