@@ -9,6 +9,7 @@ from config import config
 from engine.symbolsinterface import SymbolsInterface
 
 from collections import defaultdict
+
 class TransactionHandler(SymbolsInterface):
     def __init__(self, filename):
         self._fn = filename

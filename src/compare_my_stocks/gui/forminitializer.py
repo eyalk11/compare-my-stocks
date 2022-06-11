@@ -94,7 +94,7 @@ class FormInitializer(FormObserver):
             self.window.comparebox.setCurrentIndex(ind)
             if ind==-1:
                 self.window.comparebox.setCurrentText(self.graphObj.params.compare_with)
-
+        self.window.findChild(QCheckBox, name="COMPARE").setChecked(self.graphObj.params.type & Types.COMPARE)
         if initial:
             self.load_existing_graphs()
         self.ignore_updates_for_now = False
@@ -169,38 +169,43 @@ class FormInitializer(FormObserver):
         self.disable_slider_values_updates = False
 
     def update_stock_list(self,isinitial=0,justorgs=False):
-        org: QListWidget = self.window.orgstocks  # type:
-
-        if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
-            if self.graphObj.params.use_groups:
-                org.clear()
-                org.addItems(self.graphObj.get_options_from_groups(self.graphObj.params.groups))
-            elif isinitial:
-                org.clear()
-                org.addItems(self.graphObj.params.selected_stocks)
-
-        if justorgs:
-            return
-
-        if self.window.fromall.isChecked():
-            alloptions = self
-        else:
-            alloptions= sorted(list(self.graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
-
-        #self._last_choice=  self.window.comparebox.currentText()
-        if isinitial:
-            for comp in  [self.window.comparebox,self.window.addstock] :
-                comp.clear()
-                comp.addItems(alloptions)
-
-
-
-
-
-        #org.addItems(self.graphObj.cols)
-        refs: QListWidget = self.window.refstocks  # type:
-        refs.clear()
-        refs.addItems(self.graphObj.params.ext)
+        try:
+            org: QListWidget = self.window.orgstocks  # type:
+            
+            if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
+                if self.graphObj.params.use_groups:
+                    org.clear()
+                    org.addItems(self.graphObj.get_options_from_groups(self.graphObj.params.groups))
+                elif isinitial:
+                    org.clear()
+                    org.addItems(self.graphObj.params.selected_stocks)
+            
+            if justorgs:
+                return
+            
+            if self.window.fromall.isChecked():
+                alloptions = self
+            else:
+                alloptions= sorted(list(self.graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
+            
+            #self._last_choice=  self.window.comparebox.currentText()
+            if isinitial:
+                for comp in  [self.window.comparebox,self.window.addstock] :
+                    comp.clear()
+                    comp.addItems(alloptions)
+            
+            
+            
+            
+            
+            #org.addItems(self.graphObj.cols)
+            refs: QListWidget = self.window.refstocks  # type:
+            refs.clear()
+            refs.addItems(self.graphObj.params.ext)
+        except Exception as e:
+            import traceback;traceback.print_exc()
+            print(f'{e} in adding items')
+            
 
 
 

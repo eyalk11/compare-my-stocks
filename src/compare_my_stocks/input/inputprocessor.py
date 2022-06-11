@@ -15,8 +15,11 @@ from PySide6.QtCore import QRecursiveMutex
 from config import config
 from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
 from engine.parameters import copyit
+from input.earningsproc import EarningProcessor
 
-from input.inputsource import InputSource, IBSource, InvestPySource
+from input.inputsource import InputSource
+from input.investpysource import InvestPySource
+from input.ibsource import IBSource
 from engine.symbolsinterface import SymbolsInterface
 from input.transactionhandler import TransactionHandler
 #import input.earningsinp
@@ -73,6 +76,7 @@ class InputProcessor(TransactionHandler):
         self._proccessing_mutex = QRecursiveMutex()
         self._reg_panel=None
         self._adjusted_panel=None
+        self._earningProc=EarningProcessor.generate_or_make()
 
 
     def resolve_currency(self, sym, l, hist):
@@ -169,7 +173,7 @@ class InputProcessor(TransactionHandler):
             print('entering lock')
             self._proccessing_mutex.lock()
             print('entered')
-            self.convert_dicts_to_df_and_add_earnings()
+            self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
             print('fin convert')
             if config.IGNORE_ADJUST:
                 self.adjusted_panel=self.reg_panel.copy()
@@ -406,7 +410,7 @@ class InputProcessor(TransactionHandler):
             print("error in dumping hist")
 
 
-    def convert_dicts_to_df_and_add_earnings(self):
+    def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
         dataframes = []
         self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
                       self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
@@ -414,9 +418,11 @@ class InputProcessor(TransactionHandler):
         NONADJUSTEDDICTS= len(self.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
         seldict= self.dicts[:NONADJUSTEDDICTS]
-
+        symbols=list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update)
         try:
-            income, revenue, cs = get_earnings()
+
+            #income, revenue, cs =# get_earnings()
+            income, revenue, cs = EarningProcessor
             hasearnings=True
             combinedindex = sorted(
                 list(set(self._fset).union(set(cs.index)).union(set(income.index)).union(set(revenue.index))))

@@ -14,7 +14,8 @@ import datetime
 import pytz
 
 from common.common import InputSourceType, UseCache
-SKIP_EARNINGS=1
+SKIP_EARNINGS=0
+TRYSTORAGEFOREARNINGS=1
 DATAFILEPTR= 'DATA_FILE'
 USEWX=0
 USEWEB=0
@@ -67,6 +68,11 @@ CACHEUSAGE=UseCache.FORCEUSE
 DOWNLOADDATAFORPROT=True
 JSONFILENAME=r'mygroups.json'
 SERIALIZEDFILE=r'.\myserialized.dat' #internal
+EARNINGSTORAGE = 'earnings.dat'
+TRYSTORAGEFOREARNINGS= True
+
+
+
 '''
 Translate Unknown stocks(in your protfolio) to known once..
 '''

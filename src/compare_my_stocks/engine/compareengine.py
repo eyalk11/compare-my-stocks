@@ -44,10 +44,14 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         return self._groups_by_cat[self.cur_category]
 
     def get_options_from_groups(self,ls):
+
         if not ls:
             return []
         s = set()
         for g in ls:
+            if g not in self.Groups:
+                raise Exception(f'{g} is not in Groups')
+                #return []
             s = s.union(set(self.Groups[g]))
         if self.params.limit_to_portfolio:
             s=s.intersection(set(self.get_portfolio_stocks()))

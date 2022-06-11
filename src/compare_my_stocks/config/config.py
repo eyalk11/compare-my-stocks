@@ -44,7 +44,7 @@ with open(config_file) as f:
     code = compile(f.read(), config_file, 'exec')
     exec(code, globals(), locals())
 
-FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","PORTFOLIOFN","DEFAULTNOTEBOOK",'DATAFILEPTR']
+FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","PORTFOLIOFN","DEFAULTNOTEBOOK",'DATAFILEPTR','BUYDICTCACHE']
 for f in FILE_LIST_TO_RES:
     if not f in globals():
         print_if_ok(f'You must have {f} in config')

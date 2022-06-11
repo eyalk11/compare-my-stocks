@@ -310,7 +310,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             gr.clearSelection()
 
     def compare_changed(self,num):
-
+        if self.ignore_updates_for_now:
+            return
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
         self.graphObj.params.compare_with=self.window.comparebox.currentText()
         self.graphObj.params.type=self.graphObj.params.type | Types.COMPARE
