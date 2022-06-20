@@ -4,8 +4,7 @@ from datetime import datetime
 from enum import Enum
 from functools import partial
 
-from PySide6.QtWidgets import QHBoxLayout
-from PySide6.QtCore import QThread,QTimer,QDateTime,QTime,QDate
+from PySide6.QtCore import QThread,QTimer,QDateTime,QTime
 import PySide6.QtCore
 import PySide6.QtWidgets
 from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit,QDateEdit, QInputDialog,QGroupBox,QRadioButton,QSizePolicy
@@ -13,11 +12,13 @@ from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
 from common.common import UniteType, Types, LimitType
-from common.dolongprocess import DoLongProcess, DoLongProcessSlots
+from common.dolongprocess import DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
 from engine.symbolsinterface import SymbolsInterface
 from gui.jupyterhandler import JupyterHandler
+from gui.listobserver import ListsObserver
+
 
 class DisplayModes(int,Enum):
     MINIMAL=0,
@@ -34,71 +35,6 @@ try:
     from json_editor import json_editor_ui
 except:
     import json_editor_ui
-
-class ListsObserver():
-    def process_elem(self,params):
-        while True:
-            ls = self.addqueue.copy()
-            self.window.last_status.setText('processing added stocks')
-            self.graphObj.process(set(ls),params) #blocks. should have mutex here
-            self.window.last_status.setText('finshed processing')
-            self.addqueue = list(set(self.addqueue) - set(ls))
-            if len(self.addqueue)==0:
-                break
-
-
-    def __init__(self):
-        self.addqueue=[]
-        self.grep_from_queue_task= DoLongProcessSlots(self.process_elem)
-
-    def process_if_needed(self,stock):
-        if not stock in self.graphObj._usable_symbols:
-            self.addqueue+=[stock]
-
-            if not self.grep_from_queue_task.is_started:
-                params = copyit(self.graphObj.params)
-                params.transactions_todate = None  # datetime.now() #always till the end
-                self.grep_from_queue_task.command.emit((params,))
-
-
-
-    @staticmethod
-    def del_selected(z):
-        listItems = z.selectedItems()
-        if not listItems: return
-        for item in listItems:
-            z.takeItem(z.row(item))
-
-    def del_in_lists(self):
-        for z in [self.window.orgstocks,self.window.refstocks]:
-            self.del_selected(z)
-
-    @staticmethod
-    def generic_add_lists(org, dst):
-        items = set([x.text() for x in org.selectedItems()])
-        items = items - set([dst.item(x).text() for x in range(dst.count())])
-        dst.addItems(items)
-        FormObserver.del_selected(org)
-
-    def add_to_ref(self):
-        self.generic_add_lists(self.window.orgstocks, self.window.refstocks)
-
-    def add_to_sel(self):
-        self.generic_add_lists(self.window.refstocks, self.window.orgstocks)
-
-    def add_selected(self):
-        org: QListWidget = self.window.orgstocks  # type:
-        text = self.window.addstock.currentText()
-        self.process_if_needed(text)
-        org.addItem(text)
-        self.update_graph(1)
-
-    def add_reserved(self):
-        org: QListWidget = self.window.refstocks  # type:
-        text = self.window.addstock.currentText()
-        self.process_if_needed(text)
-        org.addItem(text)
-        self.update_graph(1)
 
 
 class GraphsHandler:
@@ -379,6 +315,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)
         self.window.addreserved.pressed.connect(self.add_reserved)
+        self.window.lookupsym_btn.pressed.connect(self.lookup_symbol)
+        self.window.addstock.currentTextChanged.connect(self.stock_edited)
         self.window.showhide.pressed.connect(self.showhide)
         self.window.selectallnone.pressed.connect(self.do_select)
         self.window.deletebtn.pressed.connect(self.del_in_lists)

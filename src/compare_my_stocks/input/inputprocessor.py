@@ -53,6 +53,10 @@ class InputProcessor(TransactionHandler):
         self._adjusted_panel=value #we are under lock
         pass
 
+    @property
+    def inputsource(self) -> InputSource:
+        return self._inputsource
+
     def __init__(self, filename):
         TransactionHandler.__init__(self, filename)
         self._income, self._revenue, = None,None
