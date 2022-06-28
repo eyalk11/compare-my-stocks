@@ -89,7 +89,7 @@ class GraphGenerator:
         dic[Types.ABS ] = '%s'
         basestr= dic.get( type &   ( Types.PRECENTAGE | Types.PRECDIFF | Types.DIFF) , dic[Types.ABS])
         st = basestr % getbasetype(type)  
-        if type & Types.COMPARE:
+        if type & Types.COMPARE and self.params.compare_with:
             st += ' Compared With ' + self.params.compare_with
         return st
 

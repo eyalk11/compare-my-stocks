@@ -15,6 +15,7 @@ from common.common import UniteType, Types, LimitType
 from common.dolongprocess import DoLongProcessSlots
 from config import config
 from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
+from engine.symbols import SimpleSymbol
 from engine.symbolsinterface import SymbolsInterface
 from gui.jupyterhandler import JupyterHandler
 from gui.listobserver import ListsObserver
@@ -49,6 +50,7 @@ class GraphsHandler:
             self.graphs={k:Parameters.load_from_json_dict(v) for k,v in gg.items()}
             self.update_graph_list()
         except:
+            import traceback;traceback.print_exc()
             print('err loading graphs')
             return
 
@@ -68,17 +70,22 @@ class GraphsHandler:
         self.graphs[text] = copyit(self.graphObj.params)
         if upd:
             self.lastgraphtext = text
-        json.dump(self.graphs, open(config.GRAPHFN, 'wt'), cls=EnhancedJSONEncoder)
+
+        open(config.GRAPHFN, 'wt').write(json.dumps(self.graphs, cls=EnhancedJSONEncoder))
         self.update_graph_list()
 
     def load_graph(self,text=None):
-        if text==None:
-            if not self.window.graphList.currentItem():
-                return
-            text=self.window.graphList.currentItem().text()
-        self.graphObj.params = copyit(self.graphs[text])
-        self.update_graph(ResetRanges.FORCE,force=True)
-        self.setup_controls_from_params(0,1)
+        try:
+            if text==None:
+                if not self.window.graphList.currentItem():
+                    return
+                text=self.window.graphList.currentItem().text()
+            self.graphObj.params = copyit(self.graphs[text])
+            self.update_graph(ResetRanges.FORCE,force=True)
+            self.setup_controls_from_params(0,1)
+        except:
+            import traceback;traceback.print_exc()
+            print('failed loading graph')
 
     def save_last_graph(self):
         if config.LASTGRAPHNAME:
@@ -253,14 +260,15 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.graphObj.params.type=self.graphObj.params.type | Types.COMPARE
         self.update_graph(ResetRanges.FORCE)
 
+
     def selected_changed(self,*args,**kw):
-        self.graphObj.params.selected_stocks=[self.window.orgstocks.item(x).text()  for x in range(self.window.orgstocks.count())]
+        self.graphObj.params.selected_stocks=[SimpleSymbol(self.window.orgstocks.item(x))  for x in range(self.window.orgstocks.count())]
         if not self.window.use_groups.isChecked():
             self.update_graph(1)
 
     def refernced_changed(self,*args,**kw):
         #befext=self.graphObj.params.ext
-        self.graphObj.params.ext=[self.window.refstocks.item(x).text()  for x in range(self.window.refstocks.count())]
+        self.graphObj.params.ext=[SimpleSymbol(self.window.refstocks.item(x))  for x in range(self.window.refstocks.count())]
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
             self.update_graph(1)
 

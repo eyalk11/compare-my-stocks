@@ -15,6 +15,7 @@ from PySide6.QtCore import QRecursiveMutex
 from config import config
 from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
 from engine.parameters import copyit
+from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
 
 from input.inputsource import InputSource
@@ -350,13 +351,18 @@ class InputProcessor(TransactionHandler):
 
         fromdate = localize_me(fromdate)
 
-
+        if fromdate==todate:
+            raise Exception("identical dates")
         for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
 
+            sym_corrected = self.process_params.resolve_hack.get(sym, None)
+            if not sym_corrected:
+                sym_corrected = config.TRANSLATEDIC.get(sym, sym)
 
-            sym_corrected = config.TRANSLATEDIC.get(sym, sym)
+
+
             skipget=False
-            ls = get_range_gap(list(self._hist_by_date[sym].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
+            ls = get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
             okdays=0
             requireddays=0
             try:
@@ -365,6 +371,7 @@ class InputProcessor(TransactionHandler):
                     requireddays+=(maxdate-mindate).days
 
             except AttributeError:
+
                 print('bad %s' % sym)
                 self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
@@ -374,7 +381,7 @@ class InputProcessor(TransactionHandler):
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
         print(f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}')
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
-                                                       iscrypto=sym_corrected in config.CRYPTO)  # should be rounded
+                                                       iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
         self.symbol_info_tmp[sym] = l #just for debug I think
         if hist is None:
             raise AttributeError("bad symbol")
@@ -551,7 +558,7 @@ class InputProcessor(TransactionHandler):
 
         for x in self.dicts:
             for k in keys:
-                x.pop(k,'')
+                x.pop(str(k),'')
 
 
 
@@ -568,8 +575,9 @@ class InputProcessor(TransactionHandler):
             params= copyit(self.params) #For now on , under lock..
 
         self.process_params = params
+        ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
         try:
-            self.process_internal(partial_symbol_update)
+            self.process_internal(ls)
         except Exception as e:
             print('exception in processing', e )
             self.statusChanges.emit(f'Exception in processing {e}' )

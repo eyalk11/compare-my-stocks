@@ -50,7 +50,7 @@ class Window(QDialog):
     myinstance=None
 
     # constructor
-    def __init__(self,inpsource):
+    def __init__(self,inpsource,initial):
         self._inpsource :InputSource =inpsource
         self.selected=None
         super(Window, self).__init__()
@@ -80,6 +80,7 @@ class Window(QDialog):
 
         # creating a line edit
         self.symbolName = QLineEdit()
+        self.symbolName.setText(initial)
         self.symbolName.editingFinished.connect(self.edited)
 
         # calling the method that create the form
@@ -147,8 +148,8 @@ class Window(QDialog):
         # setting layout
         self.formGroupBox.setLayout(layout)
 
-def PickSymbol(inpsource):
-    w= Window(inpsource)
+def PickSymbol(inpsource,initial):
+    w= Window(inpsource,initial)
     # showing the window
     w.exec_()
     return w.selected

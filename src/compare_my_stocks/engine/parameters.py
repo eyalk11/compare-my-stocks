@@ -10,6 +10,7 @@ import numpy
 
 from config import config
 from common.common import Types, UseCache, UniteType, LimitType, dictnfilt
+from engine.symbols import AbstractSymbol
 
 
 def paramaware(klass):
@@ -42,7 +43,11 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
     def default(self, o):
         if dataclasses.is_dataclass(o):
             return dataclasses.asdict(o)
-        return super().default(o)
+        try:
+            return super().default(o)
+        except TypeError:
+            print(f"{o,type(o)} is not json.. ")
+            return o.__dict__
 
 #from dataclasses_json import dataclass_json
 
@@ -54,7 +59,7 @@ class Parameters:
     valuerange : List[float] = ( (-1)* numpy.inf, numpy.inf)
     numrange : List[int] = (None,None)
     type : Types =Types.VALUE
-    ext : list =field(default_factory=config.EXT.copy)
+    _ext : list =field(default_factory=config.EXT.copy)
     increase_fig: bool =1
     _fromdate : datetime=None
     _todate: datetime =None
@@ -70,7 +75,7 @@ class Parameters:
     show_graph : bool =False
     use_groups: bool =True
     use_ext: bool = True
-    selected_stocks: list =field(default_factory=list)
+    _selected_stocks: list =field(default_factory=list)
     shown_stock: list =field(default_factory=list)
     increase_fig: bool = False
     baseclass = dataclasses.InitVar
@@ -81,6 +86,31 @@ class Parameters:
     cur_category:str = None
     limit_by : LimitType = LimitType.RANGE
     limit_to_portfolio : bool =False
+    resolve_hack: dict = field(default_factory=dict)
+
+    @property
+    def selected_stocks(self):
+        return self._selected_stocks
+
+    @selected_stocks.setter
+    def selected_stocks(self,v):
+        self._selected_stocks=list(self.helper(v))
+    @property
+    def ext(self):
+        return self._ext
+
+    @ext.setter
+    def ext(self,v):
+        self._ext=list(self.helper(v))
+    #def update_ext_with_hack(self,ls):
+
+    def helper(self,ls):
+        for l in ls:
+            if isinstance(l,AbstractSymbol) and l.dic:
+                self.resolve_hack[str(l.symbol)]=l
+                yield str(l.symbol)
+            yield str(l)
+
 
     @classmethod
     def load_from_json_dict(cls,dic):

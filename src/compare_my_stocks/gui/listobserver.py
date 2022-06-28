@@ -2,12 +2,13 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem
 
 from common.dolongprocess import DoLongProcessSlots
 from engine.parameters import copyit
-from engine.symbols import AbstractSymbol
+from engine.symbols import AbstractSymbol, SimpleSymbol
 
 from gui.stockchoice import PickSymbol
 
 
 class MyItem(QListWidgetItem,AbstractSymbol):
+    __hash__ = AbstractSymbol.__hash__
     def __init__(self,text,parent=None,*args):
         self._dic=None
         if type(text) == dict:
@@ -23,16 +24,17 @@ class MyItem(QListWidgetItem,AbstractSymbol):
 
     @property
     def symbol(self):
-        return self.text
+        return self.text()
 
 
-
+def to_simple(ls):
+    return list(map(SimpleSymbol,ls))
 
 
 class ListsObserver():
     def process_elem(self,params):
         while True:
-            ls = self.addqueue.copy()
+            ls = to_simple(self.addqueue)
             self.window.last_status.setText('processing added stocks')
             self.graphObj.process(set(ls),params) #blocks. should have mutex here. We do partial update with params and list..
             self.window.last_status.setText('finshed processing')
@@ -49,7 +51,7 @@ class ListsObserver():
 
     def process_if_needed(self,stock):
         if not str(stock) in self.graphObj._usable_symbols:
-            self.addqueue+=[stock]
+            self.addqueue+=[SimpleSymbol(stock)]
 
             if not self.grep_from_queue_task.is_started: #theorticaly it could be that it was started but just on the last two lines. unlikely..
                 params = copyit(self.graphObj.params)
@@ -83,7 +85,7 @@ class ListsObserver():
         self.generic_add_lists(self.window.refstocks, self.window.orgstocks)
 
     def lookup_symbol(self):
-        self.current_symbol = PickSymbol(self.graphObj.inputsource)
+        self.current_symbol = PickSymbol(self.graphObj.inputsource,self.window.addstock.currentText())
         if self.current_symbol==None:
             return
         #self.last_txt=self.current_symbol.text()
@@ -109,6 +111,7 @@ class ListsObserver():
 
     def add_current_to(self, org):
         text = self.window.addstock.currentText() if self.current_symbol==None else self.current_symbol
-        self.process_if_needed(text)
-        org.addItem(MyItem(text))
+        it=MyItem(text)
+        self.process_if_needed(it)
+        org.addItem(it)
         self.update_graph(1)

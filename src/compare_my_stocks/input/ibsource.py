@@ -11,17 +11,19 @@ from config import config
 
 class IBSource(InputSource):
 
-    def __init__(self):
+    def __init__(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
         super().__init__()
         from ib_insync import IB
         #loop = asyncio.new_event_loop()
         #asyncio.set_event_loop(loop)
         self.ib=IB()
         try:
-            self.ib.connect(config.HOSTIB, config.PORTIB, clientId=1, readonly=True)
+            self.ib.connect(host,port , clientId=clientId, readonly=readonly)
+            print('ib connected OK')
         except Exception as e:
             import traceback;traceback.print_exc()
             print( f"{e} in connecting to ib")
+            raise
 
     def get_positions(self):
         y = self.ib.reqPositions()

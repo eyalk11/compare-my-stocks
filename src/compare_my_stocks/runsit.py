@@ -13,9 +13,6 @@ from engine.parameters import Parameters
 from common.common import InputSourceType, Types, UniteType
 from config import config
 
-
-from .gui.mainwindow import MainWindow
-
 USEWX, USEWEB, USEQT, SIMPLEMODE = config.USEWX, config.USEWEB, config.USEQT, config.SIMPLEMODE
 if USEQT:
     from PySide6.QtWidgets import QApplication
@@ -55,6 +52,7 @@ def pd_ignore_warning():
 
 
 def main():
+    from .gui.mainwindow import MainWindow
     pd_ignore_warning()
 
     if USEQT:
@@ -70,7 +68,7 @@ def main():
     gg = initialize_graph_and_ib(mainwindow.axes if not SIMPLEMODE else None)
 
     gg.gen_graph(Parameters(
-        type=Types.PRICE, unite_by_group=UniteType.ADDPROT, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
+        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
         show_graph=False))  # ,adjust_to_currency=True,currency_to_adjust='ILS'))
 
     if SIMPLEMODE:

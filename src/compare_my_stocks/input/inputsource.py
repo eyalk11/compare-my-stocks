@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from config import config
+from engine.symbols import AbstractSymbol
 
 
 class InputSource(ABC):
@@ -42,14 +43,17 @@ class InputSource(ABC):
         ...
 
     def resolve_symbol(self,sym):
-        ls,exchok,symok=self.resolve_symbols(sym)
+        if isinstance(sym, AbstractSymbol) and sym.dic!=None:
+            return sym.dic #easy
+
+        ls,exchok,symok=self.resolve_symbols(str(sym))
 
         if len(ls)==0:
             print('nothing for %s ' % sym)
             return None
         l=ls[0]
         if exchok>1:
-            print(f'multiple same exchange {sym}, piciking {l}')
+            print(f'multiple same exchange {sym}, picking {l}')
 
         if exchok:
             return l
