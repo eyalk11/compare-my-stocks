@@ -37,7 +37,8 @@ class JupyterHandler(FormInterface):
     def generation_task(self):
         self.window.voila_widget: QtVoila
         self.already_running=True
-        self.generate_temp()
+        if not self.generate_temp():
+            return
         self.window.voila_widget.external_notebook = config.DEFAULTNOTEBOOK
         open(config.DATAFILEPTR,'wt').write(self.file_name)
         if not self.voila_run:
@@ -51,13 +52,18 @@ class JupyterHandler(FormInterface):
     def generate_temp(self):
         import tempfile
         if self.file_name!=None:
-            os.remove(self.file_name)
+            try:
+                os.remove(self.file_name)
+            except:
+                print('error tmp')
+                return False
 
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             name = tmp.name
             import pickle
             pickle.dump(self.graphObj.serialized_data(), tmp)
         self.file_name= name
+        return True
 
 
     def launch_notebook(self,filename=None):

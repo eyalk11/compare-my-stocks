@@ -579,7 +579,7 @@ class InputProcessor(TransactionHandler):
         try:
             self.process_internal(ls)
         except Exception as e:
-            print('exception in processing', e )
+            print('exception in processing', traceback.format_exc() )
             self.statusChanges.emit(f'Exception in processing {e}' )
 
 

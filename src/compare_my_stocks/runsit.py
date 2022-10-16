@@ -2,22 +2,19 @@ import sys
 import time
 from functools import partial
 
-import matplotlib
+
+
 #from matplotlib import pyplot as plt
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QApplication
-from matplotlib import pyplot as plt
-from engine.compareengine import CompareEngine
-from engine.parameters import Parameters
 #import Qt
 from common.common import InputSourceType, Types, UniteType
 from config import config
 
 USEWX, USEWEB, USEQT, SIMPLEMODE = config.USEWX, config.USEWEB, config.USEQT, config.SIMPLEMODE
-if USEQT:
-    from PySide6.QtWidgets import QApplication
+# if USEQT:
+#     from PySide6.QtWidgets import QApplication
 
 def selectmode():
+    import matplotlib
     matplotlib.interactive(True)
     if USEWX:
         matplotlib.use('WxAgg')
@@ -40,7 +37,7 @@ def initialize_graph_and_ib(axes=None):
     #         print("no IB. install interactive-broker-python-web-api")
     #         sys.exit(1)
     #     ibmain(False)
-
+    from engine.compareengine import CompareEngine
     gg = CompareEngine(config.PORTFOLIOFN,axes)
     return  gg
 
@@ -56,13 +53,19 @@ def main():
     pd_ignore_warning()
 
     if USEQT:
+        from PySide6.QtWidgets import QApplication
+        import matplotlib
+        #from matplotlib import pyplot as plt
+        from matplotlib import pyplot as plt
+        
         #QGuiApplication.setAttribute(Qt.Qt);
         app = QApplication([])
 
     if not SIMPLEMODE:
         mainwindow = MainWindow()
 
-
+    
+    from engine.parameters import Parameters
 
 
     gg = initialize_graph_and_ib(mainwindow.axes if not SIMPLEMODE else None)
@@ -73,7 +76,7 @@ def main():
 
     if SIMPLEMODE:
         plt.draw()  # no app , bitches
-    else:
+    elif USEQT:
         mainwindow.run(gg)
         #import QCore
         app.aboutToQuit.connect(partial(mainwindow.closeEvent,0))

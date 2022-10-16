@@ -5,8 +5,7 @@ import numpy as np
 
 
 import sys
-from PySide6 import QtCore
-from PySide6.QtCore import  Signal
+
 
 def index_of(val, in_list):
     try:
@@ -105,7 +104,10 @@ class NoDataException(Exception):
     pass
 
 class MySignal:
+
     def __init__(self,typ):
+        from PySide6 import QtCore
+        from PySide6.QtCore import Signal
         Emitter = type('Emitter', (QtCore.QObject,), {'signal': Signal(typ)})
         self.emitter = Emitter()
 
