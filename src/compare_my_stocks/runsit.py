@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 import time
 from functools import partial
@@ -6,6 +8,8 @@ from functools import partial
 
 #from matplotlib import pyplot as plt
 #import Qt
+import shlex
+
 from common.common import InputSourceType, Types, UniteType
 from config import config
 
@@ -38,7 +42,7 @@ def initialize_graph_and_ib(axes=None):
     #         sys.exit(1)
     #     ibmain(False)
     from engine.compareengine import CompareEngine
-    gg = CompareEngine(config.PORTFOLIOFN,axes)
+    gg = CompareEngine(axes)
     return  gg
 
 def pd_ignore_warning():
@@ -46,20 +50,58 @@ def pd_ignore_warning():
     from pandas.core.common import SettingWithCopyWarning
 
     warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
+import psutil, os
 
+def kill_proc_tree(pid, including_parent=True):
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    for child in children:
+        child.kill()
+    gone, still_alive = psutil.wait_procs(children, timeout=5)
+    if including_parent:
+        parent.kill()
+        parent.wait(5)
 
+def func(x=None):
+    print("killed")
+    if anotherproc:
+        try:
+            kill_proc_tree(anotherproc.pid)
+        except:
+            pass
+    kill_proc_tree(os.getpid())
+    #del anotherproc
+
+anotherproc=None
 def main():
+    global anotherproc
+    import win32api
+    win32api.SetConsoleCtrlHandler(func, True)
+    #import signal
+    #signal.signal(signal.SIGTERM,
+    if hasattr(config,'ADDPROCESS'):
+        v=f"/c start /wait python \"{config.ADDPROCESS}\" "
+        anotherproc=subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v,posix="false"))
+        #os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
+        time.sleep(1)
+
     from .gui.mainwindow import MainWindow
     pd_ignore_warning()
 
     if USEQT:
         from PySide6.QtWidgets import QApplication
+
+
         import matplotlib
         #from matplotlib import pyplot as plt
         from matplotlib import pyplot as plt
         
         #QGuiApplication.setAttribute(Qt.Qt);
         app = QApplication([])
+        app.aboutToQuit.connect(func)
+        # from ib_insync import util
+        # util.useQt()
+        # util.patchAsyncio()
 
     if not SIMPLEMODE:
         mainwindow = MainWindow()
@@ -83,7 +125,10 @@ def main():
         #import Qt
         #Qt.QtCo
     if USEQT:
-        sys.exit(app.exec_())
+        def f():
+            app.exec_()
+            print('exit')
+        sys.exit(f())
         a = 1
     else:
         # simple, should be ok.

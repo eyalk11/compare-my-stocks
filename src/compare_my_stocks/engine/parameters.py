@@ -1,6 +1,4 @@
 import dataclasses
-import json
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
@@ -36,18 +34,7 @@ def paramaware(klass):
     klass.update_from=update_from
 
     return klass
-from django.core.serializers.json import DjangoJSONEncoder,Deserializer
 
-
-class EnhancedJSONEncoder(DjangoJSONEncoder):
-    def default(self, o):
-        if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
-        try:
-            return super().default(o)
-        except TypeError:
-            print(f"{o,type(o)} is not json.. ")
-            return o.__dict__
 
 #from dataclasses_json import dataclass_json
 
@@ -107,9 +94,9 @@ class Parameters:
     def helper(self,ls):
         for l in ls:
             if isinstance(l,AbstractSymbol) and l.dic:
-                self.resolve_hack[str(l.symbol)]=l
                 yield str(l.symbol)
-            yield str(l)
+            else:
+                yield str(l)
 
 
     @classmethod

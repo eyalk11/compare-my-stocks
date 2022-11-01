@@ -6,36 +6,19 @@ import pandas as pd
 from dateutil import parser
 
 from config import config
-from engine.symbolsinterface import SymbolsInterface
+from transactions.transactionhandler import TrasnasctionHandler
+from transactions.transactioninterface import TrascationImplemenetorInterface
 
-from collections import defaultdict
+def get_stock_handler(man):
+    return MyStocksTransactionHandler(man,config.PORTFOLIOFN)
 
-class TransactionHandler(SymbolsInterface):
-    def __init__(self, filename):
+class MyStocksTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInterface):
+    def __init__(self,manager, filename):
+        super().__init__(manager)
         self._fn = filename
-        self._buysymbols = set()
-        self.symbol_info=defaultdict(dict)
 
-    def try_to_use_cache(self):
-        try:
-            (self._buydic, self._buysymbols, self.symbol_info) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
-            if len(self._buydic)==0:
-                return 0
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
-    def get_portfolio_stocks(self):  # TODO:: to fix
-
-        return self._buysymbols #[config.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
 
     def populate_buydic(self):
-        if self.try_to_use_cache():
-            print('using buydict cache ')
-            return
-        self._buydic = {}
-        self._buysymbols = set()
         try:
             x = pd.read_csv(self._fn)
         except Exception as e:
@@ -47,12 +30,6 @@ class TransactionHandler(SymbolsInterface):
             print(f'{e} while reading transaction data')
             return
 
-        if config.BUYDICTCACHE:
-            try:
-                pickle.dump((self._buydic, self._buysymbols, self.symbol_info), open(config.BUYDICTCACHE, 'wb'))
-                print('dumpted')
-            except Exception as e:
-                print(e)
 
     def read_trasaction_table(self, x):
         #x = x[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
@@ -83,7 +60,27 @@ class TransactionHandler(SymbolsInterface):
             # timezone = pytz.timezone("UTC")
             # dt=timezone.normalize(dt)
             # dt=dt.replace(tzinfo=None)
-            self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1])  # Qty,cost,sym
+            self._buydic[dt] = (t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],'MYSTOCK')  # Qty,cost,sym
             self._buysymbols.add(t[1])
             if q[-1]:
-                self.symbol_info[t[1]] = {'currency': q[-1]}
+                self.update_sym_property(t[1], q[-1])
+
+    def save_cache(self):
+        if not config.BUYDICTCACHE:
+            return
+        try:
+            pickle.dump((self._buydic, self._buysymbols, "tmp"), open(config.BUYDICTCACHE, 'wb'))
+            print('dumpted')
+        except Exception as e:
+            print(e)
+
+    def try_to_use_cache(self):
+        try:
+            (self._buydic, self._buysymbols, _ ) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
+
+            if len(self._buydic)==0:
+                return 0
+            return 1
+        except Exception as e:
+            print(e)
+            return 0

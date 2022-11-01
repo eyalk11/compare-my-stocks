@@ -1,4 +1,5 @@
 import json
+import threading
 from abc import abstractmethod
 from datetime import datetime
 from enum import Enum
@@ -11,14 +12,14 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit,QDa
 from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
-from common.common import UniteType, Types, LimitType
+from common.common import UniteType, Types, LimitType, EnhancedJSONEncoder, SafeSignal
 from common.dolongprocess import DoLongProcessSlots
 from config import config
-from engine.parameters import Parameters, EnhancedJSONEncoder, copyit
+from engine.parameters import Parameters, copyit
 from engine.symbols import SimpleSymbol
 from engine.symbolsinterface import SymbolsInterface
 from gui.jupyterhandler import JupyterHandler
-from gui.listobserver import ListsObserver
+from gui.listobserver import ListsObserver, MyItem
 
 
 class DisplayModes(int,Enum):
@@ -57,7 +58,7 @@ class GraphsHandler:
 
     def update_graph_list(self):
         self.window.graphList.clear()
-        self.window.graphList.addItems(list(self.graphs.keys()))
+        self.window.graphList.addItems(list(self.graphs.keys()), )
 
     def save_graph(self):
         text, ok = QInputDialog().getText(self, "Enter Graph Name",
@@ -75,14 +76,17 @@ class GraphsHandler:
         self.update_graph_list()
 
     def load_graph(self,text=None):
+        def after_task():
+            self.setup_controls_from_params(0, 1)
         try:
             if text==None:
                 if not self.window.graphList.currentItem():
                     return
                 text=self.window.graphList.currentItem().text()
             self.graphObj.params = copyit(self.graphs[text])
-            self.update_graph(ResetRanges.FORCE,force=True)
-            self.setup_controls_from_params(0,1)
+            self.update_graph(ResetRanges.FORCE,force=True,after=after_task)
+            #should wait after update
+
         except:
             import traceback;traceback.print_exc()
             print('failed loading graph')
@@ -131,7 +135,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         #self._refresh_stocks_task.postinit()
         #self._refresh_stocks_task.moveToThread(self._refresh_stocks_task.thread)
+
         self._update_graph_task = DoLongProcessSlots(self.update_task)
+        self.update_lock = threading.Lock
         #self.command_waiting=0
         self._update_graph_task.finished.connect(self.decrease)
         self.current_mode=DisplayModes.FULL
@@ -161,13 +167,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         #self._dolongprocess.run(set(toupdate))
 
 
-    def update_graph(self,reset_ranges : ResetRanges ,force=False):
+    def update_graph(self,reset_ranges : ResetRanges ,force=False,after=None):
         def call():
             self.decrease()
             self.update_ranges(reset_ranges)
+            if self._update_graph_task.after!=None:
+                z=self._update_graph_task.after
+                self._update_graph_task.after=None
+                z()
 
         self.window.last_status.setText('')
-        if self.ignore_updates_for_now:
+        if self.ignore_updates_for_now: #convert to lock
             return
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
@@ -176,10 +186,11 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                     print('update waiting')
                     self.window.last_status.setText('Update is waiting (generating graph probably)')
 
-
+                self._update_graph_task.after=after
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
-                self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),))
+
+                self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),)) #no params so update current
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 
         except:
@@ -255,18 +266,24 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def compare_changed(self,num):
         if self.ignore_updates_for_now:
             return
+        self.ignore_updates_for_now=True
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
         self.graphObj.params.compare_with=self.window.comparebox.currentText()
         self.graphObj.params.type=self.graphObj.params.type | Types.COMPARE
+        self.ignore_updates_for_now = False
         self.update_graph(ResetRanges.FORCE)
 
 
     def selected_changed(self,*args,**kw):
+        if self.ignore_updates_for_now:
+            return
         self.graphObj.params.selected_stocks=[SimpleSymbol(self.window.orgstocks.item(x))  for x in range(self.window.orgstocks.count())]
         if not self.window.use_groups.isChecked():
             self.update_graph(1)
 
     def refernced_changed(self,*args,**kw):
+        if self.ignore_updates_for_now:
+            return
         #befext=self.graphObj.params.ext
         self.graphObj.params.ext=[SimpleSymbol(self.window.refstocks.item(x))  for x in range(self.window.refstocks.count())]
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
@@ -304,22 +321,28 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.update_stock_list(justorgs=True)
 
     def setup_observers(self):
+        def safeconnect(signal,fun):
+            signal=SafeSignal(signal,lambda :not self.ignore_updates_for_now)
+            signal.connect(fun)
+            return signal
+
+
         genobs=lambda x:partial(self.attribute_set, x,reset_ranges=ResetRanges.DONT)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
         genobsResetForce = lambda x: partial(self.attribute_set, x, reset_ranges=ResetRanges.FORCE)
         self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
-        self.window.min_crit.valueChanged.connect(genobs('valuerange'))
-        self.window.max_num.valueChanged.connect(genobs('numrange'))
+        self.window.min_crit.valueChanged = safeconnect( self.window.min_crit.valueChanged,(genobs('valuerange')) )
+        self.window.max_num.valueChanged = safeconnect( self.window.max_num.valueChanged,(genobs('numrange')) )
         self.window.findChild(QCheckBox, name="limit_to_port").toggled.connect(self.limit_port_changed)
-        self.window.findChild(QCheckBox, name="usereferncestock").toggled.connect(genobsResetForce('use_ext'))
-        self.window.findChild(QCheckBox, name="start_hidden").toggled.connect(genobs('starthidden'))
-        self.window.findChild(QCheckBox, name="adjust_currency").toggled.connect(genobsResetForce('adjust_to_currency'))
-        self.window.home_currency_combo.currentTextChanged.connect(genobsResetForce('currency_to_adjust'))
+        self.window.findChild(QCheckBox, name="usereferncestock").toggled = safeconnect( self.window.findChild(QCheckBox, name="usereferncestock").toggled,(genobsResetForce('use_ext')) )
+        self.window.findChild(QCheckBox, name="start_hidden").toggled = safeconnect( self.window.findChild(QCheckBox, name="start_hidden").toggled,(genobs('starthidden')) )
+        self.window.findChild(QCheckBox, name="adjust_currency").toggled = safeconnect( self.window.findChild(QCheckBox, name="adjust_currency").toggled,(genobsResetForce('adjust_to_currency')) )
+        self.window.home_currency_combo.currentTextChanged = safeconnect( self.window.home_currency_combo.currentTextChanged,(genobsResetForce('currency_to_adjust')) )
 
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
             partial(self.update_graph,force=True,reset_ranges=ResetRanges.FORCE))
-        self.window.use_groups.toggled.connect(self.use_groups)
+        self.window.use_groups.toggled = safeconnect( self.window.use_groups.toggled,(self.use_groups) )
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)
         self.window.addreserved.pressed.connect(self.add_reserved)
@@ -330,30 +353,30 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.deletebtn.pressed.connect(self.del_in_lists)
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
-        self.window.edit_groupBtn.pressed.connect(self.edit_groups)
-        self.window.comparebox.currentIndexChanged.connect(self.compare_changed)
-        self.window.orgstocks.model().rowsInserted.connect(self.selected_changed)
-        self.window.orgstocks.model().rowsRemoved.connect(self.selected_changed)
-        self.window.refstocks.model().rowsInserted.connect(self.refernced_changed)
-        self.window.refstocks.model().rowsRemoved.connect(self.refernced_changed)
-        self.window.categoryCombo.currentIndexChanged.connect(self.category_changed)
+        self.window.edit_groupBtn.pressed = safeconnect( self.window.edit_groupBtn.pressed,(self.edit_groups) )
+        self.window.comparebox.currentIndexChanged = safeconnect( self.window.comparebox.currentIndexChanged,(self.compare_changed) )
+        self.window.orgstocks.model().rowsInserted = safeconnect( self.window.orgstocks.model().rowsInserted,(self.selected_changed) )
+        self.window.orgstocks.model().rowsRemoved = safeconnect( self.window.orgstocks.model().rowsRemoved,(self.selected_changed) )
+        self.window.refstocks.model().rowsInserted = safeconnect( self.window.refstocks.model().rowsInserted,(self.refernced_changed) )
+        self.window.refstocks.model().rowsRemoved = safeconnect( self.window.refstocks.model().rowsRemoved,(self.refernced_changed) )
+        self.window.categoryCombo.currentIndexChanged = safeconnect( self.window.categoryCombo.currentIndexChanged,(self.category_changed) )
         self.window.startdate : QDateEdit
-        self.window.startdate.editingFinished.connect(self.update_from_datefields)
-        self.window.enddate.editingFinished.connect(self.update_from_datefields)
+        self.window.startdate.editingFinished = safeconnect( self.window.startdate.editingFinished,(self.update_from_datefields) )
+        self.window.enddate.editingFinished = safeconnect( self.window.enddate.editingFinished,(self.update_from_datefields) )
         self.window.save_graph_btn.pressed.connect(self.save_graph)
         self.window.load_graph_btn.pressed.connect(self.load_graph)
 
 
         for rad in self.rad_types:
             if not '_mode' in rad.objectName():
-                rad.toggled.connect(partial(FormObserver.type_unite_toggled, self, rad.objectName()))
+                 rad.toggled= safeconnect( rad.toggled,(partial(FormObserver.type_unite_toggled, self, rad.objectName())) )
 
         #PySide6.QObject
         #connect()
 
 
-        self.graphObj.minMaxChanged.connect(self.update_rangeb)
-        self.graphObj.namesChanged.connect(self.update_range_num)
+        self.graphObj.minMaxChanged = safeconnect( self.graphObj.minMaxChanged,(self.update_rangeb) )
+        self.graphObj.namesChanged = safeconnect( self.graphObj.namesChanged,(self.update_range_num) )
         self.graphObj.statusChanges.connect(self.update_status)
 
         self.json_editor.onCloseEvent.connect(self.on_json_closed)
@@ -380,7 +403,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.daterangepicker.end = todatetime(self.window.enddate.date())
         pair=(self.window.startdate.date(),self.window.enddate.date())
         #QDateTime(value[0], QTime())
-        self.date_changed(list(map(todatetime,pair)),False )
+        self.date_changed(list(map(todatetime,pair)),False ) #cause trouble if it is updated too fast by moving bars
+
     def change_mode(self,mode,val):
         def update_sizes():
             but=[self.window.adjust_group,            self.window.main_group,            self.window.note_group,self.window.graph_groupbox]

@@ -2,6 +2,9 @@ import json
 from abc import abstractmethod
 from abc import ABC
 
+from common.common import EnhancedJSONEncoder
+
+
 class AbstractSymbol():
 
 
@@ -15,14 +18,19 @@ class AbstractSymbol():
     def symbol(self):
         ...
 
-    def __hash__(self):
+    def __hash__(self): #TODO:to precalc
         if self.dic==None:
             return hash(self.symbol) #act like a string..
-        return hash(json.dumps(self.dic))
+        return hash(json.dumps(self.dic,cls=EnhancedJSONEncoder))
 
     def __eq__(self, other):
         return hash(other)==hash(self) #work with string
-
+    def __getattr__(self, item):
+        if  self.dic:
+            t= self.dic.get(item)
+            if t!=None:
+                return t
+        raise AttributeError("%r object has not attribute %r" % (self.__class__.__name__, item))
 
 class SimpleSymbol(AbstractSymbol):
     __hash__ = AbstractSymbol.__hash__

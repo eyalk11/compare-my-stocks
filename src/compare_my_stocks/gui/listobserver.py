@@ -1,3 +1,4 @@
+from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
 
 from common.dolongprocess import DoLongProcessSlots
@@ -6,6 +7,9 @@ from engine.symbols import AbstractSymbol, SimpleSymbol
 
 from gui.stockchoice import PickSymbol
 
+def additems(lstwid,items):
+    for i in items:
+        lstwid.addItem(MyItem(i))
 
 class MyItem(QListWidgetItem,AbstractSymbol):
     __hash__ = AbstractSymbol.__hash__
@@ -14,7 +18,12 @@ class MyItem(QListWidgetItem,AbstractSymbol):
         if type(text) == dict:
             self._dic=text
             text=self._dic['symbol']
+        if hasattr(text,'text'):
+            text=text.text()
+
+
         super().__init__(text,parent,*args)
+        self.setText(text)
     def __str__(self):
         return self.text()
 
@@ -25,6 +34,8 @@ class MyItem(QListWidgetItem,AbstractSymbol):
     @property
     def symbol(self):
         return self.text()
+
+
 
 
 def to_simple(ls):
@@ -75,7 +86,7 @@ class ListsObserver():
     def generic_add_lists(org, dst):
         items = set([x for x in org.selectedItems()])
         items = items - set([dst.item(x) for x in range(dst.count())])
-        dst.addItems(items)
+        additems(dst, items)
         ListsObserver.del_selected(org)
 
     def add_to_ref(self):

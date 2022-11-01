@@ -1,51 +1,243 @@
 import asyncio
 import datetime
+import multiprocessing
+import threading
+from dataclasses import asdict
+from functools import partial
 
-from ib_insync import Forex,util
+import dateutil.parser
+from ib_insync import Forex, util as nbutil, Contract, RequestError
 
+from common.common import conv_date, dictfilt
 from config import config
 from input.inputsource import InputSource
 from config import config
+from ib_insync import IB,util
+import Pyro5.server
+import Pyro5.client
+import Pyro5.api
+WRONG_EXCHANGE = 200
+
+def get_ib_source() :
+    ibsource= IBSource()
+    return ibsource
+
+#class MyIBSourceProxy(Pyro5.api.Proxy):
 
 
+class IBSourceRem:
+    ConnectedME=None
+    # def __del__(self):
+    #     if self.IB:
+    #         self.on_disconnect()
+    @staticmethod
+    def on_disconnect():
+        print('disconnected')
+        if IBSourceRem.ConnectedME:
+            IBSourceRem.ConnectedME.ib.disconnect()
+            IBSourceRem.ConnectedME.ib= IB() #not needed
+            #IBSourceRem.ConnectedME=None
 
-class IBSource(InputSource):
+    @Pyro5.server.expose
+    def init(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
+        print('init')
 
-    def __init__(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
-        super().__init__()
-        from ib_insync import IB
-        #loop = asyncio.new_event_loop()
-        #asyncio.set_event_loop(loop)
+        #util.useQt('PySide6')
+        util.logToConsole('DEBUG')
+        try:
+            asyncio.get_event_loop()
+        except:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         self.ib=IB()
         try:
             self.ib.connect(host,port , clientId=clientId, readonly=readonly)
+            IBSourceRem.ConnectedME=self
             print('ib connected OK')
         except Exception as e:
             import traceback;traceback.print_exc()
             print( f"{e} in connecting to ib")
             raise
 
+    def whatToShow(self,contract :Contract):
+        print(contract.secType)
+        return ('TRADES' if contract.secType=='IND' else 'MIDPOINT')
+
+
+    def reqHistoricalData(self, contract, enddate, td):
+        print("xxxx",enddate,td,type(enddate))
+        self.ib.reqMarketDataType(4) #forzen +delayed
+        if td>365:
+            import math
+            tdy= math.ceil(td/365)
+            bars = self.ib.reqHistoricalData(
+                contract, endDateTime=enddate, durationStr=f'{tdy} Y',
+                barSizeSetting='1 day', whatToShow=self.whatToShow(contract), useRTH=True)
+
+        else:
+
+            bars = self.ib.reqHistoricalData(
+                contract, endDateTime= enddate, durationStr=f'{td} D',
+                barSizeSetting='1 day', whatToShow=self.whatToShow(contract), useRTH=True)
+        return bars
+
+
+
+    @Pyro5.server.expose
+    def get_current_currency(self, pair):
+        f=pair[0]+pair[1]
+        contract=Forex(f)
+        return self.get_realtime_contract(contract).markPrice
+
+    def get_realtime_contract(self, contract):
+        tick = self.ib.reqMktData(contract, '233,221')
+        tick.update()
+        return tick
+
+    @Pyro5.server.expose
+    def reqHistoricalData_ext(self, contract, enddate, td):
+
+        bars= self.reqHistoricalData(Contract.create(**contract),
+                                      dateutil.parser.parse(enddate), td)
+
+
+        return [asdict(x) for x in bars][:td]
+
+    @Pyro5.server.expose
+    def get_matching_symbols_int(self, sym,results=10):
+        print('get_matching_symbols')
+        #ignore results num
+        ls=self.ib.reqMatchingSymbols(sym)
+        print(ls)
+        lsa=[]
+        count=0
+        for c in ls:
+            count+=1
+
+            #dic = c.contract.__dict__
+            dic=asdict(c.contract)
+            #if not c.contract:
+            #     c.contract.exchange= config.TRANSLATE_EXCHANGES.get(c.contract.primaryExchange, c.contract.primaryExchange)
+            dic['derivativeSecTypes'] = c.derivativeSecTypes
+            #dic['exchange']= config.TRANSLATE_EXCHANGES.get(c.contract.primaryExchange,c.contract.primaryExchange)
+            dic['contractdic']=asdict(c.contract)
+            lsa+=[dic]
+            if count == results:
+                break
+        return lsa
+
+    @Pyro5.server.expose
+    def get_contract_details_ext(self, contractdic):
+        INC=["category","subcategory", "longName","validExchanges","marketName","stockType", "lastTradeTime"]
+        c=Contract.create(**contractdic)
+        for x in  self.ib.reqContractDetails(c):
+            print(asdict(x),x.validExchanges)
+            yield dictfilt(asdict(x),INC)
+
+
+
+
     def get_positions(self):
         y = self.ib.reqPositions()
         for k in y:
             if k.contract.secType=='STK':
                 yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
+
+class IBSource(InputSource):
+    def __init__(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True,proxy=True):
+        super().__init__()
+        if proxy:
+            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:9090')
+            self.ibrem.__class__._Proxy__check_owner = lambda self: 1
+        else:
+            self.ibrem=IBSourceRem()
+
+        self.ibrem.init(host,port,clientId,readonly)
+        self.lock = threading.Lock()
+
+    def get_matching_symbols(self, sym, results=10):
+        def tmp(x):
+            try:
+                x.update({'contract': Contract.create(**x['contractdic'])})
+                return x
+            except:
+                print(f'err in create for {x}')
+                import traceback;
+                traceback.print_exc()
+        with self.lock:
+            ls=self.ibrem.get_matching_symbols_int(sym,results)
+            contracts = list(map(tmp, ls))
+            for x in contracts:
+                det=list(self.ibrem.get_contract_details_ext(x['contractdic']))
+                if len(det)>1 :
+                    print('strange, multiple detailed descriptions')
+                if len(det)==0:
+                    print(f'no detailed description {sym}')
+                    continue
+                x.update(det[0])
+                #x['exchange']=x['validExchanges']
+                #x['contract'].exchange=x['exchange']
+                x.pop('contractdic')
+        return contracts
+
+
+    def ownership(self):
+        import threading
+
+        #print('owner',threading.currentThread().ident)
+        self.ibrem._pyroClaimOwnership()
+
+    def __getattr__(self, item):
+        def wrapper(fun,*args,**kw):
+            with self.lock:
+                return fun(*args,**kw)
+        z=getattr(self.ibrem,item)
+        return partial(wrapper,z)
+
+
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
 
-        l=self.resolve_symbol(sym)
+        l = self.resolve_symbol(sym)
         if not l:
             print(f'error resolving {sym}')
-            return None,None
-        return l,self.historicalhelper(startdate,enddate,l['contract'])
+            return None, None
+        return l, self.historicalhelper(startdate, enddate, l['contract'])
 
-    def historicalhelper(self, startdate,enddate,contract):
+    def historicalhelper(self, startdate, enddate, contract):
+        startdate=conv_date(startdate)
+        enddate = conv_date(enddate)
+        #startdate=datetime.datetime(startdate)
+        #enddate=datetime.da
         td = enddate - startdate
-        bars = self.ib.reqHistoricalData(
-            contract, endDateTime=enddate, durationStr=f'{td.days} D',
-            barSizeSetting='1 day', whatToShow='MIDPOINT', useRTH=True)
-        df = util.df(bars)
-        df = df.rename({'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
-        return df
+        with self.lock:
+            cont = asdict(contract)
+            if not contract.exchange:
+                print(f'(historicalhelper) warning: no exchange for contract {cont}')
+                cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
+            td=td.days
+            try:
+                bars = self.ibrem.reqHistoricalData_ext(cont, enddate, td)
+            except RequestError as e:
+                if e.code == WRONG_EXCHANGE:
+                    print(f'bad exchange for symbol. try resolve? {cont}. {e.message}')
+                else:
+                    print(f'failed reqHistoricalData {e.message} {e.code}')
+                return None
+            df = nbutil.df(bars)
+            if df is None:
+                return None
+            df = df.rename(columns={'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
+            df.set_index('date',inplace=True)
+            df=df.rename(index={i: dateutil.parser.parse(i) for i in df.index})
+            return df
+
+
+
+    def can_handle_dict(self, sym):
+        if hasattr(sym,"dic"):
+            sym=sym.dic
+        return type(sym)==dict and 'validExchanges' in sym
+
 
     def query_symbol(self, sym):
         pass
@@ -56,29 +248,33 @@ class IBSource(InputSource):
         contract=Forex(f)
         return None, self.historicalhelper(startdate,enddate,contract)
 
-    def get_current_currency(self, pair):
-        f=pair[0]+pair[1]
-        contract=Forex(f)
-        return self.get_realtime_contract(contract).markPrice
+
 
         pass
-
-    def get_realtime_contract(self, contract):
-        tick = self.ib.reqMktData(contract, '233,221')
-        tick.update()
-        return tick
-
-    def get_matching_symbols(self, sym,results=10):
-        #ignore results num
-        ls=self.ib.reqMatchingSymbols(sym)
-        for c in ls:
-            dic = c.contract.__dict__
-            dic['derivativeSecTypes'] = c.derivativeSecTypes
-            dic['exchange']= c.contract.primaryExchange
-            dic['contract']=c.contract
-            yield dic
-        return []
 
     # v = {"Sym":w['contractDesc'], "Qty": w["position"], "Last": last , "RelProfit": w['realizedPnl'], "Value": w['mktValue'],
     #      'Currency': w['currency'], 'Crypto': 0, 'Open': open, 'Source': 'IB', 'AvgConst': w['AvgCost'],
     #      'Hist': hist,'Stat':stat}
+  # def get_matching_symbols(self, sym,results=10):
+  #       #ignore results num
+  #       #z=self.ib.reqPositions()
+  #       #import threading
+  #       ls = self.ib.reqMatchingSymbols(sym)
+  #       #print(ls)
+  #
+  #           # for c in ls:
+  #           #     dic = c.contract.__dict__
+  #           #     dic['derivativeSecTypes'] = c.derivativeSecTypes
+  #           #     dic['exchange']= c.contract.primaryExchange
+  #           #     dic['contract']=c.contract
+  #           #     yield dic
+  #           # return []
+  #       from multiprocessing import Process
+  #       manager = multiprocessing.Manager()
+  #       return_dict = manager.dict()
+  #       t=Process(target=IBSource.tmp,args=(None,sym,return_dict))
+  #       t.start()
+  #       t.join(50)
+  #       print('joined')
+  #       print(return_dict['x'])
+  #       #return ls

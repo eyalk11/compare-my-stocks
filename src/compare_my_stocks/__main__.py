@@ -14,6 +14,8 @@ if 'ipykernel_launcher' in sys.argv:
 __builtins__.SILENT=False
 
 from compare_my_stocks import main
+import subprocess
+
 
 main()
 

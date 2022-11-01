@@ -8,7 +8,8 @@ import sys
 
 # creating a class
 # that inherits the QDialog class
-from input.inputsource import InputSource
+from input.inputsource import InputSource, InputSourceInterface
+
 
 class MyTableModel(QAbstractTableModel):
     def __init__(self, parent, results, *args):
@@ -51,7 +52,7 @@ class Window(QDialog):
 
     # constructor
     def __init__(self,inpsource,initial):
-        self._inpsource :InputSource =inpsource
+        self._inpsource :InputSourceInterface =inpsource
         self.selected=None
         super(Window, self).__init__()
 
@@ -112,7 +113,8 @@ class Window(QDialog):
         sym=self.symbolName.text()
 
         results,_,_=self._inpsource.resolve_symbols(sym)
-
+        if len(results)==0:
+            return
         table_model = MyTableModel(self,results)
         self.choices.setModel(table_model)
     # get info method called when form is accepted

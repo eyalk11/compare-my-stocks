@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from common.common import LimitType, UniteType, Types, index_of
 from config import config
 from gui.formobserver import FormObserver, ResetRanges
-
+from gui.listobserver import additems
 
 class FormInitializer(FormObserver):
 
@@ -66,6 +66,7 @@ class FormInitializer(FormObserver):
     def setup_controls_from_params(self,initial=True,isinitialforstock=None):
         self.ignore_cat_changes = False
         self.ignore_updates_for_now=True
+        self.set_all_toggled_value()
         self.set_groups_values(isinitialforstock=initial if isinitialforstock==None else isinitialforstock)
 
         self.window.daterangepicker.update_prop()
@@ -83,9 +84,9 @@ class FormInitializer(FormObserver):
         self.window.findChild(QCheckBox, name="limit_to_port").setChecked(self.graphObj.params.limit_to_portfolio)
         self.window.findChild(QCheckBox, name="adjust_currency").setChecked(self.graphObj.params.adjust_to_currency)
         self.window.home_currency_combo.clear()
-        self.window.home_currency_combo.addItems(list(config.DEFAULTCURR))
+        self.window.home_currency_combo.addItems(list(config.DEFAULTCURR), )
 
-        self.set_all_toggled_value()
+
         if not initial and self.graphObj.params.compare_with:
             wc = self.window.comparebox
 
@@ -149,7 +150,7 @@ class FormInitializer(FormObserver):
     def update_ranges(self,reset_type=ResetRanges.IfAPROP):
         nuofoptions = len(self.graphObj.colswithoutext)
 
-        self.disable_slider_values_updates=True
+        self.disable_slider_values_updates=True #convert to ..
         if nuofoptions==0:
             nuofoptions =1
         self.window.max_num.setRange(0, nuofoptions)
@@ -175,10 +176,10 @@ class FormInitializer(FormObserver):
             if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
                 if self.graphObj.params.use_groups:
                     org.clear()
-                    org.addItems(self.graphObj.get_options_from_groups(self.graphObj.params.groups))
+                    additems(org,self.graphObj.get_options_from_groups(self.graphObj.params.groups))
                 elif isinitial:
                     org.clear()
-                    org.addItems(self.graphObj.params.selected_stocks)
+                    additems(org,self.graphObj.params.selected_stocks)
             
             if justorgs:
                 return
@@ -198,10 +199,10 @@ class FormInitializer(FormObserver):
             
             
             
-            #org.addItems(self.graphObj.cols)
+            #additems(org,self.graphObj.cols)
             refs: QListWidget = self.window.refstocks  # type:
             refs.clear()
-            refs.addItems(self.graphObj.params.ext)
+            additems(refs, self.graphObj.params.ext)
         except Exception as e:
             import traceback;traceback.print_exc()
             print(f'{e} in adding items')

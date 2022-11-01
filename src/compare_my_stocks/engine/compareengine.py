@@ -71,9 +71,9 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             traceback.print_exc()
             print('exception in  groups file') #raise Exception("error reading groups")
 
-    def __init__(self,filename,axes=None):
+    def __init__(self,axes=None):
         super(CompareEngine, self).__init__(axes)
-        InputProcessor.__init__(self, filename)
+        InputProcessor.__init__(self)
         DataGenerator.__init__(self)
 
         self._annotation=[]

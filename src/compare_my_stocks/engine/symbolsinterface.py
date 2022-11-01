@@ -2,10 +2,11 @@ from abc import ABCMeta, abstractmethod
 from typing import Generic, Set
 
 from engine.parameters import Parameters
-from input.inputsource import InputSource
+from input.inputsource import InputSource, InputSourceInterface
+from transactions.transactioninterface import TransactionHandlerInterface
 
 
-class SymbolsInterface(metaclass=ABCMeta):
+class SymbolsInterface(TransactionHandlerInterface):
     TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
     #TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
     TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock']
@@ -13,12 +14,12 @@ class SymbolsInterface(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def inputsource(self) -> InputSource:
-        pass
+    def inputsource(self) -> InputSourceInterface:
+        ...
 
     @abstractmethod
     def get_options_from_groups(self, ls):
-        pass
+        ...
 
     @abstractmethod
     def read_groups_from_file(self):
@@ -42,10 +43,11 @@ class SymbolsInterface(metaclass=ABCMeta):
     def Groups(self) -> dict:
         ...
 
-    @abstractmethod
-    def get_portfolio_stocks(self):
-        ...
 
     @abstractmethod
     def process(self,  partial_symbol_update=Set,params=None):
+        ...
+
+    @abstractmethod
+    def process_transactions(self):
         ...

@@ -1,10 +1,14 @@
+import dataclasses
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from datetime import datetime
 
 import numpy as np
 
 
 import sys
+
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 def index_of(val, in_list):
@@ -65,6 +69,10 @@ class InputSourceType(Flag):
     InvestPy=auto()
 
 
+from Pyro5.errors import format_traceback
+def print_formatted_traceback():
+    print(''.join([x[:500] for x in format_traceback(detailed=True)] ))
+
 def addAttrs(attr_names):
   def deco(cls):
     for attr_name in attr_names:
@@ -117,11 +125,23 @@ class MySignal:
     def connect(self,  slot):
         self.emitter.signal.connect(slot)
 
+class SafeSignal:
+    def __init__(self,signal,cond):
+        self._signal=signal
+        self._cond=cond
+
+    def emit(self,*args,**kw):
+        if self._cond():
+            self._signal.emit(*args,**kw)
+
+    def connect(self,  slot):
+        self._signal.connect(slot)
 
 Serialized=namedtuple('Serialized', ['origdata','beforedata','afterdata','act','parameters','Groups'])
 dictfilt = lambda x, y: dict([(i, x[i]) for i in x if i in set(y)])
 dictnfilt = lambda x, y: dict([(i, x[i]) for i in x if not(i in set(y))])
 
+lmap= lambda x,y: list(map(x,y))
 # def ifnn(t,v,els=None):
 #     if t is not None:
 #         return v
@@ -133,3 +153,25 @@ def ifnn(t, v, els=lambda: None):
         return v()
     else:
         return els()
+
+import dateutil.parser
+def conv_date(dat):
+    if type(dat)==str:
+         return dateutil.parser.parse(dat)
+    elif type(dat)==datetime:
+        return dat
+    else:
+        raise AttributeError("no attr")
+
+
+class EnhancedJSONEncoder(DjangoJSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        try:
+            return super().default(o)
+        except TypeError:
+            if hasattr(o,"dic"): #SimpleSymbol
+                return o.dic
+            print(f"{o,type(o)} is not json.. ")
+            return o.__dict__

@@ -1,10 +1,12 @@
 import collections
 import math
 import pickle
+import sys
 import time
 from collections import defaultdict
 # from datetime import datetime
 import datetime
+
 import matplotlib
 import numpy
 import pandas
@@ -13,22 +15,28 @@ import pytz
 from PySide6.QtCore import QRecursiveMutex
 
 from config import config
-from common.common import UseCache, InputSourceType, addAttrs, dictfilt,  ifnn
+from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
 
-from input.inputsource import InputSource
+from input.inputsource import InputSource, InputSourceInterface
 from input.investpysource import InvestPySource
-from input.ibsource import IBSource
+from input.ibsource import IBSource, get_ib_source
 from engine.symbolsinterface import SymbolsInterface
-from input.transactionhandler import TransactionHandler
+from transactions.transactionhandlermanager import TransactionHandlerManager
 #import input.earningsinp
 from input.earningsinp import get_earnings
 
+
+
+class SymbolError(Exception):
+    pass
+
+
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
-class InputProcessor(TransactionHandler):
+class InputProcessor(TransactionHandlerManager,SymbolsInterface):
 
     @property
     def reg_panel(self):
@@ -55,22 +63,25 @@ class InputProcessor(TransactionHandler):
         pass
 
     @property
-    def inputsource(self) -> InputSource:
+    def inputsource(self) -> InputSourceInterface:
         return self._inputsource
 
-    def __init__(self, filename):
-        TransactionHandler.__init__(self, filename)
+    def __init__(self):
         self._income, self._revenue, = None,None
         self.cached_used = None
         self._symbols_wanted = set()
-        #self.symbol_info = {}
+        self.symbol_info = collections.defaultdict(dict)
         self._usable_symbols = set()
         self._bad_symbols = set()
-
-        if config.INPUTSOURCE == InputSourceType.IB:
-            self._inputsource: InputSource = IBSource()
-        else:
-            self._inputsource: InputSource = InvestPySource()
+        try:
+            if config.INPUTSOURCE == InputSourceType.IB:
+                self._inputsource: InputSource = get_ib_source() #IBSource()
+            else:
+                self._inputsource: InputSource = InvestPySource()
+        except:
+            print('Input source initialization failed')
+            import traceback;traceback.print_exc()
+            sys.exit(1)
 
         self.init_input()
         self._initial_process_done=False
@@ -141,7 +152,7 @@ class InputProcessor(TransactionHandler):
             self.filter_input(partial_symbols_update)
 
 
-        b = collections.OrderedDict(sorted(self._buydic.items()))  # ordered
+        b = collections.OrderedDict(sorted(self.buydic.items()))  # ordered
 
         cur_action = b.popitem(False) if len(b)!=0 else None
 
@@ -189,12 +200,20 @@ class InputProcessor(TransactionHandler):
             self._proccessing_mutex.unlock()
             print('exit proc lock')
 
-    def load_cache(self):
+    def load_cache(self,minimal=False):
         query_source = True
         try:
-            hist_by_date, self.symbol_info, self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
+            if minimal:
+                _, symbinfo, _, _, _ = pickle.load(open(config.HIST_F, 'rb'))
+                self.symbol_info = collections.defaultdict(dict)
+                self.symbol_info.update(symbinfo)
+                return
+            else:
+                hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
+
             if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
+
             self.update_usable_symbols()
             print(f'cache symbols used {sorted(list(self._usable_symbols))}')
             if not self.process_params.use_cache == UseCache.FORCEUSE:
@@ -207,7 +226,8 @@ class InputProcessor(TransactionHandler):
         except Exception as e:
             e = e
             print('failed to use cache')
-            self.cached_used = False
+            if not minimal:
+                self.cached_used = False
         return query_source
 
     def process_hist_internal(self, b, cur_action, partial_symbols_update):
@@ -219,7 +239,7 @@ class InputProcessor(TransactionHandler):
 
             old_holding = _cur_holding_bystock[stock]
 
-            if cur_action[1][0] > 0:
+            if cur_action[1][0]*old_holding > 0: #we increase our holding.
                 _cur_avg_cost_bystock[stock] = (old_holding * old_cost + cur_action[1][0] * cur_action[1][1]) / (
                             old_holding + cur_action[1][0])
                 # self._avg_cost_by_stock[stock][cur_action[0]] = nv
@@ -370,8 +390,7 @@ class InputProcessor(TransactionHandler):
                     okdays+=self.get_hist_sym(mindate, maxdate, sym, sym_corrected)
                     requireddays+=(maxdate-mindate).days
 
-            except AttributeError:
-
+            except SymbolError:
                 print('bad %s' % sym)
                 self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
@@ -380,11 +399,12 @@ class InputProcessor(TransactionHandler):
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
         print(f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}')
+        self._inputsource.ownership()
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
-        self.symbol_info_tmp[sym] = l #just for debug I think
+        self.symbol_info[sym] = l #just for debug I think
         if hist is None:
-            raise AttributeError("bad symbol")
+            raise SymbolError("bad symbol")
         if not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
             currency = self.resolve_currency(sym, l, hist)
             self.symbol_info[sym].update( {'currency': currency})
@@ -579,14 +599,22 @@ class InputProcessor(TransactionHandler):
         try:
             self.process_internal(ls)
         except Exception as e:
-            print('exception in processing', traceback.format_exc() )
+            import traceback
+            print('exception in processing' )
+            print_formatted_traceback()
+            try:
+                import Pyro5
+                print("".join(Pyro5.errors.get_pyro_traceback()))
+            except:
+                pass
             self.statusChanges.emit(f'Exception in processing {e}' )
 
 
     def process_internal(self, partial_symbol_update):
         t = time.process_time()
         if not self._initial_process_done:
-            self.populate_buydic()
+            self.load_cache(True)
+            self.process_transactions()
             self._initial_process_done = True
         elapsed_time = time.process_time() - t
         print('elasped populating : %s' % elapsed_time)

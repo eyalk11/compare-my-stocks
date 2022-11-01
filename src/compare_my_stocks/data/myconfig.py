@@ -35,6 +35,8 @@ EXT=['QQQ']
 DEF_FIG_SIZE = (13.2,6)
 EXCHANGES= ["nasdaq","xetra",'NYSE','London','OTC Markets']
 EXCHANGES= [i.lower() for i in EXCHANGES]
+TRANSLATE_EXCHANGES={'NASDAQ':'NYSE'}
+
 
 #Please use timezone aware value here!!
 DEFAULTFROMDATE = datetime.datetime(2020,1,1,tzinfo=pytz.UTC)

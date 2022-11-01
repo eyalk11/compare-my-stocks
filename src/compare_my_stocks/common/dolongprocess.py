@@ -74,6 +74,14 @@ class DoLongProcessSlots(QObject):
 
     @Slot(tuple)
     def process_command(self, params):
+        #import asyncio
+        # try:
+        #     asyncio.get_event_loop()
+        # except:
+        #     loop = asyncio.new_event_loop()
+        #     asyncio.set_event_loop(loop)
+        #     from ib_insync import IB,util
+        #     util.useQt('PySide6')
         realtask = partial(self._task, *params)
         self.started = True
         self.mutex.lock()
