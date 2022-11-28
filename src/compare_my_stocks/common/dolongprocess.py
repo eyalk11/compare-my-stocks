@@ -41,9 +41,12 @@ class DoLongProcess(QObject):
         self.thread.started.connect(self.run)
 
 
+from collections import namedtuple
+TaskParams=namedtuple("TaskParams","params finish_params", defaults=(None,None))
+
 class DoLongProcessSlots(QObject):
-    finished = Signal()
-    command = Signal(tuple)
+    finished = Signal(tuple)
+    command = Signal(TaskParams)
     def __init__(self, task):
         QObject.__init__(self)
         self._task = task
@@ -73,7 +76,7 @@ class DoLongProcessSlots(QObject):
         return self.started
 
     @Slot(tuple)
-    def process_command(self, params):
+    def process_command(self, taskparams):
         #import asyncio
         # try:
         #     asyncio.get_event_loop()
@@ -82,7 +85,8 @@ class DoLongProcessSlots(QObject):
         #     asyncio.set_event_loop(loop)
         #     from ib_insync import IB,util
         #     util.useQt('PySide6')
-        realtask = partial(self._task, *params)
+
+        realtask = partial(self._task, *taskparams.params)
         self.started = True
         self.mutex.lock()
         try:
@@ -96,7 +100,10 @@ class DoLongProcessSlots(QObject):
             #to update status
         finally:
             self.mutex.unlock()
-        self.finished.emit()
+        if taskparams.finish_params:
+            self.finished.emit(*taskparams.finish_params)
+        else:
+            self.finished.emit()
         self.started = False
 
         # self.thread.finished.connect(self.thread.deleteLater)

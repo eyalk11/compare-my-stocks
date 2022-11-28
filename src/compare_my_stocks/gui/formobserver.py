@@ -13,7 +13,7 @@ from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
 from common.common import UniteType, Types, LimitType, EnhancedJSONEncoder, SafeSignal
-from common.dolongprocess import DoLongProcessSlots
+from common.dolongprocess import DoLongProcessSlots, TaskParams
 from config import config
 from engine.parameters import Parameters, copyit
 from engine.symbols import SimpleSymbol
@@ -78,6 +78,7 @@ class GraphsHandler:
     def load_graph(self,text=None):
         def after_task():
             self.setup_controls_from_params(0, 1)
+            self.update_graph(ResetRanges.FORCE,force=True)
         try:
             if text==None:
                 if not self.window.graphList.currentItem():
@@ -114,7 +115,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.update_graph(1, True)
         self.window.last_status.setText('finshed refreshing')
 
-    def decrease(self):
+    def decrease(self,*args):
         self._update_graph_task.command_waiting = self._update_graph_task.command_waiting - 1
 
     def __init__(self):
@@ -162,19 +163,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         if self._refresh_stocks_task.is_started:
             self.window.last_status.setText("already runnning another")
             return
-        self._refresh_stocks_task.command.emit((toupdate,params))
+        self._refresh_stocks_task.command.emit(TaskParams(params=(toupdate,params)))
 
         #self._dolongprocess.run(set(toupdate))
 
 
     def update_graph(self,reset_ranges : ResetRanges ,force=False,after=None):
-        def call():
+        def call(after_task):
             self.decrease()
             self.update_ranges(reset_ranges)
-            if self._update_graph_task.after!=None:
-                z=self._update_graph_task.after
-                self._update_graph_task.after=None
-                z()
+            if after_task:
+                after_task()
 
         self.window.last_status.setText('')
         if self.ignore_updates_for_now: #convert to lock
@@ -186,11 +185,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                     print('update waiting')
                     self.window.last_status.setText('Update is waiting (generating graph probably)')
 
-                self._update_graph_task.after=after
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
-
-                self._update_graph_task.command.emit((Parameters(ignore_minmax=reset_ranges),)) #no params so update current
+                taskparams=TaskParams(params=(Parameters(ignore_minmax=reset_ranges),),finish_params = (after,))
+                self._update_graph_task.command.emit(taskparams) #no params so update current
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 
         except:
