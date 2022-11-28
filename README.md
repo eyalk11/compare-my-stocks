@@ -121,17 +121,39 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 
 
-## Running Instructions
+## Installation Instructions
 
 Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
 
  1. Install [Qt6](https://www.qt.io/download) 
- 2. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git
+ 2. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git (or pip install -r requirments.txt)
  3. Look at ~/.compare_my_stocks/myconfig.py and set it as you wish (will work without it).
 
     Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
  
- 4. python -m compare_my_stocks 
+ 
+ ### For IB 
+ 
+ 1. Run Trader Workstation and sign in (could be readonly). 
+ 2.  API -> Settings -> Enable ActiveX And Socket Clients
+ 
+ (You can also check "Read-Only API")
+ 
+ 3. Edit config files in ~/.compare_my_stocks: 
+ 
+   3.1. Set 
+   ```
+   INPUTSOURCE=InputSourceType.IB
+   ```
+   3.2 set PORTIB to "Socket port" 
+ 
+   3.3 set REGULAR_ACCOUNT and REGULAR_USERNAME to the IB details (Account starts with U)
+ 
+ ## Running Instructions
+ 1. (For IB) Run Trader Workstation and sign in (could be readonly). 
+ 2. python -m compare_my_stocks 
+ 
+ 
 
 * Depends on inverstpy and json_editor. Needed https://github.com/eyalk11/investpy  https://github.com/eyalk11/json-editor 
 
