@@ -12,5 +12,7 @@ git+https://github.com/eyalk11/qtvoila.git
 superqt~=0.2.5.post1
 mplcursors~=0.4
 Django~=3.2.9
-nbmanager
-
+git+https://github.com/jupyter/nbmanager.git
+ib_insync
+Pyro5
+ibflex
