@@ -37,7 +37,11 @@ setup(
 "investpy @ git+https://github.com/eyalk11/investpy.git#egg=investpy-1.0.7a",
 "superqt==0.2.5.post1",
 "mplcursors==0.4",
-"Django==3.2.9"
+"Django==3.2.9",
+"nbmanager @ git+https://github.com/jupyter/nbmanager.git",
+"ib_insync",
+"Pyro5",
+"ibflex"
     ],
     include_package_data=True,
     use_scm_version=True,
