@@ -14,7 +14,58 @@ import datetime
 import pytz
 
 from common.common import InputSourceType, UseCache
-SKIP_EARNINGS=0
+from transactions.transactioninterface import TransactionSourceType
+IGNORECONF = {} # sym : fromdate
+COMBINEDATEDIFF=20
+COMBINEAMOUNTPERC=10
+
+REGULAR_ACCOUNT = '' #your interactive broker account
+REGULAR_USERNAME = '' #your username
+
+TRANSACTION_HANDLERS={
+    "StockPrices": {
+        "Use":UseCache.USEIFAVALIABLE,
+        "CacheSpan":datetime.timedelta(days=40),
+        "File": r'stocksplit.cache',
+        "FLEXTOKEN":'YOURTOKEN',
+        "FLEXQUERY" : 'QUERYNU'
+    },
+    "IB":
+    {
+        "File":r'ibtrans.cache',
+        "CacheSpan": datetime.timedelta(hours=5),
+        "Use": UseCache.USEIFAVALIABLE,
+        "DOQUERY":True
+    },
+    "MyStocks":
+    {
+        "File":r'buydicnk.cache',
+        # This is the file name of the portfolio. You may export the csv from my stocks portfolio.
+        # https://play.google.com/store/apps/details?id=co.peeksoft.stocks&hl=iw&gl=US 
+        # Or you can generate buy dictionary yourself...  
+        "SrcFile": None,
+        "PortofolioName": None,
+        "Use": UseCache.FORCEUSE
+    }
+}
+IBTRANSCACHE=UseCache.USEIFAVALIABLE
+IBMAXCACHETIMESPAN = datetime.timedelta(hours=5)
+IBCACHE=r'ibtrans.cache'
+
+STOCKPRICECACHE= UseCache.FORCEUSE
+SPLITSTOCKCACHE=r'stocksplit.cache'
+
+TRANSACTIONSOURCE = TransactionSourceType.IB | TransactionSourceType.MyStock
+
+HOSTIB='127.0.0.1'
+PORTIB=7596
+IBSRVPORT=9090 #When you open IB SERVER in a sec process
+ADDPROCESS=r'..\compare_my_stocks\ibsrv.py'
+LOADLASTATBEGIN=True #Load last graph when the program starts 
+ADDITIONALOPTIONS={} #Additonal graph options #{'marker':'o'}
+LASTGRAPHNAME="Last"
+IGNORE_ADJUST=1
+SKIP_EARNINGS=1
 TRYSTORAGEFOREARNINGS=1
 DATAFILEPTR= 'DATA_FILE'
 USEWX=0
@@ -26,15 +77,13 @@ TZINFO=datetime.timezone(datetime.timedelta(hours=-3),'GMT3')
 MAXCACHETIMESPAN=datetime.timedelta(days=1)
 HIST_F = r'hist_file.cache'
 HIST_F_BACKUP = HIST_F+'.back'
-BUYDICTCACHE=r'mybuydicn.cache'
 DEFAULTNOTEBOOK=r'jupyter\defaultnotebook.ipynb'
-REGULAR_ACCOUNT = '' #your interactive broker account
-REGULAR_USERNAME = '' #your username
 PORT = 4001#5050
 EXT=['QQQ']
-DEF_FIG_SIZE = (13.2,6)
-EXCHANGES= ["nasdaq","xetra",'NYSE','London','OTC Markets']
+DEF_FIG_SIZE = (13.2 * 0.5 ,6* 0.5)
+EXCHANGES= ["NYSE","nasdaq","xetra",'NYSE','London','OTC Markets']
 EXCHANGES= [i.lower() for i in EXCHANGES]
+VALIDEXCHANGES=["NYSE","NASDAQ","ISLAND","XERTA","LSE"]
 TRANSLATE_EXCHANGES={'NASDAQ':'NYSE'}
 
 
@@ -50,17 +99,8 @@ Define Currency for custom stocks. Use original name.
 '''
 STOCK_CURRENCY= {'VETH.DE':'EUR','VBTC1':'EUR'}
 
-INPUTSOURCE=InputSourceType.InvestPy
-'''
-This is the file name of the portfolio. You may export the csv from my stocks portfolio.
-https://play.google.com/store/apps/details?id=co.peeksoft.stocks&hl=iw&gl=US 
-Or you can generate buy dictionary yourself...  
-'''
-PORTFOLIOFN = r'NOPORTFOLIO'
-'''
-The name of the portfolio in the file. 
-'''
-DEF_PORTFOLIO = 'My Portfolio'
+INPUTSOURCE=InputSourceType.InvestPy #IB for interactive
+
 MINCOLFORCOLUMS=20
 MIN=4000
 MAXCOLS=30
@@ -68,8 +108,8 @@ MINCHECKREQ=10
 MINIMALPRECREQ=0.2
 CACHEUSAGE=UseCache.FORCEUSE
 DOWNLOADDATAFORPROT=True
-JSONFILENAME=r'mygroups.json'
-SERIALIZEDFILE=r'.\myserialized.dat' #internal
+JSONFILENAME=r'groups.json'
+SERIALIZEDFILE=r'serialized.dat' #internal
 EARNINGSTORAGE = 'earnings.dat'
 TRYSTORAGEFOREARNINGS= True
 
@@ -86,7 +126,7 @@ TRANSLATEDIC= {
 }
 CRYPTO= set(['cardano','bitcoin','ethereum']) #names of investpy
 DEBUG=1
-GRAPHFN='mygraphs.json'
+GRAPHFN='graphs.json'
 
 BASECUR="USD"
 
@@ -95,3 +135,10 @@ INCOMEFILE = 'NOEARNINGS'
 COMMONSTOCK= 'NOEARNINGS'
 
 IGNORED_SYMBOLS=[]
+#Rapid API of StockPrices  https://rapidapi.com/alphawave/api/stock-prices2/
+#Used to get stock split history
+
+StockPricesHeaders = {
+    "X-RapidAPI-Host": "HOST",
+    "X-RapidAPI-Key": "KEY"
+}

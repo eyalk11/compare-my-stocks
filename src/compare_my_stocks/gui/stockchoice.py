@@ -111,8 +111,11 @@ class Window(QDialog):
 
     def edited(self):
         sym=self.symbolName.text()
+        try:
 
-        results,_,_=self._inpsource.resolve_symbols(sym)
+            results,_,_=self._inpsource.resolve_symbols(sym)
+        except:
+            import traceback;traceback.print_exc()
         if len(results)==0:
             return
         table_model = MyTableModel(self,results)

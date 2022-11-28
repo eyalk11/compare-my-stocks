@@ -1,26 +1,30 @@
 import datetime
 import math
-import pickle
 
 import pandas as pd
 from dateutil import parser
 
 from config import config
 from transactions.transactionhandler import TrasnasctionHandler
-from transactions.transactioninterface import TrascationImplemenetorInterface
+from transactions.transactioninterface import  TransactionHandlerImplementator
+
 
 def get_stock_handler(man):
-    return MyStocksTransactionHandler(man,config.PORTFOLIOFN)
+    return MyStocksTransactionHandler(man)
 
-class MyStocksTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInterface):
-    def __init__(self,manager, filename):
+
+class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator):
+    NAME = "MyStocks"
+    def __init__(self,manager,):
         super().__init__(manager)
-        self._fn = filename
 
+
+    def save_cache_date(self):
+        return 0
 
     def populate_buydic(self):
         try:
-            x = pd.read_csv(self._fn)
+            x = pd.read_csv(self.SrcFile)
         except Exception as e:
             print(f'{e} while getting buydic data')
             return
@@ -41,7 +45,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInte
             #    self._symbols.add(t[1])
 
 
-            if (self.params.portfolio and t[0] != self.params.portfolio) or math.isnan(t[2]):
+            if (self.PortofolioName and t[0] != self.PortofolioName) or math.isnan(t[2]):
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
             # print(dt)
@@ -65,22 +69,14 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInte
             if q[-1]:
                 self.update_sym_property(t[1], q[-1])
 
-    def save_cache(self):
-        if not config.BUYDICTCACHE:
-            return
-        try:
-            pickle.dump((self._buydic, self._buysymbols, "tmp"), open(config.BUYDICTCACHE, 'wb'))
-            print('dumpted')
-        except Exception as e:
-            print(e)
 
-    def try_to_use_cache(self):
-        try:
-            (self._buydic, self._buysymbols, _ ) = pickle.load(open(config.BUYDICTCACHE, 'rb'))
 
-            if len(self._buydic)==0:
-                return 0
-            return 1
-        except Exception as e:
-            print(e)
+    def get_vars_for_cache(self):
+        return (self._buydic, self._buysymbols, "tmp")
+
+    def set_vars_for_cache(self,v):
+        (self._buydic, self._buysymbols, _) = v
+        if len(self._buydic) == 0:
             return 0
+        return 1
+

@@ -1,20 +1,19 @@
 import collections
 import datetime
 import pickle
-import time
 from collections import defaultdict
 
 import dateutil
 from pandas.core.frame import DataFrame
-import requests
-import json
 from config import config
 
 
 
 
 import pandas
-import pytz
+
+from input.earningscommon import RapidApi, localize_me
+from transactions.stockprices import StockPrices
 
 
 def safeloc(x,df):
@@ -24,36 +23,9 @@ def safeloc(x,df):
     except:
         return False
 
-class RapidApi:
-    def get_json(self,querystring, url):
-        response = requests.request("GET", url, headers=self.headers, params=querystring)
-        t = json.loads(response.text)
-        time.sleep(0.21)
-        return t
-
-localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
-class StockPrices(RapidApi):
-
-    def get_hist_split(self,symbol):
-        import requests
-
-        url = "https://stock-prices2.p.rapidapi.com/api/v1/resources/stock-prices/10y-3mo-interval"
-
-        querystring = {"ticker": symbol}
-
-
-
-        js=self.get_json(querystring,url )
-        for dat,l in js.items():
-            for k,v in l.items():
-                if k=='Stock Splits':
-                    if v!=0:
-                        yield localize_me(dateutil.parser.parse(dat)),v
-
 
 class SeekingAlphaApi(RapidApi):
     def get_shares(self,tick):
-        import requests
 
         url = "https://seeking-alpha.p.rapidapi.com/symbols/get-key-data"
 
@@ -108,12 +80,13 @@ class EarningProcessor(SeekingAlphaApi):
     def __init__(self):
 
         self.df=DataFrame(columns=['id','nid','sub_ind','sector','exchange','company','shares'])
-        self._pr=StockPrices()
+        self._pr= StockPrices()
         self.splitsdic=defaultdict(list)
         #self.df.set_index('id', inplace=True)
         #self.df.set_index('ticker',inplace=True)
         self.revdf=None
         self.epsnorm=None
+        #super().__init__()
     @staticmethod
     def generate_or_make():
         if  config.SKIP_EARNINGS:

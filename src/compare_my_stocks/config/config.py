@@ -8,6 +8,7 @@ PROJPATHENV = 'COMPARE_STOCK_PATH'
 MYPATH=os.path.dirname(__file__)
 datapath=os.path.realpath((os.path.join(MYPATH,'..','data')))
 PROJDIR= os.path.join(os.path.expanduser("~"),"."+MYPROJ)
+
 def print_if_ok(*args):
     if 'SILENT' in __builtins__ and  __builtins__['SILENT']==False:
         print(*args)
@@ -44,7 +45,7 @@ with open(config_file) as f:
     code = compile(f.read(), config_file, 'exec')
     exec(code, globals(), locals())
 
-FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","PORTFOLIOFN","DEFAULTNOTEBOOK",'DATAFILEPTR','BUYDICTCACHE']
+FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","DEFAULTNOTEBOOK",'DATAFILEPTR']
 for f in FILE_LIST_TO_RES:
     if not f in globals():
         print_if_ok(f'You must have {f} in config')

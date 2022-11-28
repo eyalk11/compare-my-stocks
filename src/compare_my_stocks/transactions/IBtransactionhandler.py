@@ -4,22 +4,27 @@ from datetime import datetime
 
 from common.common import UseCache
 from config import config
-from transactions.transactioninterface import TrascationImplemenetorInterface
+from transactions.transactioninterface import TransactionHandlerImplementator
 from ibflex import client, parser, Trade
 from transactions.transactionhandler import TrasnasctionHandler
 def get_ib_handler(man):
-    return IBTransactionHandler(man,config.FLEXTOKEN,config.FLEXQUERY)
+    return IBTransactionHandler(man)
 
 
-class IBTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInterface):
-    def __init__(self,man,token_id, query_id):
+class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator):
+    NAME="IB"
+    def __init__(self,man):
+        self.DOQUERY=True
+        self.FLEXTOKEN, self.FLEXQUERY = None,None
         super().__init__(man)
-        self.query_id = query_id
-        self.token_id = token_id
+        self.query_id = self.FLEXQUERY
+        self.token_id =  self.FLEXTOKEN
         self._tradescache :dict  = {}
         self._cache_date=None
         self.need_to_save=True
     def doquery(self):
+        if not self.DOQUERY:
+            return
         try:
             response = client.download(self.token_id, self.query_id)
         except:
@@ -33,7 +38,7 @@ class IBTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInterface)
     def try_to_use_cache(self):
         try:
 
-            (self._tradescache , self._cache_date) = pickle.load(open(config.IBCACHE, 'rb'))
+            (self._tradescache , self._cache_date) = pickle.load(open(self.File, 'rb'))
             if len(self._tradescache) == 0:
                 self._tradescache={}
 
@@ -48,14 +53,15 @@ class IBTransactionHandler(TrasnasctionHandler, TrascationImplemenetorInterface)
             return
         try:
             self._cache_date =datetime.now()
-            pickle.dump((self._tradescache, self._cache_date), open(config.IBCACHE, 'wb'))
+            pickle.dump((self._tradescache, self._cache_date), open(self.File, 'wb'))
             print('dumpted')
         except Exception as e:
             print(e)
 
 
     def populate_buydic(self):
-        if (self._cache_date  and  self._cache_date - datetime.now() < config.IBMAXCACHETIMESPAN) or config.IBTRANSCACHE == UseCache.FORCEUSE:
+
+        if ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT):
             print('using ib cache alone')
             self.need_to_save=False
         else:

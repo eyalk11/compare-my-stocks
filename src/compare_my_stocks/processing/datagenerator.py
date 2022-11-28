@@ -261,7 +261,9 @@ class DataGenerator(SymbolsInterface, InputData):
         currency_hist= self.get_currency_hist(ncurrency,self.currencyrange[0],self.currencyrange[1]) #should be fine, the range
         simplified= (currency_hist['Open']+currency_hist['Close'])/2
         rate= self.get_relevant_currency(ncurrency)
-
+        if rate is None:
+            print("cant adjust")
+            return
         nn= self.adjusted_panel.copy() #adjusted_panel is already at base.
         for x in self.TOADJUST:
             nn[x]= nn[x].mul(1/rate)

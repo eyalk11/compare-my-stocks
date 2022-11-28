@@ -70,7 +70,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         self._income, self._revenue, = None,None
         self.cached_used = None
         self._symbols_wanted = set()
-        self.symbol_info = collections.defaultdict(dict)
+        self.symbol_info = collections.defaultdict(lambda:dict())
         self._usable_symbols = set()
         self._bad_symbols = set()
         try:
@@ -79,9 +79,10 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             else:
                 self._inputsource: InputSource = InvestPySource()
         except:
-            print('Input source initialization failed')
+            print('Input source initialization failed. ')
             import traceback;traceback.print_exc()
-            sys.exit(1)
+            #sys.exit(1)
+            self._inputsource=None
 
         self.init_input()
         self._initial_process_done=False
@@ -154,7 +155,11 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
 
         b = collections.OrderedDict(sorted(self.buydic.items()))  # ordered
 
+        if self._stockprices:
+            splits = self._stockprices.buydic
+
         cur_action = b.popitem(False) if len(b)!=0 else None
+        cur_splited =None
 
 
         if self.process_params.transactions_fromdate == None:
@@ -183,7 +188,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         print('finish initi')
         self.simplify_hist(partial_symbols_update)
         print('finish simpl')
-        self.process_hist_internal(b, cur_action, partial_symbols_update)
+        self.process_hist_internal(b, cur_action, partial_symbols_update,splits,cur_splited)
         print('finish internal')
         try:
             print('entering lock')
@@ -207,6 +212,12 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 _, symbinfo, _, _, _ = pickle.load(open(config.HIST_F, 'rb'))
                 self.symbol_info = collections.defaultdict(dict)
                 self.symbol_info.update(symbinfo)
+                #patch
+                for x in self.symbol_info:
+                    if self.symbol_info[x]==None:
+                        self.symbol_info[x]={}
+
+
                 return
             else:
                 hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
@@ -230,28 +241,49 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self.cached_used = False
         return query_source
 
-    def process_hist_internal(self, b, cur_action, partial_symbols_update):
+    def process_hist_internal(self, b, cur_action, partial_symbols_update,splits,cur_splited):
+        def calc_splited(sym,last_time, time):
+            if cur_splited[sym] is None and sym in splits:
+                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+            if not last_time or cur_splited[sym] is None:
+                return
+            while cur_splited[sym] and cur_splited[sym][0] < last_time:
+                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+            if cur_splited[sym] and (cur_splited[sym][0] > last_time)  and cur_splited[sym][0] <= time:
+                print(f"splited between {sym} {cur_splited[sym]}")
+                _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_splited[sym][1]
+                _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_splited[sym][1]
+                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+
         def update_curholding():
             stock = cur_action[1][2]
+
             if partial_symbols_update and stock not in partial_symbols_update:
                 return
             old_cost = _cur_avg_cost_bystock[stock]
 
             old_holding = _cur_holding_bystock[stock]
 
-            if cur_action[1][0]*old_holding > 0: #we increase our holding.
+            if cur_action[1][0]*old_holding >= 0: #we increase our holding.
                 _cur_avg_cost_bystock[stock] = (old_holding * old_cost + cur_action[1][0] * cur_action[1][1]) / (
                             old_holding + cur_action[1][0])
                 # self._avg_cost_by_stock[stock][cur_action[0]] = nv
             else:
-                _cur_relprofit_bystock[stock] += (-1) * ( cur_action[1][0] * (
-                            cur_action[1][1]  - _cur_avg_cost_bystock[stock]))
+                if abs(cur_action[1][0])>abs(old_holding): #we switch to the other side. so we do selling of old_holding, and buying on the other
+                    _cur_relprofit_bystock[stock] += (-1) * (old_holding * (
+                            cur_action[1][1] - _cur_avg_cost_bystock[stock]))
+                    _cur_avg_cost_bystock[stock] = (cur_action[1][1]) * ( -1 if cur_action[1][0]< 0 else 1)
+
+                else:
+                    _cur_relprofit_bystock[stock] += (-1) * ( cur_action[1][0] * (
+                                cur_action[1][1]  - _cur_avg_cost_bystock[stock]))
 
                  #_cur_relprofit_bystock[stock] += cur_action[1][0] * (
                  #                        cur_action[1][1] * (-1) - _cur_avg_cost_bystock[stock])
                 # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += cur_action[1][0]
+            _last_action_time[stock]=cur_action[0]
             if _cur_holding_bystock[stock] < 0:
                 print('warning sell below zero', stock, cur_action[0])
         self.mindate = min(
@@ -262,17 +294,48 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
+        _last_action_time = defaultdict(lambda: None)
+        cur_splited = defaultdict(lambda: None)
+        if len(self._simp_hist_by_date)==0:
+            print("WARNING: No History at all!")
+            return
         hh = pytz.UTC  # timezone('Israel')
         if not partial_symbols_update:
             self._fset=set()
-        for t, dic in sorted(self._simp_hist_by_date.items()):
+        simphist=iter(sorted(self._simp_hist_by_date.items()))
+        t=1
+        last_t=None
+        while cur_action or t:
+            try:
+                t, dic = next(simphist)
+                mini=False
+            except StopIteration:
+                print("stop iter")
+                if len(b)>0:
+                    cur_action = b.popitem(False)
+                    t=cur_action[0]
+                    mini=True
+                else:
+                    break
+
+
+
+
+
             if partial_symbols_update:
                 dic = dictfilt(dic, partial_symbols_update)
-            t = hh.localize(t, True)
+            t = hh.localize(t, True) if t.tzinfo is None else t
             # t=pytz.normalize(t,cur_action[0].tzinfo())#t.replace(tzinfo=pytz.UTC)
             if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
                 break
-            while cur_action and (t > cur_action[0]):
+            holdopt = set(_cur_holding_bystock.keys()).intersection(
+                partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
+
+            for sym in holdopt:
+                calc_splited(sym,_last_action_time.get(sym), t)
+
+            while cur_action and (t >= cur_action[0]):
+                calc_splited(cur_action[1][2], _last_action_time.get(cur_action[1][2]),cur_action[0])
                 update_curholding()
                 if len(b) == 0:
                     cur_action = None
@@ -288,7 +351,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
                 self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
                 self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
-
+            if mini:
+                continue
             symopt = self._usable_symbols.intersection(
                 partial_symbols_update) if partial_symbols_update else self._usable_symbols
             for sym in symopt:
@@ -310,11 +374,10 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
                 self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
+            last_t = t
             self._fset.add(tim)
-        if cur_action:
-            # run_cur_action(None)
-            print('after, should update rel_prof... ')
-            # cur_action[0]
+
+
 
     def simplify_hist(self, partial_symbols_update):
         self._simp_hist_by_date = collections.OrderedDict()
@@ -329,6 +392,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
 
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):
+        if self._inputsource is None:
+            return
         TOLLERENCE=5 #config
 
         def get_range_gap(dates,fromdate,todate):
@@ -398,11 +463,14 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 print(f'mostly problematic {sym}')
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
+        if self._inputsource is None:
+            return 0
         print(f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}')
-        self._inputsource.ownership()
+        #self._inputsource.ownership()
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
-        self.symbol_info[sym] = l #just for debug I think
+
+        self.symbol_info[sym] = (l if l else {}) #just for debug I think
         if hist is None:
             raise SymbolError("bad symbol")
         if not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
@@ -507,6 +575,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
 
 
     def get_relevant_currency(self,x):
+        if self._inputsource is None:
+            return
         if x not in self._relevant_currencies_rates:
             self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
         return  self._relevant_currencies_rates[x]

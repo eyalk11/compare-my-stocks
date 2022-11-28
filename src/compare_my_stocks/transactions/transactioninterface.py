@@ -2,16 +2,6 @@ from abc import ABCMeta, abstractmethod
 from enum import auto, Flag
 
 
-class TrascationImplemenetorInterface(metaclass=ABCMeta):
-    @abstractmethod
-    def populate_buydic(self):
-        pass
-
-
-
-    @abstractmethod
-    def get_portfolio_stocks(self):
-        ...
 class TransactionSourceType(Flag):
     Cache=0
     IB=auto()
@@ -34,4 +24,21 @@ class TransactionHandlerInterface(metaclass=ABCMeta):
         ...
 
     def save_cache(self):
+        ...
+
+
+class TransactionHandlerImplementator(metaclass=ABCMeta):
+    @abstractmethod
+    def populate_buydic(self):
+        pass
+
+    @abstractmethod
+    def set_vars_for_cache(self, v):
+        pass
+
+    @abstractmethod
+    def get_vars_for_cache(self):
+        pass
+    @abstractmethod
+    def get_portfolio_stocks(self):
         ...

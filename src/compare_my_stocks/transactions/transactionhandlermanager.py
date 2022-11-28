@@ -6,6 +6,7 @@ import pytz
 from config import config
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
+from transactions.stockprices import StockPrices
 from transactions.transactioninterface import TransactionHandlerInterface, TransactionSourceType
 
 
@@ -27,6 +28,12 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             self._buydic = self._stock.buydic
 
         self._buydic= {pytz.UTC.localize(x,True) : y  for x,y in self._buydic.items() if x.tzinfo is None }
+
+
+        self._stockprices=StockPrices(self,self.buysymbols)
+        self._stockprices.process_transactions()
+
+
 
 
 

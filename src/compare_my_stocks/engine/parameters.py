@@ -47,6 +47,7 @@ class Parameters:
     numrange : List[int] = (None,None)
     type : Types =Types.VALUE
     _ext : list =field(default_factory=config.EXT.copy)
+    ext: dataclasses.InitVar[list] = field(default=[]) #same as reference stock
     increase_fig: bool =1
     _fromdate : datetime=None
     _todate: datetime =None
@@ -55,7 +56,7 @@ class Parameters:
     isline: bool =True
     starthidden : bool =0
     compare_with: str =None
-    portfolio: str  = config.DEF_PORTFOLIO
+    portfolio: str  = "" #Deprecated ignored
     use_cache : UseCache =UseCache.USEIFAVALIABLE
     def_fig_size : tuple = config.DEF_FIG_SIZE
     unite_by_group : UniteType =UniteType.NONE
@@ -109,7 +110,9 @@ class Parameters:
     def __getstate__(self):
         return dictnfilt(self.__dict__,set(['_baseclass']))
 
-    def __post_init__(self,baseclass=None):
+    def __post_init__(self,ext,baseclass=None):
+        if ext and type(ext)==list:
+            self.ext=ext
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass
 

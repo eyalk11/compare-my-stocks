@@ -175,3 +175,7 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
                 return o.dic
             print(f"{o,type(o)} is not json.. ")
             return o.__dict__
+
+
+def need_add_process(config):
+    return config.INPUTSOURCE== InputSourceType.IB

@@ -10,7 +10,7 @@ from functools import partial
 #import Qt
 import shlex
 
-from common.common import InputSourceType, Types, UniteType
+from common.common import InputSourceType, Types, UniteType, need_add_process
 from config import config
 
 USEWX, USEWEB, USEQT, SIMPLEMODE = config.USEWX, config.USEWEB, config.USEQT, config.SIMPLEMODE
@@ -79,7 +79,7 @@ def main():
     win32api.SetConsoleCtrlHandler(func, True)
     #import signal
     #signal.signal(signal.SIGTERM,
-    if hasattr(config,'ADDPROCESS'):
+    if hasattr(config,'ADDPROCESS') and need_add_process(config):
         v=f"/c start /wait python \"{config.ADDPROCESS}\" "
         anotherproc=subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v,posix="false"))
         #os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
