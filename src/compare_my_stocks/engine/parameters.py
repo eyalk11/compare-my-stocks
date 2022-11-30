@@ -56,7 +56,7 @@ class Parameters:
     isline: bool =True
     starthidden : bool =0
     compare_with: str =None
-    portfolio: str  = "" #Deprecated ignored
+    portfolio: str  = None #The portfolio to read from transaction table in MyStocks
     use_cache : UseCache =UseCache.USEIFAVALIABLE
     def_fig_size : tuple = config.DEF_FIG_SIZE
     unite_by_group : UniteType =UniteType.NONE

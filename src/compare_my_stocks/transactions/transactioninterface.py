@@ -1,7 +1,11 @@
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+from datetime import datetime
 from enum import auto, Flag
+from typing import Dict
 
-
+BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract",defaults=[None]*5)
+BuyDictType=Dict[datetime,BuyDictItem]
 class TransactionSourceType(Flag):
     Cache=0
     IB=auto()
@@ -17,7 +21,7 @@ class TransactionHandlerInterface(metaclass=ABCMeta):
         ...
 
     @property
-    def buydic(self) -> dict:
+    def buydic(self) -> Dict[datetime,BuyDictItem]:
         ...
 
     def get_portfolio_stocks(self):  # TODO:: to fix

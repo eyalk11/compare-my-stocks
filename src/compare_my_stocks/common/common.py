@@ -1,4 +1,5 @@
 import dataclasses
+import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
@@ -70,6 +71,24 @@ class InputSourceType(Flag):
 
 
 from Pyro5.errors import format_traceback
+
+def simple_exception_handling(err_description=None):
+    def decorated(func):
+        def internal(*args,**kwargs):
+            if os.environ.get('PYCHARM_HOSTED') == '1':
+                func(*args,**kwargs)
+            else:
+                try:
+                    func(*args,**kwargs)
+                except:
+                    if err_description:
+                        print(err_description)
+                    print_formatted_traceback()
+        return internal
+    return decorated
+
+
+
 def print_formatted_traceback():
     print(''.join([x[:500] for x in format_traceback(detailed=True)] ))
 

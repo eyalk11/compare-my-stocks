@@ -4,7 +4,7 @@ from datetime import datetime
 
 from common.common import UseCache
 from config import config
-from transactions.transactioninterface import TransactionHandlerImplementator
+from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
 from ibflex import client, parser, Trade
 from transactions.transactionhandler import TrasnasctionHandler
 def get_ib_handler(man):
@@ -15,7 +15,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
     NAME="IB"
     def __init__(self,man):
         self.DOQUERY=True
-        self.FLEXTOKEN, self.FLEXQUERY = None,None
+        #self.FLEXTOKEN, self.FLEXQUERY = None,None
         super().__init__(man)
         self.query_id = self.FLEXQUERY
         self.token_id =  self.FLEXTOKEN
@@ -23,6 +23,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self._cache_date=None
         self.need_to_save=True
     def doquery(self):
+        print("running query")
         if not self.DOQUERY:
             return
         try:
@@ -76,7 +77,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
         for z in self._tradescache.values():
             z : Trade
-            self._buydic[z.dateTime] = (float(z.quantity),float(z.tradePrice),z.symbol,'IB',z )
+            self._buydic[z.dateTime] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z )
 
             self._buysymbols.add(z.symbol)
 

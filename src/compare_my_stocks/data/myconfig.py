@@ -27,15 +27,15 @@ TRANSACTION_HANDLERS={
         "Use":UseCache.USEIFAVALIABLE,
         "CacheSpan":datetime.timedelta(days=40),
         "File": r'stocksplit.cache',
-        "FLEXTOKEN":'YOURTOKEN',
-        "FLEXQUERY" : 'QUERYNU'
-    },
+           },
     "IB":
     {
         "File":r'ibtrans.cache',
         "CacheSpan": datetime.timedelta(hours=5),
         "Use": UseCache.USEIFAVALIABLE,
-        "DOQUERY":True
+        "DOQUERY":True,
+            "FLEXTOKEN":'YOURTOKEN',
+        "FLEXQUERY" : 'QUERYNU'
     },
     "MyStocks":
     {
@@ -142,3 +142,7 @@ StockPricesHeaders = {
     "X-RapidAPI-Host": "HOST",
     "X-RapidAPI-Key": "KEY"
 }
+EXPORTEDPORT="exported.csv"
+BOTHSYMBOLS=[]
+MAXPERCDIFFIBSTOCKWARN=0.2
+FIXBUYSELLDIFFDAYS=3

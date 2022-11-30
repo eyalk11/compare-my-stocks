@@ -4,6 +4,9 @@ import PySide6
 from PySide6.QtCore import QObject, Signal, QThread, QMutex, Slot   , QRecursiveMutex
 from PySide6.QtCore import Qt
 
+from common.common import simple_exception_handling
+
+
 class DoLongProcess(QObject):
     finished = Signal()
     def __init__(self,task):
@@ -86,17 +89,14 @@ class DoLongProcessSlots(QObject):
         #     from ib_insync import IB,util
         #     util.useQt('PySide6')
 
-        realtask = partial(self._task, *taskparams.params)
+        realtask = simple_exception_handling(err_description="excpetion in real task")(partial(self._task, *taskparams.params))
         self.started = True
         self.mutex.lock()
         try:
             print('bef real task long')
             realtask()
             print('post long')
-        except:
-            print('excpetion in real task')
-            import traceback
-            traceback.print_exc()
+
             #to update status
         finally:
             self.mutex.unlock()

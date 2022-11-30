@@ -1,5 +1,6 @@
 import collections
 import math
+import os
 import pickle
 import sys
 import time
@@ -153,12 +154,14 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             self.filter_input(partial_symbols_update)
 
 
-        b = collections.OrderedDict(sorted(self.buydic.items()))  # ordered
+        buyoperations = collections.OrderedDict(sorted(self.buydic.items()))  # ordered
 
         if self._stockprices:
             splits = self._stockprices.buydic
+        else:
+            splits = {}
 
-        cur_action = b.popitem(False) if len(b)!=0 else None
+        cur_action = buyoperations.popitem(False) if len(buyoperations)!=0 else None
         cur_splited =None
 
 
@@ -188,7 +191,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         print('finish initi')
         self.simplify_hist(partial_symbols_update)
         print('finish simpl')
-        self.process_hist_internal(b, cur_action, partial_symbols_update,splits,cur_splited)
+        self.process_hist_internal(buyoperations, cur_action, partial_symbols_update,splits,cur_splited)
+
         print('finish internal')
         try:
             print('entering lock')
@@ -241,7 +245,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self.cached_used = False
         return query_source
 
-    def process_hist_internal(self, b, cur_action, partial_symbols_update,splits,cur_splited):
+    def process_hist_internal(self, buyoperations, cur_action, partial_symbols_update, splits, cur_splited):
         def calc_splited(sym,last_time, time):
             if cur_splited[sym] is None and sym in splits:
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
@@ -286,6 +290,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             _last_action_time[stock]=cur_action[0]
             if _cur_holding_bystock[stock] < 0:
                 print('warning sell below zero', stock, cur_action[0])
+                self.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
         self.mindate = min(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
@@ -293,9 +298,11 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         _cur_avg_cost_bystock = defaultdict(lambda: 0)
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock = defaultdict(lambda: 0)
+        _cur_unrelprofit_bystock = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         _last_action_time = defaultdict(lambda: None)
         cur_splited = defaultdict(lambda: None)
+        _last_action = defaultdict(lambda: None)
         if len(self._simp_hist_by_date)==0:
             print("WARNING: No History at all!")
             return
@@ -311,8 +318,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 mini=False
             except StopIteration:
                 print("stop iter")
-                if len(b)>0:
-                    cur_action = b.popitem(False)
+                if len(buyoperations)>0:
+                    cur_action = buyoperations.popitem(False)
                     t=cur_action[0]
                     mini=True
                 else:
@@ -337,10 +344,10 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             while cur_action and (t >= cur_action[0]):
                 calc_splited(cur_action[1][2], _last_action_time.get(cur_action[1][2]),cur_action[0])
                 update_curholding()
-                if len(b) == 0:
+                if len(buyoperations) == 0:
                     cur_action = None
                     break
-                cur_action = b.popitem(False)
+                cur_action = buyoperations.popitem(False)
 
             tim = matplotlib.dates.date2num(t)
             holdopt = set(_cur_holding_bystock.keys()).intersection(
@@ -369,13 +376,40 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 #v = v[0]
                 self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
                 self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
-                self._unrel_profit[sym][tim] = v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
+                _cur_unrelprofit_bystock[sym]= v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
+
+                self._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
                 self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
                                                _cur_avg_cost_bystock[sym]
                 self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
-            last_t = t
+                _last_action[sym] = cur_action
             self._fset.add(tim)
+
+        self.fast_conv_to_df(
+            {"Holding" : _cur_holding_bystock,
+             "Unrelprofit": _cur_unrelprofit_bystock,
+             "Relprofit":  _cur_relprofit_bystock
+        })
+        #self._cur_holding_bystock=_cur_holding_bystock
+
+    def fast_conv_to_df(self, dicdics):
+        def get_DF(dic,name):
+            df=pd.DataFrame.from_dict(dict(dic).items())
+            df.columns=["stock",name]
+            df=df.set_index("stock")
+            return df
+
+        dfs = [get_DF(dic,name) for name,dic in dicdics.items()]
+        st= dfs[0]
+        for k in dfs[1:]:
+            st=st.join(k,on='stock',how='left')
+
+        self._current_status= st
+
+
+
+
 
 
 
@@ -669,6 +703,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         try:
             self.process_internal(ls)
         except Exception as e:
+            if os.environ.get('PYCHARM_HOSTED') == '1':
+                raise #will try
             import traceback
             print('exception in processing' )
             print_formatted_traceback()

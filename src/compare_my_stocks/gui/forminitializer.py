@@ -5,7 +5,7 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from common.common import LimitType, UniteType, Types, index_of
+from common.common import LimitType, UniteType, Types, index_of, simple_exception_handling
 from config import config
 from gui.formobserver import FormObserver, ResetRanges
 from gui.listobserver import additems
@@ -169,8 +169,8 @@ class FormInitializer(FormObserver):
             self.window.min_crit.setValue((self.graphObj.minValue, self.graphObj.maxValue))
         self.disable_slider_values_updates = False
 
+    @simple_exception_handling(err_description="Error in adding items")
     def update_stock_list(self,isinitial=0,justorgs=False):
-        try:
             org: QListWidget = self.window.orgstocks  # type:
             
             if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
@@ -203,10 +203,8 @@ class FormInitializer(FormObserver):
             refs: QListWidget = self.window.refstocks  # type:
             refs.clear()
             additems(refs, self.graphObj.params.ext)
-        except Exception as e:
-            import traceback;traceback.print_exc()
-            print(f'{e} in adding items')
-            
+
+
 
 
 

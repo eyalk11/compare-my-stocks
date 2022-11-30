@@ -1,6 +1,8 @@
 import pickle
 from datetime import datetime
 
+import numpy
+
 from common.common import UseCache
 from config import config
 from transactions.transactioninterface import TransactionHandlerInterface,TransactionHandlerImplementator
@@ -41,6 +43,8 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         return self._buysymbols #[config.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
 
     def update_sym_property(self, symbol, value, prop='currency', updateanyway=True):
+        if value is numpy.nan:
+            value=""
         current=  self._manager.symbol_info.get(symbol)
         if current:
 
@@ -90,7 +94,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self._buydic = {}
         self._buysymbols = set()
 
-        if not self.Use or (self.Use and self.Use!=UseCache.DONT):
+        if  (self.Use is None) or (self.Use and self.Use!=UseCache.DONT):
             if  self.try_to_use_cache():
                 print('using buydict cache ')
                 return

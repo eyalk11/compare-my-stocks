@@ -78,7 +78,7 @@ class GraphsHandler:
     def load_graph(self,text=None):
         def after_task():
             self.setup_controls_from_params(0, 1)
-            self.update_graph(ResetRanges.FORCE,force=True)
+            self.update_graph(ResetRanges.FORCE,force=True) #There is a bug of the graph not fitting in screen. This solves it.
         try:
             if text==None:
                 if not self.window.graphList.currentItem():
@@ -86,7 +86,7 @@ class GraphsHandler:
                 text=self.window.graphList.currentItem().text()
             self.graphObj.params = copyit(self.graphs[text])
             self.update_graph(ResetRanges.FORCE,force=True,after=after_task)
-            #should wait after update
+            #should wait after update with controls -> after_task
 
         except:
             import traceback;traceback.print_exc()
@@ -351,6 +351,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.deletebtn.pressed.connect(self.del_in_lists)
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
+        self.window.exportport.pressed.connect(self.graphObj.export_portfolio) #Transaction handler manager
         self.window.edit_groupBtn.pressed = safeconnect( self.window.edit_groupBtn.pressed,(self.edit_groups) )
         self.window.comparebox.currentIndexChanged = safeconnect( self.window.comparebox.currentIndexChanged,(self.compare_changed) )
         self.window.orgstocks.model().rowsInserted = safeconnect( self.window.orgstocks.model().rowsInserted,(self.selected_changed) )

@@ -1,13 +1,18 @@
 import collections
 import math
+from datetime import datetime
+from typing import Tuple
 
+import numpy as np
+import pandas as pd
 import pytz
 
+from common.common import simple_exception_handling
 from config import config
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
 from transactions.stockprices import StockPrices
-from transactions.transactioninterface import TransactionHandlerInterface, TransactionSourceType
+from transactions.transactioninterface import TransactionHandlerInterface, TransactionSourceType, BuyDictItem
 
 
 class TransactionHandlerManager(TransactionHandlerInterface):
@@ -19,15 +24,19 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._stock : TransactionHandlerInterface
         (self._ib,self._stock)= tuple(self.get_handlers())
 
+        print( f"Loaded  {len(self._stock.buydic ) if self._stock else '0'} MyStocks , {len(self._ib.buydic ) if self._ib else '0'} IB transactions! "  )
+
         if self._ib and self._stock:
             #combine
             self.combine()
+
         elif self._ib:
             self._buydic=self._ib.buydic
         elif self._stock:
             self._buydic = self._stock.buydic
+        print(f" Number of combined transactions {len(self._buydic)}")
 
-        self._buydic= {pytz.UTC.localize(x,True) : y  for x,y in self._buydic.items() if x.tzinfo is None }
+        self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
 
 
         self._stockprices=StockPrices(self,self.buysymbols)
@@ -37,27 +46,61 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
 
 
+    def try_fix_dic(self,cur_action : Tuple[datetime,BuyDictItem],last_action :  Tuple[datetime,BuyDictItem],curhold):
+        if last_action is None:
+            return
+        if (last_action[0]-cur_action[0]).days < config.FIXBUYSELLDIFFDAYS and  curhold-cur_action[1].Qty+last_action[1].Qty>=0:
+
+            self._buydic[cur_action[0]]= last_action[1]._replace(Notes=last_action[1].Notes+"| Orig time: "+ str(last_action[0]))
+            self._buydic[last_action[0]] = cur_action[1]._replace(
+                Notes=cur_action[1].Notes + "| Orig time: " + str(cur_action[0]))
+            print(f"replaced {last_action} {cur_action}")
 
     def combine(self):
-        self._buydic = self._ib.buydic
-        datesymb = collections.defaultdict(list)
-        for k, v in self._ib.buydic.items():
-            datesymb[v[2]] += [(k.date(), float(v[1])*float(v[0]))]
+
+        def get_datesym(buydic):
+            datesymb = collections.defaultdict(list)
+            for k, v in buydic.items():
+                datesymb[v.Symbol] += [(k.date(), float(v.Qty) * float(v.Cost), float(v.Qty), float(v.Cost))]
+            return datesymb
+
+        def get_vars(dicforsym,mindate):
+            return sum( abs(v[1]) for v in dicforsym  if v[0]>=mindate), sum( 1 for v in dicforsym  if v[0]>=mindate)
+
+        self._buydic = self._ib.buydic.copy()
+        datesymb = get_datesym( self._ib.buydic)
+        datesymbstocks=get_datesym( self._stock.buydic)
+
+        mindate= {x : min([y[0] for y in datesymb[x]]) for x in datesymb}
+
+        # for s,mindate in mindate.items():
+        #     perc= np.linalg.norm( np.array( get_vars(datesymb,mindate)) - np.array(get_vars(datesymbstocks,mindate)))/  np.linalg.norm( np.array( get_vars(datesymb,mindate)))
+        #     if abs(perc-1)>config.MAXPERCDIFFIBSTOCKWARN:
+        #         print(f"warning: {s} is suspicous IB: {  get_vars(datesymb,mindate) } STOCK: { get_vars(datesymb,mindate)} date: {mindate} ")
+
+
+
+
         for s, v in self._stock.buydic.items():
-            if v[2] in config.IGNORECONF and s > config.IGNORECONF[v[2]]:
+            if v.Symbol not in config.BOTHSYMBOLS and mindate.get(v.Symbol) and s.date()>=mindate[v.Symbol]  :
+                print("ignoring trans: %s %s because in IB" % (s, v))
+                continue
+
+            if v.Symbol in config.IGNORECONF and s > config.IGNORECONF[v.Symbol]:
                 print("ignoring trans: %s %s because of conf" % (s, v))
                 continue
 
-            forsym = datesymb[v[2]]
+            forsym = datesymb[v.Symbol]
             for l in forsym:
                 paid=v[0]*v[1]
 
                 if abs((l[0] - s.date()).days) < config.COMBINEDATEDIFF and abs(float(l[1]) - paid) < (
                         (l[1] + paid)/2 * config.COMBINEAMOUNTPERC / 100):
-                    print("ignoring trans: %s %s" % (s, v))
+                    print("ignoring trans: %s %s because of\n %s %s" % (s, v,l[0],l[2:]))
                     break
             else:
                 self._buydic[s] = v
+
 
     def get_handlers(self):
         for x, fun in zip([TransactionSourceType.IB, TransactionSourceType.MyStock], [get_ib_handler, get_stock_handler]):
@@ -68,6 +111,12 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                 yield handler
             else:
                 yield None
+
+    @simple_exception_handling("Error in export_portfolio")
+    def export_portfolio(self):
+        self._stock.save_transaction_table(buydict=self._buydic, file=config.EXPORTEDPORT)
+        dt=self._current_status
+        dt.to_csv(config.EXPORTEDPORT+".state.csv")
 
     @property
     def buysymbols(self) -> set:
