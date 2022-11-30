@@ -42,7 +42,15 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (Doesn't matter which broker you work with)
 
-&nbsp;&nbsp;&nbsp;&nbsp; ⚕️ Pull transactions data directly from Interactive Brokers TWS. 
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Pull transactions data directly from Interactive Brokers TWS. 
+
+### **Smart Calculations**
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Adjust Prices and profit relative to a currency. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Adjust holdings based on stock splits (using stockprices API). 
+
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Combine IB transaction data into MyStocksPortfolio (by exporting csv). 
 
 ### **Maximum control over graphs**
 
@@ -99,6 +107,7 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 
 ✅ **Completely free and open source!** 
+
 
 ## Planned Features
 
