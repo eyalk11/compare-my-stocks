@@ -53,7 +53,7 @@ class DataGenerator(SymbolsInterface, InputData):
 
         if self.used_type & Types.COMPARE:
             if not compare_with in df:
-                print('to bad, no comp')
+                logging.debug(('to bad, no comp'))
                 self.used_type = self.used_type & ~Types.COMPARE
 
                 # ind=first_index_of(compit_arr,np.isnan)
@@ -80,14 +80,14 @@ class DataGenerator(SymbolsInterface, InputData):
             fullarr = np.array(fulldf).transpose() #again...
             goodind = get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE)
             if goodind == -1:
-                print('there is no location where all are good')
+                logging.debug(('there is no location where all are good'))
                 self.use_relative=True
             else:
                 fulldf = fulldf.iloc[goodind:]
             if self.used_type & (Types.RELTOEND):
                 goodind=get_first_where_all_are_good(fullarr, self.used_type & Types.PRECENTAGE, last=1)
                 if goodind == -1:
-                    print('there is no location where all are good')
+                    logging.debug(('there is no location where all are good'))
                     self.use_relative = True
                 else:
                     fulldf = fulldf.iloc[:goodind]
@@ -139,7 +139,7 @@ class DataGenerator(SymbolsInterface, InputData):
             df = df['pricesells']
         elif div & Types.THEORTICAL_PROFIT:
             df = df['tot_profit_by_stock']
-        else:            #print('default!!') #price
+        else:            #logging.debug(('default!!')) #price
             df = df['alldates']
             df = df.fillna(method='ffill', axis=0)  # understand more before?
             if ( unitetyp & UniteType.ADDPROT) and (unitetyp & ~UniteType.ADDTOTALS ==0 )  and (div & Types.PRECDIFF ==  0): #(div& ~Types.COMPARE) and
@@ -151,7 +151,7 @@ class DataGenerator(SymbolsInterface, InputData):
     def unite_groups(self, df):
         def filt(x,df):
             if not (x <  set(df.columns)):
-                print('not enough stocks, not complete')
+                logging.debug(('not enough stocks, not complete'))
                 print (x- set(df.columns))
             return list(x.intersection(set(df.columns)))
 
@@ -181,11 +181,11 @@ class DataGenerator(SymbolsInterface, InputData):
             try:
                 arr = np.array(df[stocks]).transpose()
             except KeyError:
-                print('none of the values here')
+                logging.debug(('none of the values here'))
                 continue
             incomplete= (arr.shape[0]!=len(stocks))
             if incomplete:
-                print('incomplete unite')
+                logging.debug(('incomplete unite'))
             if self.used_unitetype & UniteType.SUM or gr in ['All','Portfolio']:
 
                 ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
@@ -262,7 +262,7 @@ class DataGenerator(SymbolsInterface, InputData):
         simplified= (currency_hist['Open']+currency_hist['Close'])/2
         rate= self.get_relevant_currency(ncurrency)
         if rate is None:
-            print("cant adjust")
+            logging.debug(("cant adjust"))
             return
         nn= self.adjusted_panel.copy() #adjusted_panel is already at base.
         for x in self.TOADJUST:
@@ -270,7 +270,7 @@ class DataGenerator(SymbolsInterface, InputData):
         simplified =pandas.DataFrame(simplified,columns=['data'])
         simplified=simplified.set_index(matplotlib.dates.date2num(list(simplified.index)))
         missingvalues = set(list(nn.index)) - set(list(simplified.index))
-        print('missing in readjust', len(missingvalues))
+        logging.debug((log_conv('missing in readjust', len(missingvalues))))
         simplified=simplified.reindex(nn.index,method='pad')
 
 
@@ -284,7 +284,7 @@ class DataGenerator(SymbolsInterface, InputData):
         return nn
 
     def serialize_me(self,filepath=config.SERIALIZEDFILE):
-        print(f'writing serialized file to {config.SERIALIZEDFILE}')
+        logging.debug((f'writing serialized file to {config.SERIALIZEDFILE}'))
         with open(filepath,'wb') as f:
             import pickle
             pickle.dump(self.serialized_data(), f)

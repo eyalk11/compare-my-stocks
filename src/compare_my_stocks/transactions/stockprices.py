@@ -29,7 +29,7 @@ class StockPrices(TrasnasctionHandler,RapidApi,TransactionHandlerImplementator):
                 if not x in self._buydic:
                     self._buydic[x] = OrderedDict()
             except Exception as e :
-                print(f"failed getting hist {x} {e}")
+                logging.debug((f"failed getting hist {x} {e}"))
             s.sort(key= lambda x: x[0])
             for dt,v in s:
                 self._buydic[x][dt]=v

@@ -6,11 +6,16 @@ from input.inputsource import InputSource, InputSourceInterface
 from transactions.transactioninterface import TransactionHandlerInterface
 
 
-class SymbolsInterface(TransactionHandlerInterface):
+class SymbolsInterface():
     TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
     #TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
     TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock']
     TOKEEP= ['holding_by_stock','rel_profit_by_stock','avg_cost_by_stock','peratio','pricesells']
+
+    # @property casues some headache.
+    # @abstractmethod
+    # def symbol_info(self):
+    #     ...
 
     @property
     @abstractmethod
@@ -46,8 +51,4 @@ class SymbolsInterface(TransactionHandlerInterface):
 
     @abstractmethod
     def process(self,  partial_symbol_update=Set,params=None):
-        ...
-
-    @abstractmethod
-    def process_transactions(self):
         ...

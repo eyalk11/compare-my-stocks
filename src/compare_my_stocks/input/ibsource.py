@@ -32,7 +32,7 @@ class IBSourceRem:
     #         self.on_disconnect()
     @staticmethod
     def on_disconnect():
-        print('disconnected')
+        logging.debug(('disconnected'))
         if IBSourceRem.ConnectedME:
             IBSourceRem.ConnectedME.ib.disconnect()
             IBSourceRem.ConnectedME.ib= IB() #not needed
@@ -40,7 +40,7 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     def init(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
-        print('init')
+        logging.debug(('init'))
 
         #util.useQt('PySide6')
         util.logToConsole('DEBUG')
@@ -53,19 +53,19 @@ class IBSourceRem:
         try:
             self.ib.connect(host,port , clientId=clientId, readonly=readonly)
             IBSourceRem.ConnectedME=self
-            print('ib connected OK')
+            logging.debug(('ib connected OK'))
         except Exception as e:
             import traceback;traceback.print_exc()
-            print( f"{e} in connecting to ib")
+            logging.debug(( f"{e} in connecting to ib"))
             raise
 
     def whatToShow(self,contract :Contract):
-        print(contract.secType)
+        logging.debug((contract.secType))
         return ('TRADES' if contract.secType=='IND' else 'MIDPOINT')
 
 
     def reqHistoricalData(self, contract, enddate, td):
-        print("xxxx",enddate,td,type(enddate))
+        logging.debug((log_conv("xxxx",enddate,td,type(enddate))))
         self.ib.reqMarketDataType(4) #forzen +delayed
         if td>365:
             import math
@@ -105,10 +105,10 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     def get_matching_symbols_int(self, sym,results=10):
-        print('get_matching_symbols')
+        logging.debug(('get_matching_symbols'))
         #ignore results num
         ls=self.ib.reqMatchingSymbols(sym)
-        print(ls)
+        logging.debug((ls))
         lsa=[]
         count=0
         for c in ls:
@@ -131,7 +131,7 @@ class IBSourceRem:
         INC=["category","subcategory", "longName","validExchanges","marketName","stockType", "lastTradeTime"]
         c=Contract.create(**contractdic)
         for x in  self.ib.reqContractDetails(c):
-            print(asdict(x),x.validExchanges)
+            logging.debug((log_conv(asdict(x),x.validExchanges)))
             yield dictfilt(asdict(x),INC)
 
 
@@ -161,7 +161,7 @@ class IBSource(InputSource):
                 x.update({'contract': Contract.create(**x['contractdic'])})
                 return x
             except:
-                print(f'err in create for {x}')
+                logging.debug((f'err in create for {x}'))
                 import traceback;
                 traceback.print_exc()
         with self.lock:
@@ -170,9 +170,9 @@ class IBSource(InputSource):
             for x in contracts:
                 det=list(self.ibrem.get_contract_details_ext(x['contractdic']))
                 if len(det)>1 :
-                    print('strange, multiple detailed descriptions')
+                    logging.debug(('strange, multiple detailed descriptions'))
                 if len(det)==0:
-                    print(f'no detailed description {sym}')
+                    logging.debug((f'no detailed description {sym}'))
                     continue
                 x.update(det[0])
                 #x['exchange']=x['validExchanges']
@@ -184,7 +184,7 @@ class IBSource(InputSource):
     def ownership(self):
         import threading
 
-        #print('owner',threading.currentThread().ident)
+        #logging.debug(('owner',threading.currentThread().ident))
         self.ibrem._pyroClaimOwnership()
 
     def __getattr__(self, item):
@@ -199,7 +199,7 @@ class IBSource(InputSource):
 
         l = self.resolve_symbol(sym)
         if not l:
-            print(f'error resolving {sym}')
+            logging.debug((f'error resolving {sym}'))
             return None, None
         return l, self.historicalhelper(startdate, enddate, l['contract'])
 
@@ -212,16 +212,16 @@ class IBSource(InputSource):
         with self.lock:
             cont = asdict(contract)
             if not contract.exchange:
-                print(f'(historicalhelper) warning: no exchange for contract {cont}')
+                logging.debug((f'(historicalhelper) warning: no exchange for contract {cont}'))
                 cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
             td=td.days
             try:
                 bars = self.ibrem.reqHistoricalData_ext(cont, enddate, td)
             except RequestError as e:
                 if e.code == WRONG_EXCHANGE:
-                    print(f'bad exchange for symbol. try resolve? {cont}. {e.message}')
+                    logging.debug((f'bad exchange for symbol. try resolve? {cont}. {e.message}'))
                 else:
-                    print(f'failed reqHistoricalData {e.message} {e.code}')
+                    logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
                 return None
             df = nbutil.df(bars)
             if df is None:
@@ -260,7 +260,7 @@ class IBSource(InputSource):
   #       #z=self.ib.reqPositions()
   #       #import threading
   #       ls = self.ib.reqMatchingSymbols(sym)
-  #       #print(ls)
+  #       #logging.debug((ls))
   #
   #           # for c in ls:
   #           #     dic = c.contract.__dict__
@@ -275,6 +275,6 @@ class IBSource(InputSource):
   #       t=Process(target=IBSource.tmp,args=(None,sym,return_dict))
   #       t.start()
   #       t.join(50)
-  #       print('joined')
-  #       print(return_dict['x'])
+  #       logging.debug(('joined'))
+  #       logging.debug((return_dict['x']))
   #       #return ls

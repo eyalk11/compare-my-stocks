@@ -27,7 +27,7 @@ class JupyterHandler(FormInterface):
 
     def finished_generation(self,number):
         if self.already_running:
-            print('already')
+            logging.debug(('already'))
             return
         if self.window.note_group.isHidden():
             return
@@ -55,7 +55,7 @@ class JupyterHandler(FormInterface):
             try:
                 os.remove(self.file_name)
             except:
-                print('error tmp')
+                logging.debug(('error tmp'))
                 return False
 
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
@@ -76,10 +76,10 @@ class JupyterHandler(FormInterface):
         z=[ pids[p.pid]['url'] for p in processes if 'python' in p.name() and pids[p.pid]['notebook_dir']==dirname]
 
         if len(z)>0:
-            print('launching existing session')
+            logging.debug(('launching existing session'))
             webbrowser.open(z[0])
         else:
-            print('didn\'t find instance, running')
+            logging.debug(('didn\'t find instance, running'))
             import subprocess
             cmd = [sys.executable, '-m', 'notebook', filename]
             subprocess.Popen(cmd)

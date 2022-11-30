@@ -1,3 +1,4 @@
+import logging
 import math
 import time
 from contextlib import suppress
@@ -17,11 +18,11 @@ from common.common import Types
 def show_annotation(sel,cls=None, ax=None,generation=None):
 
     cls.generation_mutex.lock()
-    #print('show locked')
+    #logging.debug(('show locked'))
     try:
 
         if cls.generation!=generation:
-            print('ignoring diff generation')
+            logging.debug(('ignoring diff generation'))
             with suppress(ValueError):
                 sel.annotation.remove()
             for artist in sel.extras:
@@ -43,7 +44,7 @@ def show_annotation(sel,cls=None, ax=None,generation=None):
         cls.anotation_list+=[sel]
 
     finally:
-        #print('show unlock')
+        #logging.debug(('show unlock'))
         cls.generation_mutex.unlock()
     #cls._annotation+=ann
 
@@ -73,14 +74,15 @@ class GraphGenerator:
 
         def getbasetype(type):    
             dic={} 
-            dic[Types.PROFIT]     =     'Profit'
+            dic[Types.PROFIT]     =     'Unrealized Profit'
             dic[Types.VALUE]      =     'Value'
             dic[Types.PRICE]      =     'Stock Price'
             dic[Types.TOTPROFIT] = 'Total Profit'
             dic[Types.PERATIO]  =  'PE Ratio'
             dic[Types.PRICESELLS] = 'Price To Sells'
-            dic[Types.THEORTICAL_PROFIT] = 'Theortical'
-            return dic.get( type & ( Types.PROFIT | Types.VALUE | Types.PRICE | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT) ,dic[Types.PRICE])
+            dic[Types.THEORTICAL_PROFIT] = 'Theortical Profit'
+            dic[Types.RELPROFIT] = 'Realized Profit'
+            return dic.get( type & ( Types.PROFIT | Types.VALUE | Types.PRICE | Types.RELPROFIT | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT) ,dic[Types.PRICE])
 
         dic={}
         dic[Types.PRECENTAGE]  =     f'Percentage Change { rel(type)}Of %s'
@@ -96,16 +98,16 @@ class GraphGenerator:
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         additional_options=config.ADDITIONALOPTIONS
         self.generation_mutex.lock()
-        print('generation locked')
+        logging.debug(('generation locked'))
 
         #plt.sca(self._axes)
         try:
             if not just_upd:
                 self.cur_shown_stock = set()
-                print('not  justupdate')
+                logging.debug(('not  justupdate'))
                 self.remove_all_anotations()
             if just_upd:
-                print('calledreomve!')
+                logging.debug(('calledreomve!'))
                 #import ipdb
                 #ipdb.set_trace()
                 #plt.cla()
@@ -183,11 +185,11 @@ class GraphGenerator:
                     self.adjust_date=False
                     #plt.draw()
             elif self.params.show_graph:
-                print('strange')
+                logging.debug(('strange'))
                 pass#plt.show()
             #self.remove_all_anotations()
         finally:
-            print('generation unlocked')
+            logging.debug(('generation unlocked'))
             self.generation_mutex.unlock()
                     #from IPython.core.display import display
                     #display(mfig)
@@ -196,7 +198,7 @@ class GraphGenerator:
             #else:
             #    plt.draw()
                 #plt.show(block=False)
-            #print('aftershow')
+            #logging.debug(('aftershow'))
         #time.sleep(2)
 
     def remove_all_anotations(self):
@@ -211,7 +213,7 @@ class GraphGenerator:
         # for x in self.anotation_list:
         #     try:
         #         self.cursor.remove_selection(x)
-        #         print('removed sel')
+        #         logging.debug(('removed sel'))
         #     except:
         #         pass
         if getattr(self, 'cursor', None):
@@ -220,7 +222,7 @@ class GraphGenerator:
             #time.sleep(0.2)
             self.cursor.disconnect('add', cb=self.cb)
             #self.cb=lambda :None
-            print(self.cursor._callbacks)
+            logging.debug((self.cursor._callbacks))
             self.cursor._callbacks['add'] = {}
 
         for child in self._axes.get_children():
@@ -232,7 +234,7 @@ class GraphGenerator:
                 #     try:
                 #         child.remove()
                 #     except:
-                #         print('zzs')
+                #         logging.debug(('zzs'))
                 #         pass
 
 
@@ -303,7 +305,7 @@ class GraphGenerator:
             try:
                 ar.set_ylim(ymin=minline-0.12*abs(max(minline,maxline-minline)), ymax=maxline+0.12*abs(max(maxline,maxline-minline)))
             except ValueError:
-                print('val error')
+                logging.debug(('val error'))
 
         #fig.canvas.draw()
         #ofig.canvas.draw()
@@ -337,7 +339,7 @@ class GraphGenerator:
             if USEQT:
                 fig.canvas.draw()  # draw
         else:
-            print("onpick failed")
+            logging.debug(("onpick failed"))
         #self._ax=
     def show_hide(self,toshow):
         ar = self._axes

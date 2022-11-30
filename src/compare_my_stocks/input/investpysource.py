@@ -17,7 +17,7 @@ class InvestPySource(InputSource):
                                                        to_date=enddate.strftime('%d/%m/%Y'))
             return None, df
         except Exception as r:
-            print(f'Symbols {sym} failed: {r}')
+            logging.debug((f'Symbols {sym} failed: {r}'))
             return None, None
 
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
@@ -52,7 +52,7 @@ class InvestPySource(InputSource):
 
             return l, df
         except Exception as  r:
-            print(f'{l if l else ""} is  {r}')
+            logging.debug((f'{l if l else ""} is  {r}'))
             return l,None
 
 
@@ -73,5 +73,5 @@ class InvestPySource(InputSource):
         try:
             return len(InvestPySource.investpy.search_quotes(text=sym, n_results=10)) !=0
         except:
-            print('error')
+            logging.debug(('error'))
             return 0

@@ -22,9 +22,9 @@ class DoLongProcess(QObject):
     @Slot()
     def run(self):
         self.started = True
-        print('bef real task')
+        logging.debug(('bef real task'))
         self._realtask()
-        print('post')
+        logging.debug(('post'))
         self.finished.emit()
         self.started = False
 
@@ -68,9 +68,9 @@ class DoLongProcessSlots(QObject):
     # @Slot
     # def run(self):
     #     self.started = True
-    #     print('bef real task')
+    #     logging.debug(('bef real task'))
     #     self._realtask()
-    #     print('post')
+    #     logging.debug(('post'))
     #     self.finished.emit()
     #     self.started = False
 
@@ -93,9 +93,9 @@ class DoLongProcessSlots(QObject):
         self.started = True
         self.mutex.lock()
         try:
-            print('bef real task long')
+            logging.debug(('bef real task long'))
             realtask()
-            print('post long')
+            logging.debug(('post long'))
 
             #to update status
         finally:

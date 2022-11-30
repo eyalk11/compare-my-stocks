@@ -49,7 +49,7 @@ class ActOnData:
                 refarr = arr[ 0]
         else:
             if arr.shape[1]==0:
-                print('errarr')
+                logging.debug(('errarr'))
                 return []
             if self.type & Types.RELTOMAX:
                 refarr = np.nanmax(arr,axis=1)

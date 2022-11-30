@@ -124,9 +124,9 @@ class Window(QDialog):
     def getInfo(self):
 
         # printing the form information
-        #print("Person Name : {0}".format(self.nameLineEdit.text()))
-        #print("Degree : {0}".format(self.degreeComboBox.currentText()))
-        #print("Age : {0}".format(self.ageSpinBar.text()))
+        #logging.debug(("Person Name : {0}".format(self.nameLineEdit.text())))
+        #logging.debug(("Degree : {0}".format(self.degreeComboBox.currentText())))
+        #logging.debug(("Age : {0}".format(self.ageSpinBar.text())))
         indexes=self.choices.selectedIndexes()
         if len(indexes)>0:
             self.selected=self.choices.model().row_by_index(indexes[0].row())

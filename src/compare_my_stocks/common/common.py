@@ -10,7 +10,9 @@ import numpy as np
 import sys
 
 from django.core.serializers.json import DjangoJSONEncoder
+import logging
 
+logging.getLogger().setLevel(logging.DEBUG)
 
 def index_of(val, in_list):
     try:
@@ -26,7 +28,7 @@ class Types(int,Flag):
     PRICE=auto()
     VALUE=auto()
     PROFIT = auto()
-    TOTPROFIT = auto()
+    TOTPROFIT = auto() #Though I wanted it to be X | Y
     RELPROFIT = auto()
     PERATIO = auto()
     PRICESELLS=auto()
@@ -40,6 +42,7 @@ class Types(int,Flag):
     DIFF=auto()
     COMPARE=auto()
     PRECDIFF = PRECENTAGE | DIFF
+
 
 
 
@@ -82,7 +85,7 @@ def simple_exception_handling(err_description=None):
                     func(*args,**kwargs)
                 except:
                     if err_description:
-                        print(err_description)
+                        logging.debug((err_description))
                     print_formatted_traceback()
         return internal
     return decorated
@@ -90,7 +93,7 @@ def simple_exception_handling(err_description=None):
 
 
 def print_formatted_traceback():
-    print(''.join([x[:500] for x in format_traceback(detailed=True)] ))
+    logging.debug((''.join([x[:500] for x in format_traceback(detailed=True)] )))
 
 def addAttrs(attr_names):
   def deco(cls):
@@ -111,7 +114,7 @@ def get_first_where_all_are_good(arr,remove_zeros=False,last=0):
     try:
         arr[np.abs(arr) < EPS] = 0
     except:
-        print('err EPS')
+        logging.debug(('err EPS'))
         pass
     ind = np.isnan(arr)
     if remove_zeros:
@@ -192,9 +195,13 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
         except TypeError:
             if hasattr(o,"dic"): #SimpleSymbol
                 return o.dic
-            print(f"{o,type(o)} is not json.. ")
+            logging.debug((f"{o,type(o)} is not json.. "))
             return o.__dict__
 
 
 def need_add_process(config):
     return config.INPUTSOURCE== InputSourceType.IB
+
+def log_conv(tup):
+    return '\t'.join([str(x) for x in tup ])
+

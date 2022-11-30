@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import sys
@@ -38,7 +39,7 @@ def initialize_graph_and_ib(axes=None):
     #     try:
     #         from ib.ibtest import main as ibmain
     #     except:
-    #         print("no IB. install interactive-broker-python-web-api")
+    #         logging.debug(("no IB. install interactive-broker-python-web-api"))
     #         sys.exit(1)
     #     ibmain(False)
     from engine.compareengine import CompareEngine
@@ -63,7 +64,7 @@ def kill_proc_tree(pid, including_parent=True):
         parent.wait(5)
 
 def func(x=None):
-    print("killed")
+    logging.debug(("killed"))
     if anotherproc:
         try:
             kill_proc_tree(anotherproc.pid)
@@ -127,7 +128,7 @@ def main():
     if USEQT:
         def f():
             app.exec_()
-            print('exit')
+            logging.debug(('exit'))
         sys.exit(f())
         a = 1
     else:

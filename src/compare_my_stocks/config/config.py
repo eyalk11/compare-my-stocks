@@ -1,4 +1,4 @@
-
+import logging
 import os
 import sys
 
@@ -11,7 +11,7 @@ PROJDIR= os.path.join(os.path.expanduser("~"),"."+MYPROJ)
 
 def print_if_ok(*args):
     if 'SILENT' in __builtins__ and  __builtins__['SILENT']==False:
-        print(*args)
+        logging.debug(*args)
 
 if not os.path.exists(PROJDIR):
     print_if_ok("""project directory doesn't exists... Creating...

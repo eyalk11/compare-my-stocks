@@ -22,7 +22,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.__dict__.update(config.TRANSACTION_HANDLERS[self.NAME])
         ok,path = config.resolvefile(self.File)
         if not ok:
-            print(f'Cache not found for {self.Name}')
+            logging.debug((f'Cache not found for {self.Name}'))
         self.File=path
 
 
@@ -52,7 +52,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         if not current:
             self._manager.symbol_info[symbol][prop] = value
         elif current!=value:
-            print(f'diff {prop} for {symbol} {current} {value}')
+            logging.debug((f'diff {prop} for {symbol} {current} {value}'))
             if updateanyway:
                 self._manager.symbol_info[symbol][prop] = value
 
@@ -63,13 +63,13 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if self.save_cache_date():
                 self._cache_date=v[0]
                 if self.Use == UseCache.USEIFAVALIABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
-                    print("not using after all")
+                    logging.debug(("not using after all"))
                     return  0
             else:
                 return self.set_vars_for_cache(v)
             return self.set_vars_for_cache(tuple(v[1:]))
         except Exception as e:
-            print(e)
+            logging.debug((e))
             return 0
         return 1
 
@@ -85,9 +85,9 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
                 pickle.dump(tuple([self._cache_date] + list(self.get_vars_for_cache())), open(self.File, 'wb'))
             else:
                 pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
-            print('dumpted')
+            logging.debug(('dumpted'))
         except Exception as e:
-            print(e)
+            logging.debug((e))
 
     def process_transactions(self):
 
@@ -96,7 +96,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
 
         if  (self.Use is None) or (self.Use and self.Use!=UseCache.DONT):
             if  self.try_to_use_cache():
-                print('using buydict cache ')
+                logging.debug(('using buydict cache '))
                 return
 
 

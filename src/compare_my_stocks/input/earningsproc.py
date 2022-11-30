@@ -68,10 +68,10 @@ class SeekingAlphaApi(RapidApi):
         dic_eps = defaultdict(lambda:defaultdict(lambda: 0))
         for k, v in t['estimates'].items():
             for l in v['revenue_actual'].values():
-                #print(l)
+                #logging.debug((l))
                 dic_rev[ids_dic[k]][dateutil.parser.parse(l[0]['period']['periodenddate'])]=l[0]['dataitemvalue']
             for l in v[ 'eps_normalized_actual'].values():
-                print(l)
+                logging.debug((l))
                 dic_eps[ids_dic[k]][dateutil.parser.parse(l[0]['period']['periodenddate'])]=l[0]['dataitemvalue']
         return pandas.DataFrame.from_dict(dic_rev),pandas.DataFrame.from_dict(dic_eps)
 
@@ -115,7 +115,7 @@ class EarningProcessor(SeekingAlphaApi):
             else:
                 return org.append(other) #tocheck
 
-        print(tickers)
+        logging.debug((tickers))
         tickers=list(map(lambda x: x.upper(),tickers))
         ids= dict(list(self.get_ids(tickers)))
         idshasntearnings= {i:v for i,v in  ids.items() if not safeloc(v,self.revdf)}
@@ -168,10 +168,10 @@ class EarningProcessor(SeekingAlphaApi):
         self.df2=self.df.set_index('id')
 
 
-        #print(t)
+        #logging.debug((t))
 
 
 
 #s.get_earnings(['aapl','tsla'])
 #s=s
-# print(.get_meta_data('aapl'))
+# logging.debug((.get_meta_data('aapl')))

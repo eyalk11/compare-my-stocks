@@ -619,6 +619,13 @@
                            </widget>
                           </item>
                           <item>
+                           <widget class="QRadioButton" name="VALUE">
+                            <property name="text">
+                             <string>Value</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
                            <widget class="QRadioButton" name="PERATIO">
                             <property name="enabled">
                              <bool>true</bool>
@@ -642,21 +649,21 @@
                           <item>
                            <widget class="QRadioButton" name="PROFIT">
                             <property name="text">
-                             <string>Profit</string>
+                             <string>Unrealized Profit</string>
                             </property>
                            </widget>
                           </item>
                           <item>
-                           <widget class="QRadioButton" name="VALUE">
+                           <widget class="QRadioButton" name="RELPROFIT">
                             <property name="text">
-                             <string>Value</string>
+                             <string>Realized</string>
                             </property>
                            </widget>
                           </item>
                           <item>
                            <widget class="QRadioButton" name="THEORTICAL_PROFIT">
                             <property name="text">
-                             <string>Theortical Profit</string>
+                             <string>Theortical</string>
                             </property>
                            </widget>
                           </item>

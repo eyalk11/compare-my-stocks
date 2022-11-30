@@ -18,7 +18,7 @@ from gui.forminitializer import FormInitializer
 try:
     from config import config
 except Exception as e :
-    print('please set a config file')
+    logging.debug(('please set a config file'))
     sys.exit(1)
 
 

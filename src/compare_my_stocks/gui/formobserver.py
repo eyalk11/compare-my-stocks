@@ -52,7 +52,7 @@ class GraphsHandler:
             self.update_graph_list()
         except:
             import traceback;traceback.print_exc()
-            print('err loading graphs')
+            logging.debug(('err loading graphs'))
             return
 
 
@@ -90,7 +90,7 @@ class GraphsHandler:
 
         except:
             import traceback;traceback.print_exc()
-            print('failed loading graph')
+            logging.debug(('failed loading graph'))
 
     def save_last_graph(self):
         if config.LASTGRAPHNAME:
@@ -150,13 +150,13 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
         toupdate= self.graphObj.required_syms(True,wantitall,True)
         params= copyit(self.graphObj.params)
-        print(f'refreshing {toupdate} from {params.fromdate} to {params.todate}')
+        logging.debug((f'refreshing {toupdate} from {params.fromdate} to {params.todate}'))
         now= datetime.now(tz=params.todate.tzinfo)
         if params.todate<now and (now- params.todate).days < TOLLERANCEGETIT:
             params.todate=None
         #if self.window.enddate.date().toPy-datetime.
         #params.transactions_todate=None #datetime.now() #always till the end
-        print('updating stocks from ')
+        logging.debug(('updating stocks from '))
         if len(toupdate)==0:
             return
 
@@ -182,7 +182,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
                 self._update_graph_task.command_waiting+=1
                 if self._update_graph_task.command_waiting >=3:
-                    print('update waiting')
+                    logging.debug(('update waiting'))
                     self.window.last_status.setText('Update is waiting (generating graph probably)')
 
                 self._update_graph_task.finished.disconnect()
@@ -192,7 +192,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 
         except:
-            print('failed updating graph')
+            logging.debug(('failed updating graph'))
             self.window.last_status.setText('failed updating graph')
             import traceback
             traceback.print_exc()
@@ -351,7 +351,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.deletebtn.pressed.connect(self.del_in_lists)
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
-        self.window.exportport.pressed.connect(self.graphObj.export_portfolio) #Transaction handler manager
+        self.window.exportport.pressed.connect(self.graphObj.transaction_handler.export_portfolio) #Transaction handler manager
         self.window.edit_groupBtn.pressed = safeconnect( self.window.edit_groupBtn.pressed,(self.edit_groups) )
         self.window.comparebox.currentIndexChanged = safeconnect( self.window.comparebox.currentIndexChanged,(self.compare_changed) )
         self.window.orgstocks.model().rowsInserted = safeconnect( self.window.orgstocks.model().rowsInserted,(self.selected_changed) )

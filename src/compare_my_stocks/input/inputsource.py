@@ -73,18 +73,18 @@ class InputSource():
         ls,exchok,symok=self.resolve_symbols(str(sym))
 
         if len(ls)==0:
-            print('nothing for %s ' % sym)
+            logging.debug(('nothing for %s ' % sym))
             return None
         l=ls[0]
         if exchok>1:
-            print(f'multiple same exchange {sym}, picking {l}')
+            logging.debug((f'multiple same exchange {sym}, picking {l}'))
 
         if exchok:
             return l
         elif symok:
-            print(f'not right exchange {sym}, picking {l}')
+            logging.debug((f'not right exchange {sym}, picking {l}'))
         else:
-            print(f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} ')
+            logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
     def resolve_symbols(self,sym,results=10):
@@ -97,7 +97,7 @@ class InputSource():
                 return l
             if l['exchange']:
 
-                print('strange exch')
+                logging.debug(('strange exch'))
             orgls=l['validExchanges'].split(',')
             if len(orgls)==0:
                 if not l['exchange'] and 'primaryExchange' in l:
@@ -107,14 +107,14 @@ class InputSource():
             ls=list(set(orgls).intersection(set(config.VALIDEXCHANGES)))
             ls.sort(key=lambda x: config.VALIDEXCHANGES.index(x))
             if len(ls)==0:
-                print(f'couldnt find exchange {l["symbol"]} , picking {orgls[0]}')
+                logging.debug((f'couldnt find exchange {l["symbol"]} , picking {orgls[0]}'))
                 upd(orgls[0])
             else:
                 upd(ls[0])
             return l
 
 
-        print(f'resolving {sym}')
+        logging.debug((f'resolving {sym}'))
         ss=self.get_matching_symbols(sym, results)
         if ss is None:
             ls=[]

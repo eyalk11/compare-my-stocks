@@ -7,6 +7,7 @@ from collections import namedtuple
 import pandas as pd
 from dateutil import parser
 
+from common.common import simple_exception_handling
 from config import config
 from transactions.transactionhandler import TrasnasctionHandler
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
@@ -36,15 +37,13 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
         try:
             x = pd.read_csv(self.SrcFile)
         except Exception as e:
-            print(f'{e} while getting buydic data')
-            return
-        try:
-            self.read_trasaction_table(x)
-        except Exception as e:
-            print(f'{e} while reading transaction data')
+            logging.debug((f'{e} while getting buydic data'))
             return
 
+        self.read_trasaction_table(x)
 
+
+    @simple_exception_handling("read_transaction")
     def read_trasaction_table(self, x):
         #x = x[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
         #   x['TimeOfDay']
@@ -54,16 +53,21 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             #   x['TimeOfDay']):
             # if not math.isnan(t[1]):
             #    self._symbols.add(t[1])
+            prot = self.PortofolioName
 
-            if self._manager.params.portfolio  is None:
-                self._manager.params.portfolio = self.PortofolioName
-            if (self._manager.params.portfolio and t[0] != self._manager.params.portfolio) or math.isnan(t[2]):
+            if (self._manager.params is not None ):
+                if (self._manager.params.portfolio  is None):
+                    self._manager.params.portfolio= prot
+                else:
+                    prot = self._manager.params.portfolio
+
+            if (prot and t[0] != prot) or math.isnan(t[2]):
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
-            # print(dt)
+            # logging.debug((dt))
             try:
                 if math.isnan(t[-2]):
-                    print(t)
+                    logging.debug((t))
             except:
                 pass
             arr = dt.split(' ')
@@ -108,7 +112,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
         dt = dt.applymap(lambda x: "" if str(x) == "nan" else x )
         dt=dt.applymap(lambda x: '"%s"' % x if x != ''  else x)
         dt.to_csv(file, quoting=csv.QUOTE_NONE)
-        print("saved")
+        logging.debug(("saved"))
 
 
 

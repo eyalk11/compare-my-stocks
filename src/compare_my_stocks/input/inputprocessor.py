@@ -1,4 +1,5 @@
 import collections
+import logging
 import math
 import os
 import pickle
@@ -7,6 +8,7 @@ import time
 from collections import defaultdict
 # from datetime import datetime
 import datetime
+from copy import copy
 
 import matplotlib
 import numpy
@@ -16,7 +18,7 @@ import pytz
 from PySide6.QtCore import QRecursiveMutex
 
 from config import config
-from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback
+from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
@@ -37,7 +39,21 @@ class SymbolError(Exception):
 
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
-class InputProcessor(TransactionHandlerManager,SymbolsInterface):
+class InputProcessor():
+
+    def complete_status(self):
+
+        tmpinp=InputProcessor(self._symb,None,no_input=True) #we already got our relevant history.
+        transaction_handler=TransactionHandlerManager(tmpinp) # a bit redundant. Just to be on the safe side..
+
+        tmpinp._transaction_handler=transaction_handler
+        x=copy(self._symb.params)
+        x.use_cache= UseCache.FORCEUSE
+        tmpinp.process(params=x, buy_filter=lambda _,y: ("IB:" in y.Notes) )
+        statusIB= tmpinp._current_status
+        tmpinp.process(params=x, buy_filter=lambda _, y: ("MYSTOCK:" in y.Notes))
+        statusMY = tmpinp._current_status
+        return statusIB,statusMY
 
     @property
     def reg_panel(self):
@@ -67,23 +83,32 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
     def inputsource(self) -> InputSourceInterface:
         return self._inputsource
 
-    def __init__(self):
+    @property
+    def transaction_handler(self):
+        return self._transaction_handler
+
+    def __init__(self,symb,transaction_handler,no_input=False):
+        self._symb : SymbolsInterface  =symb
+        self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
         self.cached_used = None
         self._symbols_wanted = set()
         self.symbol_info = collections.defaultdict(lambda:dict())
         self._usable_symbols = set()
         self._bad_symbols = set()
-        try:
-            if config.INPUTSOURCE == InputSourceType.IB:
-                self._inputsource: InputSource = get_ib_source() #IBSource()
-            else:
-                self._inputsource: InputSource = InvestPySource()
-        except:
-            print('Input source initialization failed. ')
-            import traceback;traceback.print_exc()
-            #sys.exit(1)
-            self._inputsource=None
+        if no_input:
+            self._inputsource = None
+        else:
+            try:
+                if config.INPUTSOURCE == InputSourceType.IB:
+                    self._inputsource: InputSource = get_ib_source() #IBSource()
+                else:
+                    self._inputsource: InputSource = InvestPySource()
+            except:
+                logging.debug(('Input source initialization failed. '))
+                import traceback;traceback.print_exc()
+                #sys.exit(1)
+                self._inputsource=None
 
         self.init_input()
         self._initial_process_done=False
@@ -102,26 +127,26 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         if 'Currency' in hist:
             currency = hist['Currency'][0]
         else:
-            print('no currency ')
+            logging.debug(('no currency '))
             currency = 'unk'
 
         if currency == 'unk':
-            print(f'resolving currency for {sym}')
+            logging.debug((f'resolving currency for {sym}'))
             currency = config.STOCK_CURRENCY.get(sym, 'unk')
         if currency == 'unk':
             currency = config.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
-            print(f'unk currency for {sym}')
+            logging.debug((f'unk currency for {sym}'))
         return currency
 
     def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
-        print('adjusted %s %s ' % (sym, currency))
+        logging.debug(('adjusted %s %s ' % (sym, currency)))
         currency_df = self.get_currency_hist(currency, fromdate, enddate)
         inc = ['Open', 'High', 'Low', 'Close']
         currency_df = currency_df[inc]
         hh = hist[inc].mul(currency_df, fill_value=numpy.NaN)
         if len(set(hist.index) - set(currency_df.index)) > 0:
-            print(' missing ', set(hist.index) - (set(currency_df.index)))
+            logging.debug((log_conv(' missing ', set(hist.index) - (set(currency_df.index)))))
         # from scipy.interpolate import interp1d
         # missing = hh.isna().any(axis=1)
         # if len(missing)>0:
@@ -154,10 +179,14 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             self.filter_input(partial_symbols_update)
 
 
-        buyoperations = collections.OrderedDict(sorted(self.buydic.items()))  # ordered
+        items= self._transaction_handler.buydic.items()
+        if self._buy_filter:
+            items = filter(self._buy_filter,items)
 
-        if self._stockprices:
-            splits = self._stockprices.buydic
+        buyoperations = collections.OrderedDict(sorted(self._transaction_handler.buydic.items()))  # ordered
+
+        if self._transaction_handler._stockprices:
+            splits = self._transaction_handler._stockprices.buydic
         else:
             splits = {}
 
@@ -168,7 +197,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         if self.process_params.transactions_fromdate == None:
             if not cur_action:
                 self.process_params.transactions_fromdate = config.DEFAULTFROMDATE
-                print('where to start?')
+                logging.debug(('where to start?'))
             else:
                 self.process_params.transactions_fromdate = cur_action[0] #start from first buy
 
@@ -188,26 +217,26 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         if query_source:
             self.get_data_from_source(partial_symbols_update,fromdate,todate)
             self.save_data()
-        print('finish initi')
+        logging.debug(('finish initi'))
         self.simplify_hist(partial_symbols_update)
-        print('finish simpl')
+        logging.debug(('finish simpl'))
         self.process_hist_internal(buyoperations, cur_action, partial_symbols_update,splits,cur_splited)
 
-        print('finish internal')
+        logging.debug(('finish internal'))
         try:
-            print('entering lock')
+            logging.debug(('entering lock'))
             self._proccessing_mutex.lock()
-            print('entered')
+            logging.debug(('entered'))
             self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
-            print('fin convert')
+            logging.debug(('fin convert'))
             if config.IGNORE_ADJUST:
                 self.adjusted_panel=self.reg_panel.copy()
             else:
                 self.adjust_for_currency()
-            print('last')
+            logging.debug(('last'))
         finally:
             self._proccessing_mutex.unlock()
-            print('exit proc lock')
+            logging.debug(('exit proc lock'))
 
     def load_cache(self,minimal=False):
         query_source = True
@@ -230,17 +259,17 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                 self._hist_by_date = hist_by_date
 
             self.update_usable_symbols()
-            print(f'cache symbols used {sorted(list(self._usable_symbols))}')
+            logging.debug((f'cache symbols used {sorted(list(self._usable_symbols))}'))
             if not self.process_params.use_cache == UseCache.FORCEUSE:
                 query_source = not (set(self._symbols_wanted) <= set(
                     self._usable_symbols))  # all the buy and required are in there
             else:
-                print('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))
+                logging.debug((log_conv('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))))
                 query_source = False
                 self.cached_used=True
         except Exception as e:
             e = e
-            print('failed to use cache')
+            logging.debug(('failed to use cache'))
             if not minimal:
                 self.cached_used = False
         return query_source
@@ -254,7 +283,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             while cur_splited[sym] and cur_splited[sym][0] < last_time:
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
             if cur_splited[sym] and (cur_splited[sym][0] > last_time)  and cur_splited[sym][0] <= time:
-                print(f"splited between {sym} {cur_splited[sym]}")
+                logging.debug((f"splited between {sym} {cur_splited[sym]}"))
                 _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_splited[sym][1]
                 _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_splited[sym][1]
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
@@ -289,8 +318,8 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             _cur_holding_bystock[stock] += cur_action[1][0]
             _last_action_time[stock]=cur_action[0]
             if _cur_holding_bystock[stock] < 0:
-                print('warning sell below zero', stock, cur_action[0])
-                self.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
+                logging.debug((log_conv('warning sell below zero', stock, cur_action[0])))
+                self._transaction_handler.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
         self.mindate = min(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
@@ -304,20 +333,21 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         cur_splited = defaultdict(lambda: None)
         _last_action = defaultdict(lambda: None)
         if len(self._simp_hist_by_date)==0:
-            print("WARNING: No History at all!")
+            logging.debug(("WARNING: No History at all!"))
             return
         hh = pytz.UTC  # timezone('Israel')
         if not partial_symbols_update:
             self._fset=set()
         simphist=iter(sorted(self._simp_hist_by_date.items()))
         t=1
-        last_t=None
+
+        dic={}
         while cur_action or t:
             try:
                 t, dic = next(simphist)
                 mini=False
             except StopIteration:
-                print("stop iter")
+                logging.debug(("stop iter"))
                 if len(buyoperations)>0:
                     cur_action = buyoperations.popitem(False)
                     t=cur_action[0]
@@ -490,16 +520,16 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
                     requireddays+=(maxdate-mindate).days
 
             except SymbolError:
-                print('bad %s' % sym)
+                logging.debug(('bad %s' % sym))
                 self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
             if requireddays/okdays<0.5:
-                print(f'mostly problematic {sym}')
+                logging.debug((f'mostly problematic {sym}'))
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
         if self._inputsource is None:
             return 0
-        print(f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}')
+        logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
         #self._inputsource.ownership()
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
@@ -530,17 +560,18 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
 
             self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
         return okdays
+
     def save_data(self):
         import shutil
         try:
             shutil.copy(config.HIST_F, config.HIST_F_BACKUP)
         except:
-            print('error in backuping hist file')
+            logging.debug(('error in backuping hist file'))
         try:
             pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
                          self.currencyrange), open(config.HIST_F, 'wb'))
         except:
-            print("error in dumping hist")
+            logging.debug(("error in dumping hist"))
 
 
     def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
@@ -555,12 +586,12 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         try:
 
             #income, revenue, cs =# get_earnings()
-            income, revenue, cs = EarningProcessor
+            income, revenue, cs = EarningProcessor()
             hasearnings=True
             combinedindex = sorted(
                 list(set(self._fset).union(set(cs.index)).union(set(income.index)).union(set(revenue.index))))
         except:
-            print('earning reading failed')
+            logging.debug(('earning reading failed'))
             import traceback
             traceback.print_exc()
             hasearnings = False
@@ -589,7 +620,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         except:
             import traceback
             traceback.print_exc()
-            print('earnings calc failed ')
+            logging.debug(('earnings calc failed '))
 
         self._reg_panel = pd.concat(dataframes,axis=1)
 
@@ -645,9 +676,9 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             return t
 
 
-        multiIndex = pd.MultiIndex.from_product([InputProcessor.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
+        multiIndex = pd.MultiIndex.from_product([SymbolsInterface.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
         df = pd.DataFrame(index=self._reg_panel.index, columns=multiIndex)
-        for x in InputProcessor.TOADJUST:
+        for x in SymbolsInterface.TOADJUST:
             for k, v in dic.items():
                 df.loc[:, (x, k)] = dic[k]
 
@@ -667,7 +698,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
 
 
 
-        nn = nn[[(c, d) for (c, d) in self._reg_panel.columns if c not in self.TOADJUSTLONG]]
+        nn = nn[[(c, d) for (c, d) in self._reg_panel.columns if c not in SymbolsInterface.TOADJUSTLONG]]
         n1= return_subpanel('value',self._adjusted_value)
         n2= return_subpanel('alldates', self._alldates_adjusted)
         n3 = return_subpanel('unrel_profit',self._unrel_profit_adjusted)
@@ -691,14 +722,15 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         for t, dic in self._hist_by_date.items():
             self._usable_symbols.update(set(dic.keys()))
 
-    def process(self, partial_symbol_update=set(),params=None):
+    def process(self, partial_symbol_update=set(),params=None,buy_filter=None):
 
 
 
         if params==None:
-            params= copyit(self.params) #For now on , under lock..
+            params= copyit(self._symb.params) #For now on , under lock.. #Only time we need access to compareengine.
 
         self.process_params = params
+        self._buy_filter=buy_filter
         ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
         try:
             self.process_internal(ls)
@@ -706,29 +738,29 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
             if os.environ.get('PYCHARM_HOSTED') == '1':
                 raise #will try
             import traceback
-            print('exception in processing' )
+            logging.debug(('exception in processing' ))
             print_formatted_traceback()
             try:
                 import Pyro5
-                print("".join(Pyro5.errors.get_pyro_traceback()))
+                logging.debug(("".join(Pyro5.errors.get_pyro_traceback())))
             except:
                 pass
-            self.statusChanges.emit(f'Exception in processing {e}' )
+            self._symb.statusChanges.emit(f'Exception in processing {e}' )
 
 
     def process_internal(self, partial_symbol_update):
         t = time.process_time()
         if not self._initial_process_done:
             self.load_cache(True)
-            self.process_transactions()
+            self._transaction_handler.process_transactions()
             self._initial_process_done = True
         elapsed_time = time.process_time() - t
-        print('elasped populating : %s' % elapsed_time)
+        logging.debug(('elasped populating : %s' % elapsed_time))
         if not partial_symbol_update:
             self.used_unitetype = self.process_params.unite_by_group
-            required = set(self.required_syms(True, True))
+            required = set(self._symb.required_syms(True, True))
             if config.DOWNLOADDATAFORPROT:
-                self._symbols_wanted = self._buysymbols.union(required)  # there are symbols to check...
+                self._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
             else:
                 self._symbols_wanted = required.copy()
         else:
@@ -738,7 +770,7 @@ class InputProcessor(TransactionHandlerManager,SymbolsInterface):
         self.process_history(partial_symbol_update)
         # do some stuff
         elapsed_time = time.process_time() - t
-        print('elasped : %s' % elapsed_time)
+        logging.debug(('elasped : %s' % elapsed_time))
     #self._proccessing_mutex.unlock()
 
 

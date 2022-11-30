@@ -8,7 +8,7 @@ from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
-
+from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
 class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterface):
@@ -69,11 +69,12 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         except:
             import traceback
             traceback.print_exc()
-            print('exception in  groups file') #raise Exception("error reading groups")
+            logging.debug(('exception in  groups file')) #raise Exception("error reading groups"))
 
     def __init__(self,axes=None):
         super(CompareEngine, self).__init__(axes)
-        InputProcessor.__init__(self)
+        tr= TransactionHandlerManager(self)
+        InputProcessor.__init__(self,self,tr) #It is kind of lame as InputProcessor uses it as variable but it actually points to self. Whereas compareengine uses directly inputporcessor fields.
         DataGenerator.__init__(self)
 
         self._annotation=[]
@@ -101,7 +102,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
         if (self.used_unitetype & ~UniteType.ADDTOTALS) and data_symbols_for_unite:
-            #print('nontrivla')
+            #logging.debug(('nontrivla'))
             return selected #it is a bit of cheating but we don't need to specify require data symbols in that case
         if  self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))
@@ -127,7 +128,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
 
             if len(symbols_neeeded)>0:
                 reprocess=1
-                print(f'should add stocks {symbols_neeeded}')
+                logging.debug((f'should add stocks {symbols_neeeded}'))
             else:
                 reprocess=0
         else:
@@ -140,13 +141,13 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             self.df, type = self.generate_data()
         except NoDataException:
             self.statusChanges.emit(f'No Data For Graph!')
-            print('no data')
+            logging.debug(('no data'))
             return
         except Exception as e:
             import traceback
             traceback.print_exc()
             e = e
-            print('exception in generating data')
+            logging.debug(('exception in generating data'))
             self.statusChanges.emit(f'Exception in gen: {e}'  )
             if config.DEBUG:
                 pass#raise
@@ -162,7 +163,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
             self.finishedGeneration.emit(1)
         except TypeError as e:
             e = e
-            print("failed generating graph ")
+            logging.debug(("failed generating graph "))
             self.statusChanges.emit(f"failed generating graph {e}")
             raise
 

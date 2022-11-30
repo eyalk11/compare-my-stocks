@@ -23,13 +23,13 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self._cache_date=None
         self.need_to_save=True
     def doquery(self):
-        print("running query")
+        logging.debug(("running query"))
         if not self.DOQUERY:
             return
         try:
             response = client.download(self.token_id, self.query_id)
         except:
-            print('err in querying flex')
+            logging.debug(('err in querying flex'))
             import traceback;traceback.print_exc()
             return
 
@@ -44,7 +44,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
                 self._tradescache={}
 
         except Exception as e:
-            print(e)
+            logging.debug((e))
             self._tradescache = {}
         return 0 #make it proceed
 
@@ -55,20 +55,25 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         try:
             self._cache_date =datetime.now()
             pickle.dump((self._tradescache, self._cache_date), open(self.File, 'wb'))
-            print('dumpted')
+            logging.debug(('dumpted'))
         except Exception as e:
-            print(e)
+            logging.debug((e))
 
 
     def populate_buydic(self):
 
         if ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT):
-            print('using ib cache alone')
+            logging.debug(('using ib cache alone'))
             self.need_to_save=False
         else:
-            print('doing query')
+            logging.debug(('doing query'))
             newres= self.doquery()
-            print('completed')
+            logging.debug(('completed'))
+            if newres is None:
+                logging.debug(('no results obtained :('))
+                return
+
+
 
             for x in newres:
                 if x.tradeID not in self._tradescache:

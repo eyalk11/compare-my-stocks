@@ -10,7 +10,7 @@ def load_data() -> Serialized:
             data: Serialized = pickle.load(open(filename, 'rb'))
             return data
 
-    print('data file not available')
+    logging.debug(('data file not available'))
 
 def display_graph():
     pass

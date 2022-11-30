@@ -12,5 +12,5 @@ from . import input
 # from . import config
 from .runsit import main,USEWX, USEWEB, USEQT, SIMPLEMODE
 #from config import config
-
+import logging
 #import common
