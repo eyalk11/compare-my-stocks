@@ -64,6 +64,8 @@ For instance:
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Groups of stock can be united by avg price/performance 
 
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Save and load graphs with all parameters instantly! 
+
 &nbsp;&nbsp;&nbsp;&nbsp; ⚪ Compare your profit to a theoretical situation in which you have bought the index!
 
 &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp; (the exact same time you have made a purchase)
@@ -92,18 +94,12 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 
 
-### Misc features 
+### More
 
-✅ Adjusted performance relative to a currency of your choice! 
-
-✅ Save and load graphs with all parameters instantly! 
 
 ✅ Edit categories and groups (using a GUI interface)! 
 
 &nbsp;&nbsp;&nbsp;&nbsp;  i.e. Airlines stocks, Growth stocks (Can be compared as a group)
-
-
-✅ Extendable input sources (for stock history), and transaction handlers (for transactions and portfolios)
 
 
 ✅ **Completely free and open source!** 
