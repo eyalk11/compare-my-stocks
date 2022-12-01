@@ -1,3 +1,4 @@
+import logging
 import collections
 import math
 from datetime import datetime
@@ -39,7 +40,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._stock : TransactionHandlerInterface
         (self._ib,self._stock)= tuple(self.get_handlers())
 
-        logging.debug(( f"Loaded  {len(self._stock.buydic ) if self._stock else '0'} MyStocks , {len(self._ib.buydic ) if self._ib else '0'} IB transactions! "  ))
+        logging.info(( f"Loaded  {len(self._stock.buydic ) if self._stock else '0'} MyStocks , {len(self._ib.buydic ) if self._ib else '0'} IB transactions! "  ))
 
         if self._ib and self._stock:
             #combine
@@ -49,7 +50,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             self._buydic=self._ib.buydic
         elif self._stock:
             self._buydic = self._stock.buydic
-        logging.debug((f" Number of combined transactions {len(self._buydic)}"))
+        logging.info((f" Number of combined transactions {len(self._buydic)}"))
 
         self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
 

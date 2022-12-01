@@ -1,9 +1,13 @@
+import logging
+
+import math
 import pickle
 from datetime import datetime
 
 import numpy
 
 from common.common import UseCache
+from common.loghandler import TRACELEVEL
 from config import config
 from transactions.transactioninterface import TransactionHandlerInterface,TransactionHandlerImplementator
 
@@ -22,7 +26,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.__dict__.update(config.TRANSACTION_HANDLERS[self.NAME])
         ok,path = config.resolvefile(self.File)
         if not ok:
-            logging.debug((f'Cache not found for {self.Name}'))
+            logging.info((f'Cache not found for {self.Name}'))
         self.File=path
 
 
@@ -43,16 +47,22 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         return self._buysymbols #[config.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
 
     def update_sym_property(self, symbol, value, prop='currency', updateanyway=True):
+        def nanch(x):
+            try:
+                return math.isnan(x)
+            except:
+                return False
+
         if value is numpy.nan:
             value=""
         current=  self._manager.symbol_info.get(symbol)
         if current:
 
             current=current.get(prop)
-        if not current:
+        if not current or nanch(current):
             self._manager.symbol_info[symbol][prop] = value
         elif current!=value:
-            logging.debug((f'diff {prop} for {symbol} {current} {value}'))
+            logging.log(TRACELEVEL,(f'diff {prop} for {symbol} {current} {value}'))
             if updateanyway:
                 self._manager.symbol_info[symbol][prop] = value
 
@@ -63,7 +73,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if self.save_cache_date():
                 self._cache_date=v[0]
                 if self.Use == UseCache.USEIFAVALIABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
-                    logging.debug(("not using after all"))
+                    logging.info(("not using after all"))
                     return  0
             else:
                 return self.set_vars_for_cache(v)
@@ -85,7 +95,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
                 pickle.dump(tuple([self._cache_date] + list(self.get_vars_for_cache())), open(self.File, 'wb'))
             else:
                 pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
-            logging.debug(('dumpted'))
+            logging.debug(('cache saved'))
         except Exception as e:
             logging.debug((e))
 

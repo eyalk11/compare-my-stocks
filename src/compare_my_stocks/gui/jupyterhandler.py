@@ -1,9 +1,11 @@
+import logging
 import os
 import sys
 import webbrowser
 
 import psutil
 
+from common.loghandler import TRACELEVEL
 from config import config
 from qtvoila import QtVoila
 from gui.forminterface  import FormInterface
@@ -27,7 +29,7 @@ class JupyterHandler(FormInterface):
 
     def finished_generation(self,number):
         if self.already_running:
-            logging.debug(('already'))
+            logging.log(TRACELEVEL,('already'))
             return
         if self.window.note_group.isHidden():
             return
@@ -76,10 +78,10 @@ class JupyterHandler(FormInterface):
         z=[ pids[p.pid]['url'] for p in processes if 'python' in p.name() and pids[p.pid]['notebook_dir']==dirname]
 
         if len(z)>0:
-            logging.debug(('launching existing session'))
+            logging.info(('launching existing session'))
             webbrowser.open(z[0])
         else:
-            logging.debug(('didn\'t find instance, running'))
+            logging.info(('didn\'t find instance, running'))
             import subprocess
             cmd = [sys.executable, '-m', 'notebook', filename]
-            subprocess.Popen(cmd)
+            subprocess.Popen(cmd,stderr=subprocess.PIPE,stdout=subprocess.PIPE)

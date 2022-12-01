@@ -1,18 +1,24 @@
+import logging
 import dataclasses
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
 
+import matplotlib
 import numpy as np
 
 
 import sys
 
 from django.core.serializers.json import DjangoJSONEncoder
-import logging
+
+from common.loghandler import init_log
 
 logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger('Voila').setLevel(logging.ERROR)
+init_log()
+matplotlib.set_loglevel("INFO")
 
 def index_of(val, in_list):
     try:
@@ -85,7 +91,7 @@ def simple_exception_handling(err_description=None):
                     func(*args,**kwargs)
                 except:
                     if err_description:
-                        logging.debug((err_description))
+                        logging.error((err_description))
                     print_formatted_traceback()
         return internal
     return decorated
@@ -93,7 +99,7 @@ def simple_exception_handling(err_description=None):
 
 
 def print_formatted_traceback():
-    logging.debug((''.join([x[:500] for x in format_traceback(detailed=True)] )))
+    logging.error((''.join([x[:500] for x in format_traceback(detailed=True)] )))
 
 def addAttrs(attr_names):
   def deco(cls):
@@ -202,6 +208,6 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
 def need_add_process(config):
     return config.INPUTSOURCE== InputSourceType.IB
 
-def log_conv(tup):
+def log_conv(*tup):
     return '\t'.join([str(x) for x in tup ])
 

@@ -1,10 +1,15 @@
 import logging
+import logging
 import math
 import time
 from contextlib import suppress
 from functools import partial
 
 import matplotlib
+
+from common.loghandler import TRACELEVEL
+
+matplotlib.set_loglevel("INFO")
 import mplcursors
 from PySide6.QtCore import QMutex, QRecursiveMutex
 #from matplotlib import pyplot as plt
@@ -18,11 +23,11 @@ from common.common import Types
 def show_annotation(sel,cls=None, ax=None,generation=None):
 
     cls.generation_mutex.lock()
-    #logging.debug(('show locked'))
+    #logging.log(TRACELEVEL,('show locked'))
     try:
 
         if cls.generation!=generation:
-            logging.debug(('ignoring diff generation'))
+            logging.log(TRACELEVEL,('ignoring diff generation'))
             with suppress(ValueError):
                 sel.annotation.remove()
             for artist in sel.extras:
@@ -44,7 +49,7 @@ def show_annotation(sel,cls=None, ax=None,generation=None):
         cls.anotation_list+=[sel]
 
     finally:
-        #logging.debug(('show unlock'))
+        #logging.log(TRACELEVEL,('show unlock'))
         cls.generation_mutex.unlock()
     #cls._annotation+=ann
 
@@ -98,16 +103,16 @@ class GraphGenerator:
     def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
         additional_options=config.ADDITIONALOPTIONS
         self.generation_mutex.lock()
-        logging.debug(('generation locked'))
+        logging.log(TRACELEVEL,('generation locked'))
 
         #plt.sca(self._axes)
         try:
             if not just_upd:
                 self.cur_shown_stock = set()
-                logging.debug(('not  justupdate'))
+                logging.log(TRACELEVEL,('not  justupdate'))
                 self.remove_all_anotations()
             if just_upd:
-                logging.debug(('calledreomve!'))
+                logging.log(TRACELEVEL,('calledreomve!'))
                 #import ipdb
                 #ipdb.set_trace()
                 #plt.cla()
@@ -177,10 +182,13 @@ class GraphGenerator:
 
                 self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
                 if self.adjust_date:
-                    f,t = self._axes.get_xlim()
-                    fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
-                    todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
-                    self._axes.set_xlim([fromdateNum,todateNum])
+                    #f,t = self._axes.get_xlim()
+                    #fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
+                    #todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
+                    mind = matplotlib.dates.date2num(min(dt.index))
+                    maxd = matplotlib.dates.date2num(max(dt.index))
+                    self._axes.set_xlim([mind, maxd])
+                    #self._axes.set_xlim([fromdateNum,todateNum])
                     #plt.grid(b=True)
                     self.adjust_date=False
                     #plt.draw()
@@ -189,7 +197,7 @@ class GraphGenerator:
                 pass#plt.show()
             #self.remove_all_anotations()
         finally:
-            logging.debug(('generation unlocked'))
+            logging.log(TRACELEVEL,('generation unlocked'))
             self.generation_mutex.unlock()
                     #from IPython.core.display import display
                     #display(mfig)
@@ -222,7 +230,7 @@ class GraphGenerator:
             #time.sleep(0.2)
             self.cursor.disconnect('add', cb=self.cb)
             #self.cb=lambda :None
-            logging.debug((self.cursor._callbacks))
+            logging.log(TRACELEVEL,(self.cursor._callbacks))
             self.cursor._callbacks['add'] = {}
 
         for child in self._axes.get_children():
@@ -339,7 +347,7 @@ class GraphGenerator:
             if USEQT:
                 fig.canvas.draw()  # draw
         else:
-            logging.debug(("onpick failed"))
+            logging.log(TRACELEVEL,("onpick failed"))
         #self._ax=
     def show_hide(self,toshow):
         ar = self._axes

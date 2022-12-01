@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 
 import PySide6
@@ -5,6 +6,7 @@ from PySide6.QtCore import QObject, Signal, QThread, QMutex, Slot   , QRecursive
 from PySide6.QtCore import Qt
 
 from common.common import simple_exception_handling
+from common.loghandler import TRACELEVEL
 
 
 class DoLongProcess(QObject):
@@ -21,10 +23,13 @@ class DoLongProcess(QObject):
 
     @Slot()
     def run(self):
+        if not self._realtask:
+            logging.error("no real task")
+            return
         self.started = True
-        logging.debug(('bef real task'))
+        logging.log(TRACELEVEL,('bef real task'))
         self._realtask()
-        logging.debug(('post'))
+        logging.log(TRACELEVEL,('post'))
         self.finished.emit()
         self.started = False
 
@@ -93,9 +98,9 @@ class DoLongProcessSlots(QObject):
         self.started = True
         self.mutex.lock()
         try:
-            logging.debug(('bef real task long'))
+            logging.log(TRACELEVEL,('bef real task long'))
             realtask()
-            logging.debug(('post long'))
+            logging.log(TRACELEVEL,('post long'))
 
             #to update status
         finally:
@@ -103,7 +108,7 @@ class DoLongProcessSlots(QObject):
         if taskparams.finish_params:
             self.finished.emit(*taskparams.finish_params)
         else:
-            self.finished.emit()
+            self.finished.emit([])
         self.started = False
 
         # self.thread.finished.connect(self.thread.deleteLater)

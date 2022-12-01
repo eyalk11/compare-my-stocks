@@ -1,3 +1,4 @@
+import logging
 import collections
 import logging
 import math
@@ -17,6 +18,7 @@ import pandas as pd
 import pytz
 from PySide6.QtCore import QRecursiveMutex
 
+from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv
 from engine.parameters import copyit
@@ -105,7 +107,7 @@ class InputProcessor():
                 else:
                     self._inputsource: InputSource = InvestPySource()
             except:
-                logging.debug(('Input source initialization failed. '))
+                logging.error(('Input source initialization failed. '))
                 import traceback;traceback.print_exc()
                 #sys.exit(1)
                 self._inputsource=None
@@ -224,19 +226,19 @@ class InputProcessor():
 
         logging.debug(('finish internal'))
         try:
-            logging.debug(('entering lock'))
+            logging.log(TRACELEVEL,('entering lock'))
             self._proccessing_mutex.lock()
-            logging.debug(('entered'))
+            logging.log(TRACELEVEL,('entered'))
             self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
-            logging.debug(('fin convert'))
+            logging.log(TRACELEVEL,('fin convert'))
             if config.IGNORE_ADJUST:
                 self.adjusted_panel=self.reg_panel.copy()
             else:
                 self.adjust_for_currency()
-            logging.debug(('last'))
+            logging.log(TRACELEVEL,('last'))
         finally:
             self._proccessing_mutex.unlock()
-            logging.debug(('exit proc lock'))
+            logging.log(TRACELEVEL,('exit proc lock'))
 
     def load_cache(self,minimal=False):
         query_source = True
@@ -269,7 +271,8 @@ class InputProcessor():
                 self.cached_used=True
         except Exception as e:
             e = e
-            logging.debug(('failed to use cache'))
+            logging.warn((f'failed to use cache {e}'))
+            import traceback;traceback.print_exc()
             if not minimal:
                 self.cached_used = False
         return query_source
@@ -318,7 +321,7 @@ class InputProcessor():
             _cur_holding_bystock[stock] += cur_action[1][0]
             _last_action_time[stock]=cur_action[0]
             if _cur_holding_bystock[stock] < 0:
-                logging.debug((log_conv('warning sell below zero', stock, cur_action[0])))
+                logging.warn((log_conv(' sell below zero', stock, cur_action[0])))
                 self._transaction_handler.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
         self.mindate = min(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
@@ -332,8 +335,8 @@ class InputProcessor():
         _last_action_time = defaultdict(lambda: None)
         cur_splited = defaultdict(lambda: None)
         _last_action = defaultdict(lambda: None)
-        if len(self._simp_hist_by_date)==0:
-            logging.debug(("WARNING: No History at all!"))
+        if len(self._simp_hist_by_date)==0 and (not partial_symbols_update):
+            logging.warn(("WARNING: No History at all!"))
             return
         hh = pytz.UTC  # timezone('Israel')
         if not partial_symbols_update:
@@ -347,7 +350,7 @@ class InputProcessor():
                 t, dic = next(simphist)
                 mini=False
             except StopIteration:
-                logging.debug(("stop iter"))
+                logging.log(TRACELEVEL,("stop iter"))
                 if len(buyoperations)>0:
                     cur_action = buyoperations.popitem(False)
                     t=cur_action[0]
@@ -415,17 +418,19 @@ class InputProcessor():
                 self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
                 _last_action[sym] = cur_action
             self._fset.add(tim)
-
-        self.fast_conv_to_df(
-            {"Holding" : _cur_holding_bystock,
-             "Unrelprofit": _cur_unrelprofit_bystock,
-             "Relprofit":  _cur_relprofit_bystock
-        })
+        if not partial_symbols_update:
+            self.fast_conv_to_df(
+                {"Holding" : _cur_holding_bystock,
+                 "Unrelprofit": _cur_unrelprofit_bystock,
+                 "Relprofit":  _cur_relprofit_bystock
+            })
         #self._cur_holding_bystock=_cur_holding_bystock
 
     def fast_conv_to_df(self, dicdics):
         def get_DF(dic,name):
             df=pd.DataFrame.from_dict(dict(dic).items())
+            if len(df)==0:
+                return df
             df.columns=["stock",name]
             df=df.set_index("stock")
             return df
@@ -571,7 +576,8 @@ class InputProcessor():
             pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
                          self.currencyrange), open(config.HIST_F, 'wb'))
         except:
-            logging.debug(("error in dumping hist"))
+            logging.error(("error in dumping hist"))
+            print_formatted_traceback()
 
 
     def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
@@ -586,14 +592,15 @@ class InputProcessor():
         try:
 
             #income, revenue, cs =# get_earnings()
-            income, revenue, cs = EarningProcessor()
+            raise Exception("no earnings for now")
+            #income, revenue, cs = #EarningProcessor()
             hasearnings=True
             combinedindex = sorted(
                 list(set(self._fset).union(set(cs.index)).union(set(income.index)).union(set(revenue.index))))
         except:
-            logging.debug(('earning reading failed'))
-            import traceback
-            traceback.print_exc()
+            logging.warn(('earning reading failed'))
+            # import traceback
+            # traceback.print_exc()
             hasearnings = False
             combinedindex=sorted(list(self._fset))
 
@@ -724,7 +731,7 @@ class InputProcessor():
 
     def process(self, partial_symbol_update=set(),params=None,buy_filter=None):
 
-
+        logging.debug("process start")
 
         if params==None:
             params= copyit(self._symb.params) #For now on , under lock.. #Only time we need access to compareengine.
@@ -738,11 +745,11 @@ class InputProcessor():
             if os.environ.get('PYCHARM_HOSTED') == '1':
                 raise #will try
             import traceback
-            logging.debug(('exception in processing' ))
+            logging.error(('exception in processing' ))
             print_formatted_traceback()
             try:
                 import Pyro5
-                logging.debug(("".join(Pyro5.errors.get_pyro_traceback())))
+                logging.error(("".join(Pyro5.errors.get_pyro_traceback())))
             except:
                 pass
             self._symb.statusChanges.emit(f'Exception in processing {e}' )

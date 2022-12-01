@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import datetime
 import multiprocessing
@@ -8,7 +9,7 @@ from functools import partial
 import dateutil.parser
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
-from common.common import conv_date, dictfilt
+from common.common import conv_date, dictfilt, log_conv
 from config import config
 from input.inputsource import InputSource
 from config import config
@@ -212,7 +213,7 @@ class IBSource(InputSource):
         with self.lock:
             cont = asdict(contract)
             if not contract.exchange:
-                logging.debug((f'(historicalhelper) warning: no exchange for contract {cont}'))
+                logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
                 cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
             td=td.days
             try:

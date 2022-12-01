@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod, ABCMeta
 
@@ -120,7 +121,14 @@ class InputSource():
             ls=[]
         else:
             ls= list(ss)
+
         ls = filter(lambda x: not(x is None or 'symbol' not in x), ls)
+        exactmatches= list(filter(lambda x: x['symbol'].upper()==sym.upper(),ls))
+        if len(exactmatches)>0:
+            ls=exactmatches
+        else:
+            logging.warn(f"exact symbol not found {sym}")
+            return [],0,0
 
 
         exchanges=config.EXCHANGES if config.INPUTSOURCE==InputSourceType.InvestPy else config.VALIDEXCHANGES

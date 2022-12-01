@@ -1,6 +1,9 @@
 import logging
+import logging
 import os
 import sys
+
+from common.common import log_conv
 
 MYPROJ='compare_my_stocks'
 PROJPATHENV = 'COMPARE_STOCK_PATH'
@@ -11,7 +14,7 @@ PROJDIR= os.path.join(os.path.expanduser("~"),"."+MYPROJ)
 
 def print_if_ok(*args):
     if 'SILENT' in __builtins__ and  __builtins__['SILENT']==False:
-        logging.debug(*args)
+        logging.info(*args)
 
 if not os.path.exists(PROJDIR):
     print_if_ok("""project directory doesn't exists... Creating...
@@ -39,7 +42,7 @@ res,config_file=resolvefile('myconfig.py')
 if not res:
     print_if_ok('No config file, aborting')
     sys.exit(-1)
-print_if_ok("Using Config File: " , config_file)
+print_if_ok(log_conv("Using Config File: " , config_file))
 
 with open(config_file) as f:
     code = compile(f.read(), config_file, 'exec')

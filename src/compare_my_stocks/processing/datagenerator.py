@@ -1,3 +1,4 @@
+import logging
 import matplotlib
 import numpy
 import numpy as np
@@ -6,7 +7,7 @@ import pandas
 
 
 from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized, \
-    LimitType
+    LimitType, log_conv
 #from compareengine import CompareEngine
 from config import config
 from processing.actondata import ActOnData

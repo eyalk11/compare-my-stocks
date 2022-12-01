@@ -1,7 +1,7 @@
 import sys
 
 if 'ipykernel_launcher' in sys.argv:
-    logging.debug(('strangeeee'))
+    print(('strangeeee'))
     if sys.path[0] == '':
         del sys.path[0]
 

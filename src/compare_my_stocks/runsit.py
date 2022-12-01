@@ -12,6 +12,7 @@ from functools import partial
 import shlex
 
 from common.common import InputSourceType, Types, UniteType, need_add_process
+from common.loghandler import init_log
 from config import config
 
 USEWX, USEWEB, USEQT, SIMPLEMODE = config.USEWX, config.USEWEB, config.USEQT, config.SIMPLEMODE
@@ -64,7 +65,7 @@ def kill_proc_tree(pid, including_parent=True):
         parent.wait(5)
 
 def func(x=None):
-    logging.debug(("killed"))
+    logging.info(("killed"))
     if anotherproc:
         try:
             kill_proc_tree(anotherproc.pid)
@@ -75,6 +76,7 @@ def func(x=None):
 
 anotherproc=None
 def main():
+    #init_log()
     global anotherproc
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)
