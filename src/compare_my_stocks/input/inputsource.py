@@ -50,7 +50,7 @@ class InputSourceInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def resolve_symbols(self, sym, results):
+    def resolve_symbols(self, sym, results=10,strict=True):
         pass
 
 
@@ -81,6 +81,7 @@ class InputSource():
             logging.debug((f'multiple same exchange {sym}, picking {l}'))
 
         if exchok:
+            logging.debug((f'one exchange is good based on valid exchanges for {sym}, picking {l}'))
             return l
         elif symok:
             logging.debug((f'not right exchange {sym}, picking {l}'))
@@ -88,7 +89,7 @@ class InputSource():
             logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
-    def resolve_symbols(self,sym,results=10):
+    def resolve_symbols(self,sym,results=10,strict=True):
         def fix_valid_exchanges(l):
             def upd(v):
                 l['exchange'] = v
@@ -108,7 +109,7 @@ class InputSource():
             ls=list(set(orgls).intersection(set(config.VALIDEXCHANGES)))
             ls.sort(key=lambda x: config.VALIDEXCHANGES.index(x))
             if len(ls)==0:
-                logging.debug((f'couldnt find exchange {l["symbol"]} , picking {orgls[0]}'))
+                logging.debug((f'couldnt find exchange (for a candidate) {l["symbol"]} , picking {orgls[0]}'))
                 upd(orgls[0])
             else:
                 upd(ls[0])
@@ -128,7 +129,8 @@ class InputSource():
             ls=exactmatches
         else:
             logging.warn(f"exact symbol not found {sym}")
-            return [],0,0
+            if strict:
+                return [],0,0
 
 
         exchanges=config.EXCHANGES if config.INPUTSOURCE==InputSourceType.InvestPy else config.VALIDEXCHANGES
