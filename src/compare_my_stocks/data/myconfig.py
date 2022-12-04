@@ -27,6 +27,7 @@ TRANSACTION_HANDLERS={
         "Use":UseCache.USEIFAVALIABLE,
         "CacheSpan":datetime.timedelta(days=40),
         "File": r'stocksplit.cache',
+        "IgnoreSymbols": set([])
            },
     "IB":
     {
@@ -34,7 +35,7 @@ TRANSACTION_HANDLERS={
         "CacheSpan": datetime.timedelta(hours=5),
         "Use": UseCache.USEIFAVALIABLE,
         "DOQUERY":True,
-            "FLEXTOKEN":'YOURTOKEN',
+        "FLEXTOKEN":'YOURTOKEN',
         "FLEXQUERY" : 'QUERYNU'
     },
     "MyStocks":
@@ -45,15 +46,9 @@ TRANSACTION_HANDLERS={
         # Or you can generate buy dictionary yourself...  
         "SrcFile": None,
         "PortofolioName": None,
-        "Use": UseCache.FORCEUSE
+        "Use": UseCache.USEIFAVALIABLE
     }
 }
-IBTRANSCACHE=UseCache.USEIFAVALIABLE
-IBMAXCACHETIMESPAN = datetime.timedelta(hours=5)
-IBCACHE=r'ibtrans.cache'
-
-STOCKPRICECACHE= UseCache.FORCEUSE
-SPLITSTOCKCACHE=r'stocksplit.cache'
 
 TRANSACTIONSOURCE = TransactionSourceType.IB | TransactionSourceType.MyStock
 
@@ -63,6 +58,7 @@ IBSRVPORT=9090 #When you open IB SERVER in a sec process
 ADDPROCESS=r'..\compare_my_stocks\ibsrv.py'
 LOADLASTATBEGIN=True #Load last graph when the program starts 
 ADDITIONALOPTIONS={} #Additonal graph options #{'marker':'o'}
+
 LASTGRAPHNAME="Last"
 IGNORE_ADJUST=1
 SKIP_EARNINGS=1
@@ -134,15 +130,20 @@ REVENUEFILE ='NOEARNINGS'
 INCOMEFILE = 'NOEARNINGS'
 COMMONSTOCK= 'NOEARNINGS'
 
-IGNORED_SYMBOLS=[]
+IGNORED_SYMBOLS=['FB']
 #Rapid API of StockPrices  https://rapidapi.com/alphawave/api/stock-prices2/
 #Used to get stock split history
 
 StockPricesHeaders = {
-    "X-RapidAPI-Host": "HOST",
+    "X-RapidAPI-Host": "stock-prices2.p.rapidapi.com",
+    "X-RapidAPI-Key": "KEY"
+}
+SEEKINGALPHAHeaders = {
+    "X-RapidAPI-Host": "seeking-alpha.p.rapidapi.com",
     "X-RapidAPI-Key": "KEY"
 }
 EXPORTEDPORT="exported.csv"
 BOTHSYMBOLS=[]
 MAXPERCDIFFIBSTOCKWARN=0.2
 FIXBUYSELLDIFFDAYS=3
+NORMALIZE_ON_TRANSACTIONSAVE=0

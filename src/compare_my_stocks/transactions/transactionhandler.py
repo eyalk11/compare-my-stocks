@@ -106,7 +106,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
 
         if  (self.Use is None) or (self.Use and self.Use!=UseCache.DONT):
             if  self.try_to_use_cache():
-                logging.debug(('using buydict cache '))
+                logging.debug((f'using buydict cache for {self.NAME}'))
                 return
 
 

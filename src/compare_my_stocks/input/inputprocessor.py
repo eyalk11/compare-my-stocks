@@ -44,18 +44,19 @@ class SymbolError(Exception):
 class InputProcessor():
 
     def complete_status(self):
+        def get_stat(filter_str):
+            tmpinp = InputProcessor(self._symb, None, no_input=True)  # we already got our relevant history.
+            transaction_handler = TransactionHandlerManager(tmpinp)  # a bit redundant. Just to be on the safe side..
+            tmpinp._transaction_handler = transaction_handler
+            x = copy(self._symb.params)
+            x.use_cache = UseCache.FORCEUSE
+            tmpinp.process(params=x, buy_filter=lambda x: (filter_str in x[1].Notes))
+            status = tmpinp._current_status
+            return status
 
-        tmpinp=InputProcessor(self._symb,None,no_input=True) #we already got our relevant history.
-        transaction_handler=TransactionHandlerManager(tmpinp) # a bit redundant. Just to be on the safe side..
+        return  get_stat("IB"), get_stat("MYSTOCK")
 
-        tmpinp._transaction_handler=transaction_handler
-        x=copy(self._symb.params)
-        x.use_cache= UseCache.FORCEUSE
-        tmpinp.process(params=x, buy_filter=lambda _,y: ("IB:" in y.Notes) )
-        statusIB= tmpinp._current_status
-        tmpinp.process(params=x, buy_filter=lambda _, y: ("MYSTOCK:" in y.Notes))
-        statusMY = tmpinp._current_status
-        return statusIB,statusMY
+
 
     @property
     def reg_panel(self):
@@ -185,9 +186,10 @@ class InputProcessor():
         if self._buy_filter:
             items = filter(self._buy_filter,items)
 
-        buyoperations = collections.OrderedDict(sorted(self._transaction_handler.buydic.items()))  # ordered
+        buyoperations = collections.OrderedDict(sorted(items))  # ordered
 
         if self._transaction_handler._stockprices:
+            self._transaction_handler._stockprices.filter_bad()
             splits = self._transaction_handler._stockprices.buydic
         else:
             splits = {}
@@ -287,6 +289,7 @@ class InputProcessor():
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
             if cur_splited[sym] and (cur_splited[sym][0] > last_time)  and cur_splited[sym][0] <= time:
                 logging.debug((f"splited between {sym} {cur_splited[sym]}"))
+                _cur_splits_bystock[sym]*=cur_splited[sym][1]
                 _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_splited[sym][1]
                 _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_splited[sym][1]
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
@@ -327,6 +330,7 @@ class InputProcessor():
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
+        _cur_splits_bystock = defaultdict(lambda:1)
         _cur_avg_cost_bystock = defaultdict(lambda: 0)
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock = defaultdict(lambda: 0)
@@ -391,6 +395,7 @@ class InputProcessor():
                 self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
                 self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
                 self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
+                self._split_by_stock[sym][tim] = _cur_splits_bystock[sym]
             if mini:
                 continue
             symopt = self._usable_symbols.intersection(
@@ -424,6 +429,7 @@ class InputProcessor():
                  "Unrelprofit": _cur_unrelprofit_bystock,
                  "Relprofit":  _cur_relprofit_bystock
             })
+            self._cur_splits=_cur_splits_bystock
         #self._cur_holding_bystock=_cur_holding_bystock
 
     def fast_conv_to_df(self, dicdics):
@@ -675,6 +681,7 @@ class InputProcessor():
         self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._split_by_stock = defaultdict(lambda: defaultdict(lambda: 1))
 
     def get_adjusted_df_for_currency(self, dic):
         def return_subpanel(s,dic):

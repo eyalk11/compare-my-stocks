@@ -1,7 +1,7 @@
 import logging
 import collections
 import pickle
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from common.common import UseCache
 from config import config
@@ -82,8 +82,13 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
         for z in self._tradescache.values():
+            date=z.dateTime
             z : Trade
-            self._buydic[z.dateTime] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z )
+            while date in self._buydic:
+                date += timedelta(seconds=1)
+                #z.dateTime=z.dateTime
+
+            self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z )
 
             self._buysymbols.add(z.symbol)
 

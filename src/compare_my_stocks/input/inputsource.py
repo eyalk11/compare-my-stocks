@@ -118,6 +118,7 @@ class InputSource():
 
         logging.debug((f'resolving {sym}'))
         ss=self.get_matching_symbols(sym, results)
+        logging.debug((f'end resolving {sym}'))
         if ss is None:
             ls=[]
         else:

@@ -3,8 +3,10 @@ import csv
 import datetime
 import math
 import re
+import bisect
 from collections import namedtuple
 
+import matplotlib
 import pandas as pd
 from dateutil import parser
 
@@ -90,10 +92,25 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             self.update_sym_property(t[1], q[-1], "Notes")
 
 
-    def save_transaction_table(self, buydict,file):
+    def save_transaction_table(self, buydict,file,normailze_to_cur=config.NORMALIZE_ON_TRANSACTIONSAVE):
+        def loctim(dic,item): #not the most efficient.
+            ll=list(dic.keys())
+            ind=bisect.bisect_left(ll, item)
+            if ind>0:
+                return dic.get(ll[ind - 1])
         dt= pd.DataFrame(columns=self.COLUMNS)
         index=0
         for t  ,z in sorted(buydict.items()):
+            tim = matplotlib.dates.date2num(t)
+            if normailze_to_cur:
+                inp = self._manager._inp 
+                cur=inp._cur_splits.get(z.Symbol)
+                then=loctim(inp._split_by_stock.get(z.Symbol),tim)
+                if cur and then:
+                    z=z._replace(Qty=float(z.Qty)*cur/then,Cost=float(z.Cost)*then/cur)
+                else:
+                    z=z
+
             index+=1
             t : datetime.datetime
             syminfo=self._manager.symbol_info.get(z[2])

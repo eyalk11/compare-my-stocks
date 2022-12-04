@@ -51,6 +51,7 @@ class IBSourceRem:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
         self.ib=IB()
+        self.ib.RequestTimeout = 20
         try:
             self.ib.connect(host,port , clientId=clientId, readonly=readonly)
             IBSourceRem.ConnectedME=self
@@ -108,6 +109,7 @@ class IBSourceRem:
     def get_matching_symbols_int(self, sym,results=10):
         logging.debug(('get_matching_symbols'))
         #ignore results num
+        logging.debug('before req symbols')
         ls=self.ib.reqMatchingSymbols(sym)
         logging.debug((ls))
         lsa=[]
