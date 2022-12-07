@@ -10,7 +10,9 @@ from config import config
 from common.common import Types, UseCache, UniteType, LimitType, dictnfilt
 from engine.symbols import AbstractSymbol
 
-
+'''
+Parameteres has many default values. Here we want to see what we changed explicitly. In order to be able to merge to parameters. 
+'''
 def paramaware(klass):
     orginit=klass.__init__
     orgset = klass.__setattr__

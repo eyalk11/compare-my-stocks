@@ -11,7 +11,10 @@ if 'ipykernel_launcher' in sys.argv:
     sys.exit(0)
 
 #cheating...
-__builtins__.SILENT=False
+try:
+    __builtins__.SILENT=False
+except:
+    pass
 
 from compare_my_stocks import main
 import subprocess

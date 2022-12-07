@@ -1,10 +1,8 @@
-import logging
 import collections
 import logging
 import math
 import os
 import pickle
-import sys
 import time
 from collections import defaultdict
 # from datetime import datetime
@@ -24,15 +22,14 @@ from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, p
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
+from input.inputprocessorinterface import InputProcessorInterface
 
 from input.inputsource import InputSource, InputSourceInterface
 from input.investpysource import InvestPySource
-from input.ibsource import IBSource, get_ib_source
+from input.ibsource import get_ib_source
 from engine.symbolsinterface import SymbolsInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
 #import input.earningsinp
-from input.earningsinp import get_earnings
-
 
 
 class SymbolError(Exception):
@@ -41,7 +38,7 @@ class SymbolError(Exception):
 
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
-class InputProcessor():
+class InputProcessor(InputProcessorInterface):
 
     def complete_status(self):
         def get_stat(filter_str):
@@ -579,8 +576,9 @@ class InputProcessor():
         except:
             logging.debug(('error in backuping hist file'))
         try:
-            pickle.dump((self._hist_by_date, self.symbol_info, datetime.datetime.now(), self.currency_hist,
+            pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist,
                          self.currencyrange), open(config.HIST_F, 'wb'))
+            logging.debug(('hist saved'))
         except:
             logging.error(("error in dumping hist"))
             print_formatted_traceback()

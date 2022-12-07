@@ -1,4 +1,5 @@
 import logging
+
 import PySide6.QtWidgets
 
 from PySide6.QtWidgets import QRadioButton, QCheckBox, QListWidget, QSizePolicy,QComboBox
@@ -8,10 +9,13 @@ from matplotlib.figure import Figure
 
 from common.common import LimitType, UniteType, Types, index_of, simple_exception_handling
 from config import config
-from gui.formobserver import FormObserver, ResetRanges
+from gui.forminitializerinterface import FormInitializerInterface
+from gui.formobserver import FormObserver
+from gui.formobserverinterface import ResetRanges
 from gui.listobserver import additems
 
-class FormInitializer(FormObserver):
+
+class FormInitializer(FormObserver, FormInitializerInterface):
 
     def __init__(self):
         super().__init__()

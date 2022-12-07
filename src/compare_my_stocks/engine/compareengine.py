@@ -1,10 +1,10 @@
 import logging
 import json
 
-from common.dolongprocess import DoLongProcess
 from config import config
 from common.common import NoDataException, UniteType, Types
-from engine.symbolsinterface import SymbolsInterface
+from engine.compareengineinterface import CompareEngineInterface
+
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
@@ -12,7 +12,7 @@ from engine.parameters import Parameters
 from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
-class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterface):
+class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngineInterface):
     @property
     def params(self) -> Parameters:
         return self._params
@@ -91,20 +91,22 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
 
 
 
-    def  required_syms(self, include_ext=True, want_it_all=False, data_symbols_for_unite=False): #the want it all is in the case of populating dict
+    def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False): #the want it all is in the case of populating dict
         selected = set()
-        if data_symbols_for_unite and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
+        if want_unite_symbols and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
             selected.update(set([self.params.compare_with]))
 
 
-        if want_it_all and (self.params.unite_by_group & UniteType.ADDPROT):
+        if want_portfolio_if_needed and (self.params.unite_by_group & UniteType.ADDPROT):
             selected=set(self.get_portfolio_stocks())
 
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
-        if (self.used_unitetype & ~UniteType.ADDTOTALS) and data_symbols_for_unite:
+        if (self.used_unitetype & ~UniteType.ADDTOTALS) and want_unite_symbols:
             #logging.debug(('nontrivla'))
-            return selected #it is a bit of cheating but we don't need to specify require data symbols in that case
+
+            if only_unite: #it is a bit of cheating but we don't need to specify require data symbols in that case
+                return selected
         if  self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))
         else:
@@ -118,6 +120,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, SymbolsInterf
              self.params.update_from(params)
         else:
             self.params=params
+
 
         self.params._baseclass=self
 

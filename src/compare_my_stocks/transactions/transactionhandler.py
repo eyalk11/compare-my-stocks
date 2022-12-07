@@ -6,7 +6,7 @@ from datetime import datetime
 
 import numpy
 
-from common.common import UseCache
+from common.common import UseCache, simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
 from transactions.transactioninterface import TransactionHandlerInterface,TransactionHandlerImplementator
@@ -26,7 +26,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.__dict__.update(config.TRANSACTION_HANDLERS[self.NAME])
         ok,path = config.resolvefile(self.File)
         if not ok:
-            logging.info((f'Cache not found for {self.Name}'))
+            logging.info((f'Cache not found for {self.NAME}'))
         self.File=path
 
 
@@ -66,38 +66,36 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if updateanyway:
                 self._manager.symbol_info[symbol][prop] = value
 
+    @simple_exception_handling("try_to_use_cache",return_succ=True)
     def try_to_use_cache(self):
+        v=list(pickle.load(open(self.File, 'rb')))
+        if self.save_cache_date():
+            self._cache_date=v[0]
+            if type(v[0]) is not datetime:
+                logging.error("bad cache - not datetime")
+                return 0
+            if self.Use == UseCache.USEIFAVALIABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
+                logging.info(("not using after all"))
+                return  0
+        else:
+            return self.set_vars_for_cache(v)
+        return self.set_vars_for_cache(tuple(v[1:]))
 
-        try:
-            v=list(pickle.load(open(self.File, 'rb')))
-            if self.save_cache_date():
-                self._cache_date=v[0]
-                if self.Use == UseCache.USEIFAVALIABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
-                    logging.info(("not using after all"))
-                    return  0
-            else:
-                return self.set_vars_for_cache(v)
-            return self.set_vars_for_cache(tuple(v[1:]))
-        except Exception as e:
-            logging.debug((e))
-            return 0
-        return 1
 
     def save_cache_date(self):
         return 1
 
+    @simple_exception_handling("save_cache")
     def save_cache(self):
         if not self.File:
             return
-        try:
-            if self.save_cache_date():
-                self._cache_date = datetime.now()
-                pickle.dump(tuple([self._cache_date] + list(self.get_vars_for_cache())), open(self.File, 'wb'))
-            else:
-                pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
-            logging.debug(('cache saved'))
-        except Exception as e:
-            logging.debug((e))
+
+        if self.save_cache_date():
+            self._cache_date = datetime.now()
+            pickle.dump(tuple([self._cache_date] + list(self.get_vars_for_cache())), open(self.File, 'wb'))
+        else:
+            pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
+        logging.debug(('cache saved'))
 
     def process_transactions(self):
 

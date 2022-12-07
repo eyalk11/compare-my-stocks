@@ -81,18 +81,20 @@ class InputSourceType(Flag):
 
 from Pyro5.errors import format_traceback
 
-def simple_exception_handling(err_description=None):
+def simple_exception_handling(err_description=None,return_succ=False):
     def decorated(func):
         def internal(*args,**kwargs):
             if os.environ.get('PYCHARM_HOSTED') == '1':
-                func(*args,**kwargs)
+                return func(*args,**kwargs)
             else:
                 try:
-                    func(*args,**kwargs)
+                    return func(*args,**kwargs)
                 except:
                     if err_description:
                         logging.error((err_description))
                     print_formatted_traceback()
+                    if return_succ:
+                        return 0
         return internal
     return decorated
 

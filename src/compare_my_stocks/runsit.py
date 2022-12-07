@@ -6,7 +6,6 @@ import time
 from functools import partial
 
 
-
 #from matplotlib import pyplot as plt
 #import Qt
 import shlex
@@ -82,22 +81,23 @@ def main():
     win32api.SetConsoleCtrlHandler(func, True)
     #import signal
     #signal.signal(signal.SIGTERM,
-    if hasattr(config,'ADDPROCESS') and need_add_process(config):
+    if hasattr(config,'ADDPROCESS') and config.ADDPROCESS and need_add_process(config):
         v=f"/c start /wait python \"{config.ADDPROCESS}\" "
         anotherproc=subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v,posix="false"))
         #os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
         time.sleep(1)
 
-    from .gui.mainwindow import MainWindow
+
     pd_ignore_warning()
 
     if USEQT:
+        from .gui.mainwindow import MainWindow
         from PySide6.QtWidgets import QApplication
 
 
         import matplotlib
         #from matplotlib import pyplot as plt
-        from matplotlib import pyplot as plt
+
         
         #QGuiApplication.setAttribute(Qt.Qt);
         app = QApplication([])
@@ -107,6 +107,7 @@ def main():
         # util.patchAsyncio()
 
     if not SIMPLEMODE:
+        from .gui.mainwindow import MainWindow
         mainwindow = MainWindow()
 
     
@@ -120,6 +121,7 @@ def main():
         show_graph=False))  # ,adjust_to_currency=True,currency_to_adjust='ILS'))
 
     if SIMPLEMODE:
+        from matplotlib import pyplot as plt
         plt.draw()  # no app , bitches
     elif USEQT:
         mainwindow.run(gg)
@@ -129,7 +131,11 @@ def main():
         #Qt.QtCo
     if USEQT:
         def f():
-            app.exec_()
+            try:
+                app.exec_()
+            except Exception as e :
+                logging.error(f'fatal error {e}')
+                raise
             logging.debug(('exit'))
         sys.exit(f())
         a = 1

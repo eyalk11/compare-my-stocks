@@ -95,7 +95,7 @@ Define Currency for custom stocks. Use original name.
 '''
 STOCK_CURRENCY= {'VETH.DE':'EUR','VBTC1':'EUR'}
 
-INPUTSOURCE=InputSourceType.InvestPy #IB for interactive
+INPUTSOURCE=InputSourceType.IB #IB for interactive
 
 MINCOLFORCOLUMS=20
 MIN=4000
@@ -136,14 +136,15 @@ IGNORED_SYMBOLS=['FB']
 
 StockPricesHeaders = {
     "X-RapidAPI-Host": "stock-prices2.p.rapidapi.com",
-    "X-RapidAPI-Key": "KEY"
+    "X-RapidAPI-Key": None 
 }
 SEEKINGALPHAHeaders = {
     "X-RapidAPI-Host": "seeking-alpha.p.rapidapi.com",
-    "X-RapidAPI-Key": "KEY"
+    "X-RapidAPI-Key": None
 }
 EXPORTEDPORT="exported.csv"
 BOTHSYMBOLS=[]
 MAXPERCDIFFIBSTOCKWARN=0.2
 FIXBUYSELLDIFFDAYS=3
 NORMALIZE_ON_TRANSACTIONSAVE=0
+DONT_RUN_NOTEBOOK=True

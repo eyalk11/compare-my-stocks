@@ -20,7 +20,9 @@ import Pyro5.api
 WRONG_EXCHANGE = 200
 
 def get_ib_source() :
-    ibsource= IBSource()
+    ibsource = IBSource()
+    #proxy= True if config.ADDPROCESS else False
+    #ibsource= IBSource(proxy=proxy)
     return ibsource
 
 #class MyIBSourceProxy(Pyro5.api.Proxy):
@@ -102,8 +104,10 @@ class IBSourceRem:
         bars= self.reqHistoricalData(Contract.create(**contract),
                                       dateutil.parser.parse(enddate), td)
 
+        ls=[asdict(x) for x in bars]
+        logging.debug(f"got {len(ls)} . looking for {td}")
 
-        return [asdict(x) for x in bars][:td]
+        return ls[::-1][:td]
 
     @Pyro5.server.expose
     def get_matching_symbols_int(self, sym,results=10):
@@ -111,6 +115,9 @@ class IBSourceRem:
         #ignore results num
         logging.debug('before req symbols')
         ls=self.ib.reqMatchingSymbols(sym)
+        if ls is None:
+            logging.debug(f'req matching failed {sym}')
+            return []
         logging.debug((ls))
         lsa=[]
         count=0
@@ -219,7 +226,7 @@ class IBSource(InputSource):
                 cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
             td=td.days
             try:
-                bars = self.ibrem.reqHistoricalData_ext(cont, enddate, td)
+                bars = self.ibrem.reqHistoricalData_ext(cont, enddate, td) #we might get more than we opted for because it returns all the traded days up to the enddate..
             except RequestError as e:
                 if e.code == WRONG_EXCHANGE:
                     logging.debug((f'bad exchange for symbol. try resolve? {cont}. {e.message}'))

@@ -5,6 +5,9 @@ from engine.parameters import Parameters
 from input.inputsource import InputSource, InputSourceInterface
 from transactions.transactioninterface import TransactionHandlerInterface
 
+'''
+A subset of compareengine. Used by input processor to resolve it.
+'''
 
 class SymbolsInterface():
     TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
@@ -31,7 +34,9 @@ class SymbolsInterface():
         pass
 
     @abstractmethod
-    def required_syms(self, include_ext, want_it_all, data_symbols_for_unite):
+
+
+    def required_syms(self,include_ext = True, want_portfolio_if_needed = False, want_unite_symbols = False, only_unite = False):
         pass
 
     @property
@@ -48,7 +53,3 @@ class SymbolsInterface():
     def Groups(self) -> dict:
         ...
 
-
-    @abstractmethod
-    def process(self,  partial_symbol_update=Set,params=None):
-        ...

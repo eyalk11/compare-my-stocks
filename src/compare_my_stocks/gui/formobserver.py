@@ -16,11 +16,14 @@ import pytz
 from common.common import UniteType, Types, LimitType, EnhancedJSONEncoder, SafeSignal
 from common.dolongprocess import DoLongProcessSlots, TaskParams
 from config import config
+from engine.compareengineinterface import CompareEngineInterface
 from engine.parameters import Parameters, copyit
 from engine.symbols import SimpleSymbol
-from engine.symbolsinterface import SymbolsInterface
+from gui.forminitializerinterface import FormInitializerInterface
+from gui.formobserverinterface import ResetRanges
+
 from gui.jupyterhandler import JupyterHandler
-from gui.listobserver import ListsObserver, MyItem
+from gui.listobserver import ListsObserver
 
 
 class DisplayModes(int,Enum):
@@ -28,10 +31,6 @@ class DisplayModes(int,Enum):
     JUPYTER=1,
     NOJUPYTER = 2,
     FULL=3
-class ResetRanges(int,Enum):
-    DONT=0
-    IfAPROP=1
-    FORCE=2
 
 
 try:
@@ -40,7 +39,7 @@ except:
     import json_editor_ui
 
 
-class GraphsHandler:
+class GraphsHandler(CompareEngineInterface,FormInitializerInterface):
     def __init__(self):
         self.graphs= {}
         self.lastgraphtext=""
@@ -53,7 +52,7 @@ class GraphsHandler:
             self.update_graph_list()
         except:
             import traceback;traceback.print_exc()
-            logging.debug(('err loading graphs'))
+            logging.warn(('err loading graphs'))
             return
 
 
@@ -79,14 +78,17 @@ class GraphsHandler:
     def load_graph(self,text=None):
         def after_task():
             self.setup_controls_from_params(0, 1)
-            self.update_graph(ResetRanges.FORCE,force=True) #There is a bug of the graph not fitting in screen. This solves it.
+            self.update_graph(ResetRanges.FORCE, force=True) #There is a bug of the graph not fitting in screen. This solves it.
         try:
             if text==None:
                 if not self.window.graphList.currentItem():
                     return
                 text=self.window.graphList.currentItem().text()
+            if text not in self.graphs:
+                logging.warn(f'graph {text} not found')
+                return
             self.graphObj.params = copyit(self.graphs[text])
-            self.update_graph(ResetRanges.FORCE,force=True,after=after_task)
+            self.update_graph(ResetRanges.FORCE, force=True, after=after_task)
             #should wait after update with controls -> after_task
 
         except:
@@ -104,9 +106,11 @@ class GraphsHandler:
         
 
 
-class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
+class FormObserver(ListsObserver, GraphsHandler, JupyterHandler,CompareEngineInterface):
     def update_task(self,params):
         # self.window.last_status.setText('started refreshing')
+        #if params.ignore_minmax == ResetRanges.FORCE:
+        #    self.graphObj.adjust_date=True
         self.graphObj.update_graph(params)
         # self.window.last_status.setText('finshed refreshing')
 
@@ -123,7 +127,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         ListsObserver.__init__(self)
         GraphsHandler.__init__(self)
         JupyterHandler.__init__(self)
-        self.graphObj : SymbolsInterface = None
+        self.graphObj : CompareEngineInterface = None
         self.window=None
         self._toshow=True
         self._initiated=False
@@ -169,7 +173,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         #self._dolongprocess.run(set(toupdate))
 
 
-    def update_graph(self,reset_ranges : ResetRanges ,force=False,after=None):
+    def update_graph(self, reset_ranges : ResetRanges, force=False, after=None):
         def call(after_task):
             self.decrease()
             self.update_ranges(reset_ranges)
@@ -200,9 +204,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def type_unite_toggled(self, name, value):
         types_dic = {
-            'unite': (UniteType,'unite_by_group',ResetRanges.FORCE),
+            'unite': (UniteType,'unite_by_group', ResetRanges.FORCE),
             'limit' : (LimitType,'limit_by',0),
-            '':(Types,'type',ResetRanges.FORCE)
+            '':(Types,'type', ResetRanges.FORCE)
         }
         for k in types_dic:
             if name.startswith(k):
@@ -326,7 +330,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             return signal
 
 
-        genobs=lambda x:partial(self.attribute_set, x,reset_ranges=ResetRanges.DONT)
+        genobs=lambda x:partial(self.attribute_set, x, reset_ranges=ResetRanges.DONT)
         genobsReset = lambda x: partial(self.attribute_set, x, reset_ranges=1)
         genobsResetForce = lambda x: partial(self.attribute_set, x, reset_ranges=ResetRanges.FORCE)
         self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
@@ -340,7 +344,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
-            partial(self.update_graph,force=True,reset_ranges=ResetRanges.FORCE))
+            partial(self.update_graph, force=True, reset_ranges=ResetRanges.FORCE))
         self.window.use_groups.toggled = safeconnect( self.window.use_groups.toggled,(self.use_groups) )
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)

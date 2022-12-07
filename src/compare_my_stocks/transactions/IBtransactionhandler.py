@@ -25,7 +25,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self.need_to_save=True
     def doquery(self):
         logging.debug(("running query"))
-        if not self.DOQUERY:
+        if not self.DOQUERY or not (self.query_id) or not self.token_id:
             return
         try:
             response = client.download(self.token_id, self.query_id)

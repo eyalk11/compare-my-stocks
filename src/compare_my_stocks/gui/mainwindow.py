@@ -25,8 +25,11 @@ except Exception as e :
 
 from superqt import QLabeledDoubleRangeSlider
 
+#from noconflict import classmaker
+from six import with_metaclass
 
 class MainWindow(QMainWindow, FormInitializer):
+
     def __init__(self):
 
         super(MainWindow, self).__init__()

@@ -44,7 +44,8 @@ class JupyterHandler(FormInterface):
         self.window.voila_widget.external_notebook = config.DEFAULTNOTEBOOK
         open(config.DATAFILEPTR,'wt').write(self.file_name)
         if not self.voila_run:
-            self.window.voila_widget.run_voila()
+            if not config.DONT_RUN_NOTEBOOK:
+                self.window.voila_widget.run_voila()
             self.voila_run=True
         else:
             self.window.voila_widget.reload()

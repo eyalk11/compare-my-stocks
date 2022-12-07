@@ -54,6 +54,9 @@ class StockPrices(TrasnasctionHandler,RapidApi,TransactionHandlerImplementator):
 
 
     def get_hist_split(self,symbol):
+        if not self.is_initialized():
+            logging.error("Couldnt get hist splits , update key!")
+            return
         import requests
 
         url = "https://stock-prices2.p.rapidapi.com/api/v1/resources/stock-prices/10y-3mo-interval"

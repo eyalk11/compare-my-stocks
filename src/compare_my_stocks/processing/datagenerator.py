@@ -10,12 +10,13 @@ from common.common import Types, UniteType, NoDataException, get_first_where_all
     LimitType, log_conv
 #from compareengine import CompareEngine
 from config import config
+from input.inputprocessorinterface import InputProcessorInterface
 from processing.actondata import ActOnData
 from input.inputdata import InputData
 
 from engine.symbolsinterface import SymbolsInterface
 
-class DataGenerator(SymbolsInterface, InputData):
+class DataGenerator(SymbolsInterface, InputData,InputProcessorInterface):
     minMaxChanged=MySignal(tuple)
     namesChanged = MySignal(int)
     statusChanges= MySignal(str)
@@ -158,7 +159,7 @@ class DataGenerator(SymbolsInterface, InputData):
 
         items = [(g, self.Groups[g]) for g in self.params.groups]
         if (self.used_unitetype & ~UniteType.ADDTOTALS): #Non trivial unite. groups
-            reqsym= self.required_syms(data_symbols_for_unite=True).intersection(set(df.columns) )
+            reqsym= self.required_syms(want_unite_symbols=True, only_unite=True).intersection(set(df.columns))
             if len(reqsym )>0:
                 ndf= df.loc[:, reqsym]
             else:

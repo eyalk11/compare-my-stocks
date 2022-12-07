@@ -8,6 +8,7 @@ from functools import partial
 import matplotlib
 
 from common.loghandler import TRACELEVEL
+from gui.formobserverinterface import ResetRanges
 
 matplotlib.set_loglevel("INFO")
 import mplcursors
@@ -113,25 +114,12 @@ class GraphGenerator:
                 self.remove_all_anotations()
             if just_upd:
                 logging.log(TRACELEVEL,('calledreomve!'))
-                #import ipdb
-                #ipdb.set_trace()
-                #plt.cla()
-                #for ann in self._annotation:
-                #    ann.remove()
-                    #del ann
+
                 self.remove_all_anotations()
                 ar = self._axes
                 dt.plot.line(reuse_plot=True, ax=ar,grid=True,**additional_options)
-                #fig=
-                #if just_upd:
-                #    fig.canvas.mpl_disconnect(self.cid)
 
 
-
-                #mplfinance.plot(dt,figsize=(16, 10), reuse_plot=True,ax=ar,type='candle')
-
-                #ar.legend_.figure.canvas.clear()
-                #ar.legend_.figure.canvas.draw()
             else:
 
                 if not isline:
@@ -140,7 +128,10 @@ class GraphGenerator:
                     #mplfinance.plot(dt, figsize=(16, 10), type='candle')
                     ar = self._axes
                     dt.plot.line(reuse_plot=True, ax=ar,grid=True,**additional_options)
-                    self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
+                    if USEQT:
+                        self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
+            if ar is None:
+                return
             FACy = 1.2
             FACx = 2.4
             box = ar.get_position()
@@ -175,21 +166,15 @@ class GraphGenerator:
             self.generation += 1
             self.cb= self.cursor.connect('add', partial(show_annotation,cls=self,ax=ar,generation=self.generation))
 
-            #plt.grid(visible=True)
-            #self._ax=ax
+
             if just_upd:
-                #with self._out:
 
                 self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
                 if self.adjust_date:
-                    #f,t = self._axes.get_xlim()
-                    #fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else f
-                    #todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else t
                     mind = matplotlib.dates.date2num(min(dt.index))
                     maxd = matplotlib.dates.date2num(max(dt.index))
-                    self._axes.set_xlim([mind, maxd])
-                    #self._axes.set_xlim([fromdateNum,todateNum])
-                    #plt.grid(b=True)
+                    if mind<maxd:
+                        self._axes.set_xlim([mind, maxd])
                     self.adjust_date=False
                     #plt.draw()
             elif self.params.show_graph:
@@ -224,6 +209,8 @@ class GraphGenerator:
         #         logging.debug(('removed sel'))
         #     except:
         #         pass
+        if self._axes is None:
+            return
         if getattr(self, 'cursor', None):
             self.cursor.remove()
 
