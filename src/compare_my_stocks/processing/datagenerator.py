@@ -31,7 +31,7 @@ class DataGenerator(DataGeneratorInterface):
         self.minValue = None
         self.maxValue = None
 
-        self.cols = None
+        self.cols = None #not exported by compareengine
         self.act = None
 
     def get_data_by_type(self, type=Types.RELTOMAX, compare_with=None):

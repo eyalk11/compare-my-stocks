@@ -1,23 +1,110 @@
 import logging
-import json
 
 from config import config
-from common.common import NoDataException, UniteType, Types, MySignal
+from common.common import NoDataException, MySignal, simple_exception_handling
 from engine.compareengineinterface import CompareEngineInterface
+from engine.symbolshandler import SymbolsHandler
 
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
-from processing.datageneratorinterface import DataGeneratorInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
-class CompareEngine(CompareEngineInterface):
+class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
     statusChanges = MySignal(str)
     finishedGeneration = MySignal(int)
     minMaxChanged = MySignal(tuple)
     namesChanged = MySignal(int)
+
+    def __init__(self, axes=None):
+        SymbolsHandler.__init__(self)
+        self._tr = TransactionHandlerManager(None)
+        self._inp = InputProcessor(self, self._tr)
+        self._tr._inp = self._inp  # double redirection.
+
+        self._datagen: DataGenerator = DataGenerator(self)
+        self._generator: GraphGenerator = GraphGenerator(self, axes)
+
+        self._annotation = []
+        self._cache_date = None
+
+        self.read_groups_from_file()
+
+    def gen_graph(self, params: Parameters, just_upd=0, reprocess=1):
+        if just_upd and self.params:
+            self.params.update_from(params)
+        else:
+            self.params = params
+
+        self.params._baseclass = self
+
+        self.to_use_ext = self.params.use_ext
+        self.used_unitetype = self.params.unite_by_group
+        requried_syms = self.required_syms(True, True)
+
+        if self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
+            symbols_needed = set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols - set(
+                config.IGNORED_SYMBOLS)
+
+            if len(symbols_needed) > 0:
+                reprocess = 1
+                logging.debug((f'should add stocks {symbols_needed}'))
+            else:
+                reprocess = 0
+        else:
+            symbols_needed = set()  # process all...
+
+        if reprocess:
+            self._inp.process(symbols_needed)
+            self.adjust_date = True
+
+        df, type = self.call_data_generator()
+
+        if type is not None:
+            self.call_graph_generator(df, just_upd, type)
+
+    @simple_exception_handling(err_description="Exception in generation")
+    def call_data_generator(self):
+        try:
+            return self._datagen.generate_data()
+        except NoDataException:
+            self.statusChanges.emit(f'No Data For Graph!')
+            logging.debug(('no data'))
+            return None, None
+        except Exception as e:
+            self.statusChanges.emit(f'Exception in generation: {e}')
+            raise
+
+    def call_graph_generator(self, df, just_upd, type):
+        try:
+            self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
+                                             just_upd, type)
+            self.statusChanges.emit("Generated Graph :)")
+            logging.info("Generated graph")
+            self.finishedGeneration.emit(1)
+        except TypeError as e:
+            e = e
+            logging.error("failed generating graph ")
+            self.statusChanges.emit(f"failed generating graph {e}")
+            raise
+
+    # makes the entire graph from the default attributes.
+    def update_graph(self, params: Parameters = Parameters()):
+        reprocess = 1 if (not self.input_processor._alldates) else 0
+
+        params.increase_fig = False
+        self.gen_graph(params, just_upd=1, reprocess=reprocess)
+
+
+class CompareEngine(InternalCompareEngine):
+    '''
+    Here we just add the proxy methods.
+    '''
+
+    def serialized_data(self):
+        return self._datagen.serialized_data()
 
     @property
     def adjust_date(self):
@@ -26,9 +113,6 @@ class CompareEngine(CompareEngineInterface):
     @adjust_date.setter
     def adjust_date(self, value):
         self._generator.adjust_date = value
-
-    def serialized_data(self):
-        return self._datagen.serialized_data()
 
     @property
     def input_processor(self):
@@ -51,10 +135,6 @@ class CompareEngine(CompareEngineInterface):
         return self._datagen.maxValue
 
     @property
-    def mindate(self):
-        return self._inp.mindate
-
-    @property
     def maxdate(self):
         if self._inp:
             return self._inp.maxdate
@@ -64,186 +144,28 @@ class CompareEngine(CompareEngineInterface):
     @property
     def mindate(self):
         if self._inp:
-            return  self._inp.mindate
+            return self._inp.mindate
         else:
             return None
 
     @property
-    def act(self):
-        self._datagen.act
+    def to_use_ext(self):
+        """doc"""
+        return self._datagen.to_use_ext
+
+    @to_use_ext.setter
+    def to_use_ext(self, value):
+        self._datagen.to_use_ext = value
+
+    @property
+    def used_unitetype(self):
+        """doc"""
+        return self._datagen.used_unitetype
+
+    @used_unitetype.setter
+    def used_unitetype(self, value):
+        self._datagen.used_unitetype = value
 
     @property
     def usable_symbols(self):
         return self._inp.usable_symbols
-    @property
-    def params(self) -> Parameters:
-        return self._params
-
-    @params.setter
-    def params(self,value : Parameters):
-        self._params = value
-
-    @property
-    def Categories(self):
-        return self._categories
-
-    @property
-    def cur_category(self) -> str:
-        param=self.params
-        if param:
-            param= self.params.cur_category
-        if param==None:
-            return self._categories[0]
-        return param
-
-    @cur_category.setter
-    def cur_category(self, value: str):
-        if self.params:
-            self.params.cur_category = value
-
-
-    @property
-    def Groups(self):
-        return self._groups_by_cat[self.cur_category]
-
-    def get_options_from_groups(self,ls):
-
-        if not ls:
-            return []
-        s = set()
-        for g in ls:
-            if g not in self.Groups:
-                raise Exception(f'{g} is not in Groups')
-                #return []
-            s = s.union(set(self.Groups[g]))
-        if self.params.limit_to_portfolio:
-            s=s.intersection(set(self.transaction_handler.get_portfolio_stocks()))
-        return list(s)
-
-
-
-    def read_groups_from_file(self):
-        try:
-            jsongroups= json.load(open(config.JSONFILENAME,'rt'))
-            self._groups_by_cat = jsongroups
-            self._categories= list(self._groups_by_cat.keys())
-            # if self.cur_category==None:
-                # self.cur_category=self._categories[0]
-        except:
-            import traceback
-            traceback.print_exc()
-            logging.debug(('exception in  groups file')) #raise Exception("error reading groups"))
-
-    def __init__(self,axes=None):
-        self._tr= TransactionHandlerManager(None)
-        self._inp=InputProcessor(self,self._tr) #It is kind of lame as InputProcessor uses it as variable but it actually points to self. Whereas compareengine uses directly inputporcessor fields.
-        self._tr._inp=self._inp #double redirection.
-
-
-        self._datagen : DataGeneratorInterface =DataGenerator(self)
-        self._generator : GraphGenerator =GraphGenerator(self,axes)
-
-        self._annotation=[]
-        self._cache_date=None
-        self.params : Parameters=None
-
-
-        #self._groups = config.GROUPS
-        self._categories=None
-        self._cur_category = None
-        self._groups_by_cat = {}
-
-        self.read_groups_from_file()
-        self.adjust_date=True
-
-
-
-    def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False): #the want it all is in the case of populating dict
-        selected = set()
-        if want_unite_symbols and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
-            selected.update(set([self.params.compare_with]))
-
-
-        if want_portfolio_if_needed and (self.params.unite_by_group & UniteType.ADDPROT):
-            selected=set(self.transaction_handler.get_portfolio_stocks())
-
-        if self.to_use_ext and include_ext:
-            selected.update(set(self.params.ext))
-        if (self.used_unitetype & ~UniteType.ADDTOTALS) and want_unite_symbols:
-            #logging.debug(('nontrivla'))
-
-            if only_unite: #it is a bit of cheating but we don't need to specify require data symbols in that case
-                return selected
-        if  self.params.use_groups:
-            return selected.union(self.get_options_from_groups(self.params.groups))
-        else:
-            return selected.union(self.params.selected_stocks)
-
-        #t = inspect.getfullargspec(CompareEngine.gen_graph)  # generate all fields from paramters of gengraph
-        #[self.__setattr__(a, d) for a, d in zip(t.args[1:], t.defaults)]
-
-    def gen_graph(self, params: Parameters, just_upd=0, reprocess=1):
-        if just_upd and self.params:
-             self.params.update_from(params)
-        else:
-            self.params=params
-
-
-        self.params._baseclass=self
-
-        self.to_use_ext = self.params.use_ext
-        self.used_unitetype = self.params.unite_by_group
-        requried_syms = self.required_syms(True, True)
-        if self._inp.usable_symbols and (not (set(requried_syms) <=self._inp.usable_symbols)):
-            symbols_neeeded= set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols  -set(config.IGNORED_SYMBOLS)
-
-            if len(symbols_neeeded)>0:
-                reprocess=1
-                logging.debug((f'should add stocks {symbols_neeeded}'))
-            else:
-                reprocess=0
-        else:
-            symbols_neeeded=set() #process all...
-
-        if reprocess:
-            self._inp.process(symbols_neeeded)
-            self.adjust_date=True
-        try:
-            self.df, type = self._datagen.generate_data()
-        except NoDataException:
-            self.statusChanges.emit(f'No Data For Graph!')
-            logging.debug(('no data'))
-            return
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            e = e
-            logging.debug('exception in generating data')
-            self.statusChanges.emit(f'Exception in gen: {e}'  )
-            if config.DEBUG:
-                pass#raise
-            return
-
-        self.call_graph_generator(just_upd, type)
-
-    def call_graph_generator(self, just_upd, type):
-        try:
-            self._generator.gen_actual_graph(list(self.df.columns), self.df, self.params.isline, self.params.starthidden,
-                                  just_upd, type)
-            self.statusChanges.emit("Generated Graph :)")
-            self.finishedGeneration.emit(1)
-        except TypeError as e:
-            e = e
-            logging.debug(("failed generating graph "))
-            self.statusChanges.emit(f"failed generating graph {e}")
-            raise
-
-    # makes the entire graph from the default attributes.
-    def update_graph(self, params: Parameters = Parameters()):
-        reprocess= 1 if  (not self.input_processor._alldates) else 0
-
-        params.increase_fig=False
-        #t = inspect.getfullargspec(CompareEngine.gen_graph)
-        #dd={x:self.__getattribute__(x) for x in t.args if x not in ['self','increase_fig','reprocess','just_upd' ] }
-        self.gen_graph(params,just_upd=1,reprocess=reprocess )
-
