@@ -19,6 +19,10 @@ class SymbolsInterface():
     # @abstractmethod
     # def symbol_info(self):
     #     ...
+    @property
+    @abstractmethod
+    def usable_symbols(self):
+        ...
 
     @property
     @abstractmethod

@@ -2,17 +2,79 @@ import logging
 import json
 
 from config import config
-from common.common import NoDataException, UniteType, Types
+from common.common import NoDataException, UniteType, Types, MySignal
 from engine.compareengineinterface import CompareEngineInterface
 
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
+from processing.datageneratorinterface import DataGeneratorInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
-class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngineInterface):
+class CompareEngine(CompareEngineInterface):
+    statusChanges = MySignal(str)
+    finishedGeneration = MySignal(int)
+    minMaxChanged = MySignal(tuple)
+    namesChanged = MySignal(int)
+
+    @property
+    def adjust_date(self):
+        return self._generator.adjust_date
+
+    @adjust_date.setter
+    def adjust_date(self, value):
+        self._generator.adjust_date = value
+
+    def serialized_data(self):
+        return self._datagen.serialized_data()
+
+    @property
+    def input_processor(self):
+        return self._inp
+
+    @property
+    def transaction_handler(self):
+        return self._tr
+
+    @property
+    def colswithoutext(self):
+        return self._datagen.colswithoutext
+
+    @property
+    def minValue(self):
+        return self._datagen.minValue
+
+    @property
+    def maxValue(self):
+        return self._datagen.maxValue
+
+    @property
+    def mindate(self):
+        return self._inp.mindate
+
+    @property
+    def maxdate(self):
+        if self._inp:
+            return self._inp.maxdate
+        else:
+            return None
+
+    @property
+    def mindate(self):
+        if self._inp:
+            return  self._inp.mindate
+        else:
+            return None
+
+    @property
+    def act(self):
+        self._datagen.act
+
+    @property
+    def usable_symbols(self):
+        return self._inp.usable_symbols
     @property
     def params(self) -> Parameters:
         return self._params
@@ -55,7 +117,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
                 #return []
             s = s.union(set(self.Groups[g]))
         if self.params.limit_to_portfolio:
-            s=s.intersection(set(self.get_portfolio_stocks()))
+            s=s.intersection(set(self.transaction_handler.get_portfolio_stocks()))
         return list(s)
 
 
@@ -73,21 +135,26 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
             logging.debug(('exception in  groups file')) #raise Exception("error reading groups"))
 
     def __init__(self,axes=None):
-        super(CompareEngine, self).__init__(axes)
-        tr= TransactionHandlerManager(self)
-        InputProcessor.__init__(self,self,tr) #It is kind of lame as InputProcessor uses it as variable but it actually points to self. Whereas compareengine uses directly inputporcessor fields.
-        DataGenerator.__init__(self)
+        self._tr= TransactionHandlerManager(None)
+        self._inp=InputProcessor(self,self._tr) #It is kind of lame as InputProcessor uses it as variable but it actually points to self. Whereas compareengine uses directly inputporcessor fields.
+        self._tr._inp=self._inp #double redirection.
+
+
+        self._datagen : DataGeneratorInterface =DataGenerator(self)
+        self._generator : GraphGenerator =GraphGenerator(self,axes)
 
         self._annotation=[]
         self._cache_date=None
-        self.params=None
+        self.params : Parameters=None
 
 
         #self._groups = config.GROUPS
         self._categories=None
         self._cur_category = None
         self._groups_by_cat = {}
+
         self.read_groups_from_file()
+        self.adjust_date=True
 
 
 
@@ -98,7 +165,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
 
 
         if want_portfolio_if_needed and (self.params.unite_by_group & UniteType.ADDPROT):
-            selected=set(self.get_portfolio_stocks())
+            selected=set(self.transaction_handler.get_portfolio_stocks())
 
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
@@ -127,8 +194,8 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
         self.to_use_ext = self.params.use_ext
         self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
-        if self._usable_symbols and (not (set(requried_syms) <=self._usable_symbols)):
-            symbols_neeeded= set(requried_syms) - self._usable_symbols - self._bad_symbols  -set(config.IGNORED_SYMBOLS)
+        if self._inp.usable_symbols and (not (set(requried_syms) <=self._inp.usable_symbols)):
+            symbols_neeeded= set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols  -set(config.IGNORED_SYMBOLS)
 
             if len(symbols_neeeded)>0:
                 reprocess=1
@@ -138,11 +205,11 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
         else:
             symbols_neeeded=set() #process all...
 
-        B = (1, 0.5)
         if reprocess:
-            self.process(symbols_neeeded)
+            self._inp.process(symbols_neeeded)
+            self.adjust_date=True
         try:
-            self.df, type = self.generate_data()
+            self.df, type = self._datagen.generate_data()
         except NoDataException:
             self.statusChanges.emit(f'No Data For Graph!')
             logging.debug(('no data'))
@@ -151,17 +218,17 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
             import traceback
             traceback.print_exc()
             e = e
-            logging.debug(('exception in generating data'))
+            logging.debug('exception in generating data')
             self.statusChanges.emit(f'Exception in gen: {e}'  )
             if config.DEBUG:
                 pass#raise
             return
 
-        self.call_graph_generator(B, just_upd, type)
+        self.call_graph_generator(just_upd, type)
 
-    def call_graph_generator(self, B, just_upd, type):
+    def call_graph_generator(self, just_upd, type):
         try:
-            self.gen_actual_graph(B, list(self.df.columns), self.df, self.params.isline, self.params.starthidden,
+            self._generator.gen_actual_graph(list(self.df.columns), self.df, self.params.isline, self.params.starthidden,
                                   just_upd, type)
             self.statusChanges.emit("Generated Graph :)")
             self.finishedGeneration.emit(1)
@@ -173,7 +240,7 @@ class CompareEngine(GraphGenerator, InputProcessor, DataGenerator, CompareEngine
 
     # makes the entire graph from the default attributes.
     def update_graph(self, params: Parameters = Parameters()):
-        reprocess= 1 if  (not self._alldates) else 0
+        reprocess= 1 if  (not self.input_processor._alldates) else 0
 
         params.increase_fig=False
         #t = inspect.getfullargspec(CompareEngine.gen_graph)

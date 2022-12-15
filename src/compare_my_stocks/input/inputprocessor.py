@@ -42,10 +42,10 @@ class InputProcessor(InputProcessorInterface):
 
     def complete_status(self):
         def get_stat(filter_str):
-            tmpinp = InputProcessor(self._symb, None, no_input=True)  # we already got our relevant history.
+            tmpinp = InputProcessor(self._eng, None, no_input=True)  # we already got our relevant history.
             transaction_handler = TransactionHandlerManager(tmpinp)  # a bit redundant. Just to be on the safe side..
             tmpinp._transaction_handler = transaction_handler
-            x = copy(self._symb.params)
+            x = copy(self._eng.params)
             x.use_cache = UseCache.FORCEUSE
             tmpinp.process(params=x, buy_filter=lambda x: (filter_str in x[1].Notes))
             status = tmpinp._current_status
@@ -53,6 +53,9 @@ class InputProcessor(InputProcessorInterface):
 
         return  get_stat("IB"), get_stat("MYSTOCK")
 
+    @property
+    def usable_symbols(self):
+        return self._usable_symbols
 
 
     @property
@@ -88,7 +91,7 @@ class InputProcessor(InputProcessorInterface):
         return self._transaction_handler
 
     def __init__(self,symb,transaction_handler,no_input=False):
-        self._symb : SymbolsInterface  =symb
+        self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
         self.cached_used = None
@@ -107,6 +110,11 @@ class InputProcessor(InputProcessorInterface):
             except:
                 logging.error(('Input source initialization failed. '))
                 import traceback;traceback.print_exc()
+                # try:
+                #     import Pyro5
+                #     logging.error(("".join(Pyro5.errors.get_pyro_traceback())))
+                # except:
+                #     pass
                 #sys.exit(1)
                 self._inputsource=None
 
@@ -120,6 +128,9 @@ class InputProcessor(InputProcessorInterface):
         self._reg_panel=None
         self._adjusted_panel=None
         self._earningProc=EarningProcessor.generate_or_make()
+
+        self.mindate=None
+        self.maxdate=None
 
 
     def resolve_currency(self, sym, l, hist):
@@ -198,7 +209,7 @@ class InputProcessor(InputProcessorInterface):
         if self.process_params.transactions_fromdate == None:
             if not cur_action:
                 self.process_params.transactions_fromdate = config.DEFAULTFROMDATE
-                logging.debug(('where to start?'))
+                logging.warn(('Trasactions are empty.Strarting from default date. '))
             else:
                 self.process_params.transactions_fromdate = cur_action[0] #start from first buy
 
@@ -739,7 +750,7 @@ class InputProcessor(InputProcessorInterface):
         logging.debug("process start")
 
         if params==None:
-            params= copyit(self._symb.params) #For now on , under lock.. #Only time we need access to compareengine.
+            params= copyit(self._eng.params) #For now on , under lock.. #Only time we need access to compareengine.
 
         self.process_params = params
         self._buy_filter=buy_filter
@@ -757,7 +768,7 @@ class InputProcessor(InputProcessorInterface):
                 logging.error(("".join(Pyro5.errors.get_pyro_traceback())))
             except:
                 pass
-            self._symb.statusChanges.emit(f'Exception in processing {e}' )
+            self._eng.statusChanges.emit(f'Exception in processing {e}')
 
 
     def process_internal(self, partial_symbol_update):
@@ -770,7 +781,7 @@ class InputProcessor(InputProcessorInterface):
         logging.debug(('elasped populating : %s' % elapsed_time))
         if not partial_symbol_update:
             self.used_unitetype = self.process_params.unite_by_group
-            required = set(self._symb.required_syms(True, True))
+            required = set(self._eng.required_syms(True, True))
             if config.DOWNLOADDATAFORPROT:
                 self._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
             else:

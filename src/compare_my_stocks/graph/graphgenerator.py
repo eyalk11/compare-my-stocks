@@ -8,6 +8,7 @@ from functools import partial
 import matplotlib
 
 from common.loghandler import TRACELEVEL
+from engine.compareengineinterface import CompareEngineInterface
 from gui.formobserverinterface import ResetRanges
 
 matplotlib.set_loglevel("INFO")
@@ -54,15 +55,21 @@ def show_annotation(sel,cls=None, ax=None,generation=None):
         cls.generation_mutex.unlock()
     #cls._annotation+=ann
 
-class GraphGenerator:
 
-    def __init__(self,axes):
-        #self.params = None
+class GraphGenerator:
+    B = (1, 0.5)
+
+    @property
+    def params(self):
+        return self._eng.params
+
+    def __init__(self,eng,axes):
+        self._eng : CompareEngineInterface  =eng
         self._axes=axes
         self._linesandfig=[]
         self.last_stock_list=set()
         self.cur_shown_stock=set()
-        self.adjust_date=False
+        self.adjust_date=True
         self.generation_mutex = QRecursiveMutex()
         self.generation=0
         self.anotation_list=[]
@@ -101,7 +108,7 @@ class GraphGenerator:
             st += ' Compared With ' + self.params.compare_with
         return st
 
-    def gen_actual_graph(self, B, cols, dt, isline, starthidden, just_upd,type):
+    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd,type):
         additional_options=config.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         logging.log(TRACELEVEL,('generation locked'))
@@ -143,9 +150,9 @@ class GraphGenerator:
             # Put a legend to the right of the current aris
             if len(cols) >= config.MINCOLFORCOLUMS:
 
-                ar.legend(loc='center left', bbox_to_anchor=B, ncol=len(cols) // config.MINCOLFORCOLUMS, handleheight=2.4, labelspacing=0.05)
+                ar.legend(loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.MINCOLFORCOLUMS, handleheight=2.4, labelspacing=0.05)
             else:
-                ar.legend(loc='center left', bbox_to_anchor=B,handleheight=2.4, labelspacing=0.05)
+                ar.legend(loc='center left', bbox_to_anchor=self.B,handleheight=2.4, labelspacing=0.05)
             if isline:
                 self.handle_line(ar, starthidden,just_upd)
             #
@@ -335,7 +342,7 @@ class GraphGenerator:
                 fig.canvas.draw()  # draw
         else:
             logging.log(TRACELEVEL,("onpick failed"))
-        #self._ax=
+        # self._ax=
     def show_hide(self,toshow):
         ar = self._axes
         leg = ar.legend_

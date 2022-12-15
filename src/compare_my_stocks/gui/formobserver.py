@@ -173,10 +173,14 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler,CompareEngineInt
         #self._dolongprocess.run(set(toupdate))
 
 
-    def update_graph(self, reset_ranges : ResetRanges, force=False, after=None):
-        def call(after_task):
+    def update_graph(self, reset_ranges : ResetRanges, force=False, after=None,adjust_date=False):
+        #ignores adjust_data for now.
+        def call(params):
+            after_task, adjust_date = params #arab
             self.decrease()
             self.update_ranges(reset_ranges)
+            # if adjust_date:
+            #     self.graphObj.adjust_date = True
             if after_task:
                 after_task()
 
@@ -192,7 +196,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler,CompareEngineInt
 
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
-                taskparams=TaskParams(params=(Parameters(ignore_minmax=reset_ranges),),finish_params = (after,))
+                taskparams=TaskParams(params=(Parameters(ignore_minmax=reset_ranges),),finish_params = (after,adjust_date))
                 self._update_graph_task.command.emit(taskparams) #no params so update current
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 

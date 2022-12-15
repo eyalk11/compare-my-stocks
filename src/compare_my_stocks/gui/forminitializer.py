@@ -192,7 +192,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             if self.window.fromall.isChecked():
                 alloptions = self
             else:
-                alloptions= sorted(list(self.graphObj._usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
+                alloptions= sorted(list(self.graphObj.usable_symbols)) #CompareEngine.get_options_from_groups([g for g in CompareEngine.Groups])
             
             #self._last_choice=  self.window.comparebox.currentText()
             if isinitial:

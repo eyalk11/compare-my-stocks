@@ -31,7 +31,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
     @property
     def params(self):
-        return self._inp._symb.params #should be process_params but it is readonly(copied) . And we want to change portfolio.
+        return self._inp._eng.params #should be process_params but it is readonly(copied) . And we want to change portfolio.
     def process_transactions(self): #from all sources
         self._buydic = {}
         self._buysymbols= set()

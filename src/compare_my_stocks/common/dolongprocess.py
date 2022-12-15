@@ -1,13 +1,11 @@
 import logging
 from functools import partial
 
-import PySide6
-from PySide6.QtCore import QObject, Signal, QThread, QMutex, Slot   , QRecursiveMutex
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QObject, Signal, QThread, Slot , QRecursiveMutex
 
 from common.common import simple_exception_handling
 from common.loghandler import TRACELEVEL
-
+import colorlog
 
 class DoLongProcess(QObject):
     finished = Signal()
@@ -106,7 +104,7 @@ class DoLongProcessSlots(QObject):
         finally:
             self.mutex.unlock()
         if taskparams.finish_params:
-            self.finished.emit(*taskparams.finish_params)
+            self.finished.emit(taskparams.finish_params)
         else:
             self.finished.emit([])
         self.started = False
