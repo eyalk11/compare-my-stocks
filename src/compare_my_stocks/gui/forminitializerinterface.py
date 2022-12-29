@@ -22,3 +22,12 @@ class FormInitializerInterface():
     @abstractmethod
     def update_ranges(self, reset_type):
         pass
+
+    @abstractmethod
+    def setup_controls_from_params(self, initial=True, isinitialforstock=None):
+        pass
+
+    @abstractmethod
+    def update_stock_list(self,isinitial=0,justorgs=False):
+        pass
+

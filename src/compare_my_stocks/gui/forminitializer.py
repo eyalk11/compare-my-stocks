@@ -211,20 +211,6 @@ class FormInitializer(FormObserver, FormInitializerInterface):
 
 
 
-
-
-
-
-    #self.window.gridLayout_8.addWidget(toolbar)
-    #self.window.gridLayout_8.addWidget(sc)
-    #self.window.tabWidget.setLayout(QVBoxLayout())
-    #self.window.tabWidget.setCenteralWidget()
-    #tabWidget.setCentralWidget(self.window.gridLayout_8)
-    #self.window.graph_groupbox.gridLayout_3.setLayout(layout)
-    #layoutq=QVBoxLayout()
-    #self.window.tab
-
-
 class MplCanvas(FigureCanvasQTAgg):
     def __init__(self):
         self.fig = Figure()

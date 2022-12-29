@@ -65,17 +65,17 @@ class DoLongProcessSlots(QObject):
         self.mutex=QRecursiveMutex()
         self.command_waiting=0
 
-        #self.thread.started.connect(self.run)
+        #self.thread.data_generated.connect(self.run)
         #self.finished.connect(self.thread.quit)
 
     # @Slot
     # def run(self):
-    #     self.started = True
+    #     self.data_generated = True
     #     logging.debug(('bef real task'))
     #     self._realtask()
     #     logging.debug(('post'))
     #     self.finished.emit()
-    #     self.started = False
+    #     self.data_generated = False
 
     @property
     def is_started(self):

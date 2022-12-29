@@ -77,6 +77,9 @@ class Parameters:
     limit_by : LimitType = LimitType.RANGE
     limit_to_portfolio : bool =False
     resolve_hack: dict = field(default_factory=dict)
+    #Resolve hack is meant to provide custom symbol data to the input processor
+    #most of the code originally written to work with strings. So, here we input the entire info the dic and treat the symbol as dic.
+    #Also useful in restoration.
 
     @property
     def selected_stocks(self):
@@ -97,6 +100,7 @@ class Parameters:
     def helper(self,ls):
         for l in ls:
             if isinstance(l,AbstractSymbol) and l.dic:
+                self.resolve_hack[str(l.symbol)]=l
                 yield str(l.symbol)
             else:
                 yield str(l)

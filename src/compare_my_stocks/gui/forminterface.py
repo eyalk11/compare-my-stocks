@@ -1,5 +1,6 @@
 from abc import abstractmethod
 
+from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolsinterface import SymbolsInterface
 
 
@@ -11,5 +12,6 @@ class FormInterface:
 
         @property
         @abstractmethod
-        def graphObj(self) -> SymbolsInterface:
+        def graphObj(self) -> CompareEngineInterface:
             ...
+

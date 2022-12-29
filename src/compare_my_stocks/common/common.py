@@ -15,6 +15,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 from common.loghandler import init_log
 
+#Found to work. Not the best.
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('Voila').setLevel(logging.ERROR)
 init_log()
@@ -84,7 +85,11 @@ from Pyro5.errors import format_traceback
 def simple_exception_handling(err_description=None,return_succ=False):
     def decorated(func):
         def internal(*args,**kwargs):
-            if os.environ.get('PYCHARM_HOSTED') == '1':
+            tostop= os.environ.get('PYCHARM_HOSTED') == '1'
+            if 'config' in globals():
+                tostop = tostop and globals()['config'].STOP_EXCEPTION_IN_DEBUG
+
+            if tostop:
                 return func(*args,**kwargs)
             else:
                 try:

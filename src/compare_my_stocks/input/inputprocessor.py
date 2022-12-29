@@ -18,7 +18,8 @@ from PySide6.QtCore import QRecursiveMutex
 
 from common.loghandler import TRACELEVEL
 from config import config
-from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv
+from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
+    simple_exception_handling
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
@@ -150,6 +151,7 @@ class InputProcessor(InputProcessorInterface):
             logging.debug((f'unk currency for {sym}'))
         return currency
 
+    @simple_exception_handling(err_description="error in adjusting sym for currency")
     def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
         logging.debug(('adjusted %s %s ' % (sym, currency)))
         currency_df = self.get_currency_hist(currency, fromdate, enddate)
@@ -754,6 +756,8 @@ class InputProcessor(InputProcessorInterface):
 
         self.process_params = params
         self._buy_filter=buy_filter
+        #This would return text for each symbol. see comment about resolve_hack in parameters.
+        #From this point, symbols are textual!
         ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
         try:
             self.process_internal(ls)

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Set
-
+from abc import ABC
 from engine.symbolsinterface import SymbolsInterface
 
 class CompareEngineInterface(SymbolsInterface):
@@ -82,4 +82,7 @@ class CompareEngineInterface(SymbolsInterface):
     @property
     @abstractmethod
     def usable_symbols(self):
+        ...
+    @abstractmethod
+    def show_hide(self,val):
         ...

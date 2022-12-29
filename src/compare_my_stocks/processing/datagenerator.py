@@ -1,17 +1,16 @@
 import logging
+
 import matplotlib
 import numpy
 import numpy as np
 import pandas
 
-from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, MySignal, Serialized, \
+from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, Serialized, \
     LimitType, log_conv
-# from compareengine import CompareEngine
 from config import config
 from engine.compareengineinterface import CompareEngineInterface
-from processing.actondata import ActOnData
-
 from engine.symbolsinterface import SymbolsInterface
+from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
 
 
@@ -22,8 +21,9 @@ class DataGenerator(DataGeneratorInterface):
 
 
 
-    def __init__(self, eng):
-        self._eng: CompareEngineInterface = eng
+    def __init__(self, eng : CompareEngineInterface):
+        self._eng = eng
+        self._inp= self._eng.input_processor
         # DataGenerator.minMaxChanged.initemit()
         self.colswithoutext = []
         self.tmp_colswithoutext = []
@@ -34,12 +34,17 @@ class DataGenerator(DataGeneratorInterface):
         self.cols = None #not exported by compareengine
         self.act = None
 
+        self.used_unitetype = None
+        self.to_use_ext =None
+        self.data_generated=False
+
     def get_data_by_type(self, type=Types.RELTOMAX, compare_with=None):
         params = self.generate_initial_data(compare_with, type)
         act = ActOnData(*params, compare_with, self)
         self.act = act
         act.do()
 
+        self.data_generated=True
         return act.df, act.Marr, act.min_arr, act.type
 
     def generate_initial_data(self, compare_with, type):
@@ -161,7 +166,7 @@ class DataGenerator(DataGeneratorInterface):
                 print(x - set(df.columns))
             return list(x.intersection(set(df.columns)))
 
-        items = [(g, self.Groups[g]) for g in self.params.groups]
+        items = [(g, self._eng.Groups[g]) for g in self.params.groups]
         if (self.used_unitetype & ~UniteType.ADDTOTALS):  # Non trivial unite. groups
             reqsym = self._eng.required_syms(want_unite_symbols=True, only_unite=True).intersection(set(df.columns))
             if len(reqsym) > 0:
@@ -183,7 +188,7 @@ class DataGenerator(DataGeneratorInterface):
             try:
                 arr = np.array(df[stocks]).transpose()
             except KeyError:
-                logging.debug(('none of the values here'))
+                logging.error('none of the values here')
                 continue
             incomplete = (arr.shape[0] != len(stocks))
             if incomplete:
@@ -258,15 +263,15 @@ class DataGenerator(DataGeneratorInterface):
 
     def readjust_for_currency(self, ncurrency):
 
-        currency_hist = self.get_currency_hist(ncurrency, self.currencyrange[0],
-                                               self.currencyrange[1])  # should be fine, the range
+        currency_hist = self._inp.get_currency_hist(ncurrency, self._inp.currencyrange[0],
+                                               self._inp.currencyrange[1])  # should be fine, the range
         simplified = (currency_hist['Open'] + currency_hist['Close']) / 2
-        rate = self.get_relevant_currency(ncurrency)
+        rate = self._inp.get_relevant_currency(ncurrency)
         if rate is None:
-            logging.debug(("cant adjust"))
+            logging.error(("cant adjust"))
             return
-        nn = self.adjusted_panel.copy()  # adjusted_panel is already at base.
-        for x in self.TOADJUST:
+        nn = self._inp.adjusted_panel.copy()  # adjusted_panel is already at base.
+        for x in self._inp.TOADJUST:
             nn[x] = nn[x].mul(1 / rate)
         simplified = pandas.DataFrame(simplified, columns=['data'])
         simplified = simplified.set_index(matplotlib.dates.date2num(list(simplified.index)))
@@ -277,7 +282,7 @@ class DataGenerator(DataGeneratorInterface):
         for y in SymbolsInterface.TOADJUSTLONG:
             nn[y] = nn[y].mul(simplified['data'], axis=0)
 
-        nn = nn[[(c, d) for (c, d) in self.reg_panel.columns if c not in ['tot_profit_by_stock']]]
+        nn = nn[[(c, d) for (c, d) in self._inp.reg_panel.columns if c not in ['tot_profit_by_stock']]]
         t = nn['rel_profit_by_stock'] + nn['unrel_profit']
         t.columns = pandas.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)],
                                                    names=['Name', 'Symbols'])

@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, ABC
 from typing import Generic, Set
 
 from engine.parameters import Parameters
@@ -9,7 +9,7 @@ from transactions.transactioninterface import TransactionHandlerInterface
 A subset of compareengine. Used by input processor to resolve it.
 '''
 
-class SymbolsInterface():
+class SymbolsInterface(ABC):
     TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
     #TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
     TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock']

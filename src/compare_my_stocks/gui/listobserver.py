@@ -1,9 +1,10 @@
 from PySide6.QtGui import Qt
 from PySide6.QtWidgets import QListWidget, QListWidgetItem
 
-from common.dolongprocess import DoLongProcessSlots
+from common.dolongprocess import DoLongProcessSlots, TaskParams
 from engine.parameters import copyit
 from engine.symbols import AbstractSymbol, SimpleSymbol
+from gui.forminterface import FormInterface
 
 from gui.stockchoice import PickSymbol
 
@@ -42,7 +43,7 @@ def to_simple(ls):
     return list(map(SimpleSymbol,ls))
 
 
-class ListsObserver():
+class ListsObserver(FormInterface):
     def process_elem(self,params):
         while True:
             ls = to_simple(self.addqueue)
@@ -61,14 +62,13 @@ class ListsObserver():
         self.last_txt=None
 
     def process_if_needed(self,stock):
-        if not str(stock) in self.graphObj._usable_symbols:
+        if not str(stock) in self.graphObj.usable_symbols:
             self.addqueue+=[SimpleSymbol(stock)]
 
-            if not self.grep_from_queue_task.is_started: #theorticaly it could be that it was started but just on the last two lines. unlikely..
+            if not self.grep_from_queue_task.is_started: #theorticaly it could be that it was data_generated but just on the last two lines. unlikely..
                 params = copyit(self.graphObj.params)
                 params.transactions_todate = None  # datetime.now() #always till the end
-                self.grep_from_queue_task.command.emit((params,))
-
+                self.grep_from_queue_task.command.emit(TaskParams(params=(params,)))
 
 
     @staticmethod
