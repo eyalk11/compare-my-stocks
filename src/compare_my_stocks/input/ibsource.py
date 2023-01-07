@@ -6,7 +6,6 @@ import threading
 from dataclasses import asdict
 from functools import partial
 
-import dateutil.parser
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
 from common.common import conv_date, dictfilt, log_conv
@@ -89,6 +88,7 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     def get_current_currency(self, pair):
+        logging.debug("get_current_currency {pair}")
         f=pair[0]+pair[1]
         contract=Forex(f)
         return self.get_realtime_contract(contract).markPrice
@@ -100,9 +100,9 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     def reqHistoricalData_ext(self, contract, enddate, td):
-
+        logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
         bars= self.reqHistoricalData(Contract.create(**contract),
-                                      dateutil.parser.parse(enddate), td)
+                                      conv_date(enddate), td)
 
         ls=[asdict(x) for x in bars]
         logging.debug(f"got {len(ls)} . looking for {td}")
@@ -148,6 +148,7 @@ class IBSourceRem:
 
 
     def get_positions(self):
+        logging.debug("positions")
         y = self.ib.reqPositions()
         for k in y:
             if k.contract.secType=='STK':
@@ -157,13 +158,16 @@ class IBSource(InputSource):
     def __init__(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True,proxy=True):
         super().__init__()
         if proxy:
-            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:9090')
+            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBSRVPORT )
             self.ibrem.__class__._Proxy__check_owner = lambda self: 1
         else:
             self.ibrem=IBSourceRem()
 
         self.ibrem.init(host,port,clientId,readonly)
         self.lock = threading.Lock()
+
+    def get_current_currency(self, pair):
+        return 0
 
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
@@ -195,7 +199,7 @@ class IBSource(InputSource):
         import threading
 
         #logging.debug(('owner',threading.currentThread().ident))
-        self.ibrem._pyroClaimOwnership()
+        #self.ibrem._pyroClaimOwnership()
 
     def __getattr__(self, item):
         def wrapper(fun,*args,**kw):
@@ -238,7 +242,7 @@ class IBSource(InputSource):
                 return None
             df = df.rename(columns={'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
             df.set_index('date',inplace=True)
-            df=df.rename(index={i: dateutil.parser.parse(i) for i in df.index})
+            df=df.rename(index={i: conv_date(str(i)) for i in df.index})
             return df
 
 
@@ -256,11 +260,7 @@ class IBSource(InputSource):
     def get_currency_history(self, pair, startdate, enddate):
         f=pair[0]+pair[1]
         contract=Forex(f)
-        return None, self.historicalhelper(startdate,enddate,contract)
-
-
-
-        pass
+        return self.historicalhelper(startdate,enddate,contract)
 
     # v = {"Sym":w['contractDesc'], "Qty": w["position"], "Last": last , "RelProfit": w['realizedPnl'], "Value": w['mktValue'],
     #      'Currency': w['currency'], 'Crypto': 0, 'Open': open, 'Source': 'IB', 'AvgConst': w['AvgCost'],

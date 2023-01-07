@@ -9,6 +9,7 @@ import sys
 
 # creating a class
 # that inherits the QDialog class
+from common.common import print_formatted_traceback
 from input.inputsource import InputSource, InputSourceInterface
 
 
@@ -114,11 +115,13 @@ class Window(QDialog):
         sym=self.symbolName.text()
         try:
 
-            results,_,_=self._inpsource.resolve_symbols(sym,strict=False)
+            results,_,_=self._inpsource.get_best_matches(sym, strict=False)
+            if len(results) == 0:
+                return
         except:
-            import traceback;traceback.print_exc()
-        if len(results)==0:
+            print_formatted_traceback()
             return
+
         table_model = MyTableModel(self,results)
         self.choices.setModel(table_model)
     # get info method called when form is accepted

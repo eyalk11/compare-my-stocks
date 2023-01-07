@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from common.common import Types, get_first_where_all_are_good,dictnfilt
+from common.common import Types, get_first_where_all_are_good, dictnfilt, NoDataException
 from config import config
 
 from input.inputdata import InputData
@@ -51,7 +51,7 @@ class ActOnData:
         else:
             if arr.shape[1]==0:
                 logging.debug(('errarr'))
-                return []
+                raise NoDataException()
             if self.type & Types.RELTOMAX:
                 refarr = np.nanmax(arr,axis=1)
             elif self.type & Types.RELTOMIN:

@@ -16,3 +16,4 @@ git+https://github.com/jupyter/nbmanager.git
 ib_insync
 Pyro5
 ibflex
+colorlog

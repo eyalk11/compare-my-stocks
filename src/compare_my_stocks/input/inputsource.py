@@ -50,11 +50,11 @@ class InputSourceInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def resolve_symbols(self, sym, results=10,strict=True):
+    def get_best_matches(self, sym, results=10, strict=True):
         pass
 
 
-class InputSource():
+class InputSource(InputSourceInterface):
     def __init__(self):
         self._allsymbols = []
 
@@ -71,7 +71,7 @@ class InputSource():
             sym=sym.symbol
 
 
-        ls,exchok,symok=self.resolve_symbols(str(sym))
+        ls,exchok,symok=self.get_best_matches(str(sym))
 
         if len(ls)==0:
             logging.debug(('nothing for %s ' % sym))
@@ -89,7 +89,7 @@ class InputSource():
             logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
-    def resolve_symbols(self,sym,results=10,strict=True):
+    def get_best_matches(self, sym, results=10, strict=True):
         def fix_valid_exchanges(l):
             def upd(v):
                 l['exchange'] = v

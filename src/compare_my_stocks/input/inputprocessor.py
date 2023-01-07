@@ -31,6 +31,7 @@ from input.ibsource import get_ib_source
 from engine.symbolsinterface import SymbolsInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
 #import input.earningsinp
+StandardColumns = ['Open', 'High', 'Low', 'Close']
 
 
 class SymbolError(Exception):
@@ -43,7 +44,7 @@ class InputProcessor(InputProcessorInterface):
 
     def complete_status(self):
         def get_stat(filter_str):
-            tmpinp = InputProcessor(self._eng, None, no_input=True)  # we already got our relevant history.
+            tmpinp = InputProcessor(self._eng, None)  # we already got our relevant history.
             transaction_handler = TransactionHandlerManager(tmpinp)  # a bit redundant. Just to be on the safe side..
             tmpinp._transaction_handler = transaction_handler
             x = copy(self._eng.params)
@@ -91,7 +92,10 @@ class InputProcessor(InputProcessorInterface):
     def transaction_handler(self):
         return self._transaction_handler
 
-    def __init__(self,symb,transaction_handler,no_input=False):
+    def __init__(self, symb, transaction_handler, input_source=None):
+        self._inputsource: InputSource = input_source
+        if self._inputsource is None:
+            logging.debug("not using any source")
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
@@ -100,24 +104,9 @@ class InputProcessor(InputProcessorInterface):
         self.symbol_info = collections.defaultdict(lambda:dict())
         self._usable_symbols = set()
         self._bad_symbols = set()
-        if no_input:
-            self._inputsource = None
-        else:
-            try:
-                if config.INPUTSOURCE == InputSourceType.IB:
-                    self._inputsource: InputSource = get_ib_source() #IBSource()
-                else:
-                    self._inputsource: InputSource = InvestPySource()
-            except:
-                logging.error(('Input source initialization failed. '))
-                import traceback;traceback.print_exc()
-                # try:
-                #     import Pyro5
-                #     logging.error(("".join(Pyro5.errors.get_pyro_traceback())))
-                # except:
-                #     pass
-                #sys.exit(1)
-                self._inputsource=None
+        self.currency_hist= {}
+
+
 
         self.init_input()
         self._initial_process_done=False
@@ -153,11 +142,14 @@ class InputProcessor(InputProcessorInterface):
 
     @simple_exception_handling(err_description="error in adjusting sym for currency")
     def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
-        logging.debug(('adjusted %s %s ' % (sym, currency)))
+        logging.debug(('adjusting for currency %s %s ' % (sym, currency)))
+
+
+
         currency_df = self.get_currency_hist(currency, fromdate, enddate)
-        inc = ['Open', 'High', 'Low', 'Close']
-        currency_df = currency_df[inc]
-        hh = hist[inc].mul(currency_df, fill_value=numpy.NaN)
+
+        currency_df = currency_df[StandardColumns]
+        hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.NaN)
         if len(set(hist.index) - set(currency_df.index)) > 0:
             logging.debug((log_conv(' missing ', set(hist.index) - (set(currency_df.index)))))
         # from scipy.interpolate import interp1d
@@ -168,21 +160,38 @@ class InputProcessor(InputProcessorInterface):
         #        hh[missing]['Open'].mul(f(hh[missing].index))
         return hh
 
+    def update_currency_hist(self,currency,df):
+        df=df[StandardColumns]
+        mi = pd.MultiIndex.from_product([[currency], list(StandardColumns)])
+        df.columns = mi
+        if self.currency_hist is None:
+            self.currency_hist = df
+        elif currency not in self.currency_hist:
+            self.currency_hist = self.currency_hist.join(df)
+        else: #merging
+            old=self.currency_hist[currency]
+            updated= old.combine_first(df)
+            self.currency_hist.reindex(index=updated.index)
+            self.currency_hist[currency] = updated
+
     def get_currency_hist(self, currency, fromdate, enddate):
         pair = (config.BASECUR, currency)
-        if self.currencyrange !=None: #if currencyrange is updated, then entire dict should be
-            if currency in self.currency_hist:
-                if (fromdate!= self.currencyrange[0] or  enddate!= self.currencyrange[1]):
-                    self.currency_hist= {}
-                    #[currency]=  self._inputsource.get_currency_history(pair, fromdate, enddate)
+        def get_good_keys():
 
-        currency_df = self.currency_hist.get(currency,
-                                             self._inputsource.get_currency_history(pair, fromdate, enddate))
-        self.currencyrange = ( fromdate, enddate)
+            zz = self.currency_hist[currency].isna().any(axis=1)
+            return list(self.currency_hist[currency].index[~zz])
+        if isinstance(self.currency_hist,dict):
+            self.currency_hist=None
+        ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist  and currency in self.currency_hist else [(fromdate,enddate)])
 
-        if currency not in self.currency_hist:
-            self.currency_hist[currency] = currency_df
-        return currency_df
+
+        for (mindate, maxdate) in ls:
+            tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
+            self.update_currency_hist(currency,tmpdf)
+
+        df = self.currency_hist[currency]
+        goodind=  list(set([x for x in  self.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
+        return df.loc[ goodind ]
 
     def process_history(self, partial_symbols_update=set()):
 
@@ -226,8 +235,6 @@ class InputProcessor(InputProcessorInterface):
         if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
             query_source = self.load_cache()
 
-
-        self.currency_hist= {}
         if query_source:
             self.get_data_from_source(partial_symbols_update,fromdate,todate)
             self.save_data()
@@ -476,35 +483,38 @@ class InputProcessor(InputProcessorInterface):
                               lambda: (dica['Close'] + dica['Open']) / 2)
                 self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
 
+    @staticmethod
+    def get_range_gap(dates,fromdate,todate):
+        TOLLERENCE = 5  # config
+        #yields the gaps in data between dates ..
+        dates=sorted(list(dates))
+        if len(dates)<2 or dates[-1]<=fromdate:
+            yield  fromdate,todate
+        reachedfrom=False
+        for da,af  in zip( dates[:-1],dates[1:]):
+            if da<=fromdate:
+                if da==fromdate:
+                    reachedfrom=True
+                continue
+            #we are >=fromdate
+            if da>fromdate and (da-fromdate).days>TOLLERENCE :
+                if not reachedfrom:
+                    yield fromdate,da #days missing befor we reached
+                    reachedfrom=True
+            if da>=todate:
+                break
+            if (af-da).days>TOLLERENCE: #gap
+                yield da,min(af,todate) #we miss all the days inbetween
+
+        if af<todate and (todate-af).days>TOLLERENCE:
+            yield af,  todate
+
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):
         if self._inputsource is None:
             return
-        TOLLERENCE=5 #config
 
-        def get_range_gap(dates,fromdate,todate):
 
-            #yields the gaps in data between dates ..
-            dates=sorted(list(dates))
-            if len(dates)<2 or dates[-1]<=fromdate:
-                yield  fromdate,todate
-            reachedfrom=False
-            for da,af  in zip( dates[:-1],dates[1:]):
-                if da<=fromdate:
-                    if da==fromdate:
-                        reachedfrom=True
-                    continue
-                #we are >=fromdate
-                if da>fromdate and (da-fromdate).days>TOLLERENCE :
-                    if not reachedfrom:
-                        yield fromdate,da #days missing befor we reached
-                        reachedfrom=True
-                if da>=todate:
-                    break
-                if (af-da).days>TOLLERENCE: #gap
-                    yield da,min(af,todate) #we miss all the days inbetween
 
-            if af<todate and (todate-af).days>TOLLERENCE:
-                yield af,  todate
 
 
         self.symbol_info_tmp={}
@@ -532,7 +542,7 @@ class InputProcessor(InputProcessorInterface):
 
 
             skipget=False
-            ls = get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
+            ls = self.get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
             okdays=0
             requireddays=0
             try:

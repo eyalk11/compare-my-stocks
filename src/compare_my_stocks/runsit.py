@@ -63,8 +63,9 @@ def kill_proc_tree(pid, including_parent=True):
         parent.kill()
         parent.wait(5)
 
-def func(x=None):
-    logging.info(("killed"))
+def func(x=None,tolog=True):
+    if tolog:
+        logging.info(("killed"))
     if anotherproc:
         try:
             kill_proc_tree(anotherproc.pid)
@@ -76,17 +77,13 @@ def func(x=None):
 anotherproc=None
 def main():
     #init_log()
-    global anotherproc
+
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)
     #import signal
     #signal.signal(signal.SIGTERM,
     if hasattr(config,'ADDPROCESS') and config.ADDPROCESS and need_add_process(config):
-        v=f"/c start /wait python \"{config.ADDPROCESS}\" "
-        anotherproc=subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v,posix="false"))
-        #os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
-        time.sleep(1)
-
+        run_additional_process()
 
     pd_ignore_warning()
 
@@ -143,3 +140,11 @@ def main():
         # simple, should be ok.
         while (1):
             time.sleep(1)
+
+
+def run_additional_process():
+    global anotherproc
+    v = f"/c start /wait python \"{config.ADDPROCESS}\" "
+    anotherproc = subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v, posix="false"))
+    # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
+    time.sleep(1)

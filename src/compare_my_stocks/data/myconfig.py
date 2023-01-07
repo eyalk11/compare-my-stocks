@@ -54,7 +54,7 @@ TRANSACTIONSOURCE = TransactionSourceType.IB | TransactionSourceType.MyStock
 
 HOSTIB='127.0.0.1'
 PORTIB=7596
-IBSRVPORT=9090 #When you open IB SERVER in a sec process
+IBSRVPORT=9091 #When you open IB SERVER in a sec process
 ADDPROCESS=r'..\compare_my_stocks\ibsrv.py'
 LOADLASTATBEGIN=True #Load last graph when the program starts 
 ADDITIONALOPTIONS={} #Additonal graph options #{'marker':'o'}

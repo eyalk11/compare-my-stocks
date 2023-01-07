@@ -1,10 +1,12 @@
 import logging
 
 from config import config
-from common.common import NoDataException, MySignal, simple_exception_handling, Types, UniteType
+from common.common import NoDataException, MySignal, simple_exception_handling, Types, UniteType, InputSourceType
 from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolshandler import SymbolsHandler
+from input.ibsource import get_ib_source
 from input.inputsource import InputSourceInterface
+from input.investpysource import InvestPySource
 
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator
@@ -19,10 +21,23 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
     minMaxChanged = MySignal(tuple)
     namesChanged = MySignal(int)
 
+    @staticmethod
+    @simple_exception_handling(err_description='Input source initialization failed. ')
+    def get_input_source(input_type  : InputSourceType = None):
+        if input_type is None:
+            input_type =config.INPUTSOURCE
+            if input_type == InputSourceType.IB:
+                return get_ib_source()  # IBSource()
+            else:
+                return InvestPySource()
+
+
     def __init__(self, axes=None):
         SymbolsHandler.__init__(self)
+        input_source=  self.get_input_source()
+
         self._tr = TransactionHandlerManager(None)
-        self._inp = InputProcessor(self, self._tr)
+        self._inp = InputProcessor(self, self._tr,input_source)
         self._tr._inp = self._inp  # double redirection.
 
         self._datagen: DataGenerator = DataGenerator(self)
