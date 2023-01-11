@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import matplotlib
@@ -19,11 +20,9 @@ class DataGenerator(DataGeneratorInterface):
     def params(self):
         return self._eng.params
 
-
-
-    def __init__(self, eng : CompareEngineInterface):
+    def __init__(self, eng: CompareEngineInterface):
         self._eng = eng
-        self._inp= self._eng.input_processor
+        self._inp = self._eng.input_processor
         # DataGenerator.minMaxChanged.initemit()
         self.colswithoutext = []
         self.tmp_colswithoutext = []
@@ -31,21 +30,23 @@ class DataGenerator(DataGeneratorInterface):
         self.minValue = None
         self.maxValue = None
 
-        self.cols = None #not exported by compareengine
+        self.cols = None  # not exported by compareengine
         self.act = None
 
         self.used_unitetype = None
-        self.to_use_ext =None
-        self.data_generated=False
+        self.to_use_ext = None
+        self.data_generated = False
+        self.df_before_act = None
 
     def get_data_by_type(self, type=Types.RELTOMAX, compare_with=None):
         params = self.generate_initial_data(compare_with, type)
+        self.df_before_act = params[1].copy()
         act = ActOnData(*params, compare_with, self)
         self.act = act
         act.do()
 
-        self.data_generated=True
-        return act.df, act.Marr, act.min_arr, act.type
+        self.data_generated = True
+        self.df , self.Marr, self.min_arr, self.type = act.df, act.Marr, act.min_arr, act.type
 
     def generate_initial_data(self, compare_with, type):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
@@ -63,7 +64,7 @@ class DataGenerator(DataGeneratorInterface):
 
         if self.used_type & Types.COMPARE:
             if not compare_with in df:
-                logging.debug(('to bad, no comp'))
+                logging.debug(('too bad, no compare'))
                 self.used_type = self.used_type & ~Types.COMPARE
 
                 # ind=first_index_of(compit_arr,np.isnan)
@@ -100,7 +101,7 @@ class DataGenerator(DataGeneratorInterface):
                     logging.debug(('there is no location where all are good'))
                     self.use_relative = True
                 else:
-                    fulldf = fulldf.iloc[:goodind]
+                    fulldf = fulldf.iloc[goodind:]
 
         df = fulldf[sorted(list(cols - comp_set))]
         arr = np.array(df).transpose()  # will just work with arr
@@ -110,6 +111,7 @@ class DataGenerator(DataGeneratorInterface):
 
         self.tmp_colswithoutext = set(colswithoutext).intersection(df.columns)
         self.after_filter_data = fulldf.copy()
+
 
         return arr, df, self.used_type, fulldf
 
@@ -204,7 +206,8 @@ class DataGenerator(DataGeneratorInterface):
 
     def cols_by_selection(self, data):
         cols = set([x for x in data])
-        selected = self._eng.required_syms(True).union(set(['All', 'Portfolio']))  # always include All if there is all..
+        selected = self._eng.required_syms(True).union(
+            set(['All', 'Portfolio']))  # always include All if there is all..
         withoutext = self._eng.required_syms(False).union(set(['All', 'Portfolio']))
 
         return cols.intersection(selected), cols.intersection(withoutext)
@@ -212,22 +215,25 @@ class DataGenerator(DataGeneratorInterface):
     def generate_data(self):
         # self.params.use_ext=True #Will be changed by func
 
-        df, Marr, min_arr, type = self.get_data_by_type(self.params.type, self.params.compare_with)
-
-        self.cols = df.columns
-        if df.isnull().all(axis=None):
+        self.get_data_by_type(self.params.type, self.params.compare_with)
+        self.cols = self.df.columns
+        if self.df.isnull().all(axis=None):
             raise NoDataException("Dataframe is empty")
 
-        b = self.update_ranges(df)
+        b = self.update_ranges()
 
-        df = self.filter_ranges(Marr, b, df, min_arr)
-        df.rename({y: matplotlib.dates.num2date(y) for y in df.index}, axis=0, inplace=1)  # problematicline
+        self.filter_ranges(b)
+        self.df_before_act = self.df_before_act [ self.df.columns]
 
-        return df, type
+        def conv_index(df):
+            df.rename({y: matplotlib.dates.num2date(y) for y in df.index}, axis=0, inplace=1)  # problematicline
+        conv_index(self.df)
+        conv_index(self.df_before_act)
 
-    def filter_ranges(self, Marr, b, df, min_arr):
+
+    def filter_ranges(self,  b):
         self.params.ignore_minmax = self.params.ignore_minmax or b
-        mainlst = list(x for x in zip(Marr, min_arr, df.columns) if x[2] in self.colswithoutext)
+        mainlst = list(x for x in zip(self.Marr, self.min_arr, self.df.columns) if x[2] in self.colswithoutext)
         mainlst = sorted(mainlst, key=lambda x: x[0],
                          reverse=(self.params.limit_by == LimitType.MIN))
         condrange = lambda min, max: (min >= self.params.valuerange[0] and max <= self.params.valuerange[1])
@@ -242,19 +248,18 @@ class DataGenerator(DataGeneratorInterface):
         else:
             rang = (None, None)
         sordlist = sordlist[rang[0]:rang[1]]
-        restofcols = set(df.columns) - set(self.colswithoutext)
+        restofcols = set(self.df.columns) - set(self.colswithoutext)
 
-        df = df[sorted(list(restofcols)) + sordlist]  # rearrange columns by max, and include rest
-        return df
+        self.df = self.df[sorted(list(restofcols)) + sordlist]  # rearrange columns by max, and include rest
 
-    def update_ranges(self, df):
+    def update_ranges(self):
         upd1 = self.tmp_colswithoutext != self.colswithoutext
         if upd1:
             self.colswithoutext = self.tmp_colswithoutext
             self._eng.namesChanged.emit(len(self.colswithoutext))
 
-        M = max(list(df.max(numeric_only=True)))
-        m = min(list(df.min(numeric_only=True)))
+        M = max(list(self.df.max(numeric_only=True)))
+        m = min(list(self.df.min(numeric_only=True)))
         diff = self.maxValue != M or self.minValue != m
         self.minValue, self.maxValue = m, M
         if diff:
@@ -264,7 +269,7 @@ class DataGenerator(DataGeneratorInterface):
     def readjust_for_currency(self, ncurrency):
 
         currency_hist = self._inp.get_currency_hist(ncurrency, self._inp.currencyrange[0],
-                                               self._inp.currencyrange[1])  # should be fine, the range
+                                                    self._inp.currencyrange[1])  # should be fine, the range
         simplified = (currency_hist['Open'] + currency_hist['Close']) / 2
         rate = self._inp.get_relevant_currency(ncurrency)
         if rate is None:
@@ -296,4 +301,11 @@ class DataGenerator(DataGeneratorInterface):
             pickle.dump(self.serialized_data(), f)
 
     def serialized_data(self):
-        return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act, self.params, self._eng.Groups)
+        return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act, self.params,
+                          self._eng.Groups)
+
+    def verify_conditions(self):
+        return (self.params.fromdate is None or self.params.todate is None or self.params.fromdate < self.params.todate -datetime.timedelta(days=1) ) \
+               and (self.params.use_groups and len(self.params.groups) > 0) or \
+               (not self.params.use_groups and \
+                len(self.params.selected_stocks) + (len(self.params.ext) if self.params.use_ext else 0) > 0)

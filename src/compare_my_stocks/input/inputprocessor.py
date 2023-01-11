@@ -18,16 +18,15 @@ from PySide6.QtCore import QRecursiveMutex
 
 from common.loghandler import TRACELEVEL
 from config import config
-from common.common import UseCache, InputSourceType, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    simple_exception_handling
+from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
+    simple_exception_handling, localize_it, unlocalize_it, VerifySave
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
+from input.earningscommon import localize_me
 from input.earningsproc import EarningProcessor
 from input.inputprocessorinterface import InputProcessorInterface
 
 from input.inputsource import InputSource, InputSourceInterface
-from input.investpysource import InvestPySource
-from input.ibsource import get_ib_source
 from engine.symbolsinterface import SymbolsInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
 #import input.earningsinp
@@ -142,6 +141,8 @@ class InputProcessor(InputProcessorInterface):
 
     @simple_exception_handling(err_description="error in adjusting sym for currency")
     def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
+        fromdate=unlocalize_it(fromdate)
+        enddate=unlocalize_it(enddate)
         logging.debug(('adjusting for currency %s %s ' % (sym, currency)))
 
 
@@ -152,12 +153,6 @@ class InputProcessor(InputProcessorInterface):
         hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.NaN)
         if len(set(hist.index) - set(currency_df.index)) > 0:
             logging.debug((log_conv(' missing ', set(hist.index) - (set(currency_df.index)))))
-        # from scipy.interpolate import interp1d
-        # missing = hh.isna().any(axis=1)
-        # if len(missing)>0:
-        #    for ij in inc:
-        #        f = interp1d(currency_df.index, currency_df[ij])
-        #        hh[missing]['Open'].mul(f(hh[missing].index))
         return hh
 
     def update_currency_hist(self,currency,df):
@@ -177,12 +172,12 @@ class InputProcessor(InputProcessorInterface):
     def get_currency_hist(self, currency, fromdate, enddate):
         pair = (config.BASECUR, currency)
         def get_good_keys():
-
             zz = self.currency_hist[currency].isna().any(axis=1)
             return list(self.currency_hist[currency].index[~zz])
-        if isinstance(self.currency_hist,dict):
-            self.currency_hist=None
-        ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist  and currency in self.currency_hist else [(fromdate,enddate)])
+
+        # if isinstance(self.currency_hist,dict):
+        #     self.currency_hist=None
+        ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist is not None  and currency in self.currency_hist else [(fromdate,enddate)])
 
 
         for (mindate, maxdate) in ls:
@@ -190,8 +185,9 @@ class InputProcessor(InputProcessorInterface):
             self.update_currency_hist(currency,tmpdf)
 
         df = self.currency_hist[currency]
-        goodind=  list(set([x for x in  self.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
-        return df.loc[ goodind ]
+        return df #whatever we get is ok
+        #goodind=  list(set([x for x in  self.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
+        #return df.loc[ goodind ]
 
     def process_history(self, partial_symbols_update=set()):
 
@@ -262,7 +258,7 @@ class InputProcessor(InputProcessorInterface):
     def load_cache(self,minimal=False):
         query_source = True
         try:
-            if minimal:
+            if minimal: # Symbol info is needed by TransactionHandler . So we load just this...
                 _, symbinfo, _, _, _ = pickle.load(open(config.HIST_F, 'rb'))
                 self.symbol_info = collections.defaultdict(dict)
                 self.symbol_info.update(symbinfo)
@@ -276,6 +272,7 @@ class InputProcessor(InputProcessorInterface):
             else:
                 hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
 
+            self.currency_hist = None
             if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
 
@@ -518,7 +515,7 @@ class InputProcessor(InputProcessorInterface):
 
 
         self.symbol_info_tmp={}
-        localize_me = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
+
         if not partial_symbols_update:
             self._usable_symbols = set()
             self._bad_symbols = set()
@@ -527,9 +524,9 @@ class InputProcessor(InputProcessorInterface):
             self._bad_symbols=self._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
         todate = todate if todate is not None else datetime.datetime.now()
 
-        todate = localize_me(todate)
+        todate = localize_it(todate)
 
-        fromdate = localize_me(fromdate)
+        fromdate = localize_it(fromdate)
 
         if fromdate==todate:
             raise Exception("identical dates")
@@ -568,6 +565,8 @@ class InputProcessor(InputProcessorInterface):
         self.symbol_info[sym] = (l if l else {}) #just for debug I think
         if hist is None:
             raise SymbolError("bad symbol")
+        else:
+            logging.debug(f"got history for {sym}")
         if not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
             currency = self.resolve_currency(sym, l, hist)
             self.symbol_info[sym].update( {'currency': currency})
@@ -593,6 +592,18 @@ class InputProcessor(InputProcessorInterface):
         return okdays
 
     def save_data(self):
+        if self.process_params.use_cache == UseCache.DONT:
+            if config.VERIFY_SAVING == VerifySave.DONT:
+                logging.warn("Not saving data because not using cache")
+                return
+            logging.warn("Saving data without using cache! Can earse data!")
+            if config.VERIFY_SAVING == VerifySave.Ask :
+
+                x=input('Are you sure you want to? (y to accept)')
+                if x.lower()!='y':
+                    return
+
+
         import shutil
         try:
             shutil.copy(config.HIST_F, config.HIST_F_BACKUP)

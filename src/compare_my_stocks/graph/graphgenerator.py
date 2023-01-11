@@ -3,6 +3,7 @@ import logging
 import math
 import time
 from contextlib import suppress
+from datetime import timedelta
 from functools import partial
 
 import matplotlib
@@ -19,15 +20,15 @@ import numpy
 from config import config
 
 USEQT = config.USEQT
-from common.common import Types
+from common.common import Types, simple_exception_handling
 
 
 # plt.rcParams["figure.autolayout"] = False
 
-
+@simple_exception_handling(err_description="simple err",never_throw=True)
 def show_annotation(sel, cls=None, ax=None, generation=None):
     cls.generation_mutex.lock()
-    logging.log(TRACELEVEL,('show locked'))
+    logging.log(TRACELEVEL, ('show locked'))
     try:
 
         if cls.generation != generation:
@@ -43,19 +44,32 @@ def show_annotation(sel, cls=None, ax=None, generation=None):
         xi = sel.target[0]
         vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
         sel.extras.append(vertical_line)
-
-        val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
+        date = matplotlib.dates.num2date(xi)
         names = [k._label for k in ax.legend_.legendHandles]
+        if cls.typ & (Types.PRECENTAGE | Types.DIFF):
+            ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
+            vals_orig=[numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
+        else:
+            vals_orig = [None] * len(names)
+
+        get_val = lambda n: f"({round(n, 2)})" if n is not None else ''
+        val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
+
+        stls = [(f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}', targ)
+                for n, (v1, vis, targ),val_orig in
+                zip(names, val,vals_orig) if vis and not math.isnan(v1)]
+
         annotation_str = '\n'.join(
-            [('%s' if not targ else r' $\bf{ %s }$') % (f'{n}: {v1}') for n, (v1, vis, targ) in zip(names, val) if
-             vis and not math.isnan(v1)])
-        annotation_str += '\n' + str(matplotlib.dates.num2date(xi).strftime('%Y-%m-%d'))
+         [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%'))) for s,targ in stls ])
+
+
+        annotation_str += '\n' + str(date.strftime('%Y-%m-%d'))
 
         sel.annotation.set_text(annotation_str)
         cls.anotation_list += [sel]
 
     finally:
-        logging.log(TRACELEVEL,('show unlock'))
+        logging.log(TRACELEVEL, ('show unlock'))
         cls.generation_mutex.unlock()
     # cls._annotation+=ann
 
@@ -83,41 +97,48 @@ class GraphGenerator:
 
         def rel(type):
             dic = {}
-            dic[Types.RELTOMAX] = 'Relative To Maximum '
-            dic[Types.RELTOMIN] = 'Relative To Minimum '
-            dic[Types.RELTOEND] = 'Relative To End '
-            dic[Types.RELTOSTART] = '' if type & Types.COMPARE else 'Relative To Start Time '
+            dic[Types.RELTOMAX] = 'relative to maximum '
+            dic[Types.RELTOMIN] = 'relative to minimum '
+            dic[Types.RELTOEND] = 'relative to end '
+            dic[Types.RELTOSTART] = '' if type & Types.COMPARE else 'relative to start time '
             return dic.get(type & (Types.RELTOSTART | Types.RELTOMAX | Types.RELTOMIN | Types.RELTOEND), '')
 
         def getbasetype(type):
             dic = {}
-            dic[Types.PROFIT] = 'Unrealized Profit'
+            dic[Types.PROFIT] = 'Unrealized profit'
             dic[Types.VALUE] = 'Value'
-            dic[Types.PRICE] = 'Stock Price'
-            dic[Types.TOTPROFIT] = 'Total Profit'
+            dic[Types.PRICE] = 'Stock price'
+            dic[Types.TOTPROFIT] = 'Total profit'
             dic[Types.PERATIO] = 'PE Ratio'
-            dic[Types.PRICESELLS] = 'Price To Sells'
-            dic[Types.THEORTICAL_PROFIT] = 'Theortical Profit'
+            dic[Types.PRICESELLS] = 'Price to sells'
+            dic[Types.THEORTICAL_PROFIT] = 'Theortical profit'
             dic[Types.RELPROFIT] = 'Realized Profit'
             return dic.get(type & (
-                        Types.PROFIT | Types.VALUE | Types.PRICE | Types.RELPROFIT | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT),
+                    Types.PROFIT | Types.VALUE | Types.PRICE | Types.RELPROFIT | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT),
                            dic[Types.PRICE])
 
+        lowerfirst = lambda x: x[0].lower() + x[1:]
         dic = {}
-        dic[Types.PRECENTAGE] = f'Percentage Change {rel(type)}Of %s'
-        dic[Types.PRECDIFF] = f'Percentage Change Difference {rel(type)}Of %s'
-        dic[Types.DIFF] = f'Difference {rel(type)}Of %s'
-        dic[Types.ABS] = '%s'
+        dic[Types.PRECENTAGE] = lambda s: f'Percentage change {rel(type)}of {lowerfirst(s)}'
+        dic[Types.PRECDIFF] = lambda s: f'Percentage change difference {rel(type)}of {lowerfirst(s)}'
+        dic[Types.DIFF] = lambda s: f'Difference {rel(type)}of {lowerfirst(s)}'
+        dic[Types.ABS] = lambda s: s
+        if ((type & Types.COMPARE) == 0) and type & (Types.PRECENTAGE | Types.DIFF):
+            type = type & ~Types.DIFF  # percentage diff when not comparing is meaningless
         basestr = dic.get(type & (Types.PRECENTAGE | Types.PRECDIFF | Types.DIFF), dic[Types.ABS])
-        st = basestr % getbasetype(type)
+
+        st = basestr(getbasetype(type))
         if type & Types.COMPARE and self.params.compare_with:
-            st += ' Compared With ' + self.params.compare_with
+            st += ' compared with ' + self.params.compare_with
         return st
 
-    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type):
+    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data):
         additional_options = config.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         logging.log(TRACELEVEL, ('generation locked'))
+
+        self.orig_data = orig_data
+        self.typ = type
 
         # plt.sca(self._axes)
         try:
@@ -206,7 +227,6 @@ class GraphGenerator:
             if isinstance(child, matplotlib.lines.Line2D):
                 child.remove()
 
-
         if getattr(self, 'cursor', None):
             self._axes.figure.canvas.callbacks.disconnect(self.cb)
             del self.cursor
@@ -235,7 +255,7 @@ class GraphGenerator:
                 hide = legline._label not in self.params.shown_stock  # act based on shown_stock
             else:
                 hide = (iscurtrivial and starthidden) or (
-                            not iscurtrivial and (legline._label not in self.cur_shown_stock))
+                        not iscurtrivial and (legline._label not in self.cur_shown_stock))
 
             if hide:
                 legline.set_alpha(0.2)  # hide

@@ -9,6 +9,7 @@ from functools import partial
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
 from common.common import conv_date, dictfilt, log_conv
+from common.loghandler import TRACELEVEL
 from config import config
 from input.inputsource import InputSource
 from config import config
@@ -204,7 +205,10 @@ class IBSource(InputSource):
     def __getattr__(self, item):
         def wrapper(fun,*args,**kw):
             with self.lock:
-                return fun(*args,**kw)
+                logging.log(TRACELEVEL,"entering iblock")
+                x= fun(*args,**kw)
+                logging.log(TRACELEVEL, "after iblock")
+                return x
         z=getattr(self.ibrem,item)
         return partial(wrapper,z)
 

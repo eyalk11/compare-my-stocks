@@ -1,7 +1,5 @@
 import logging
-import json
 import threading
-from abc import abstractmethod
 from datetime import datetime
 from enum import Enum
 from functools import partial
@@ -9,19 +7,19 @@ from functools import partial
 from PySide6.QtCore import QThread, QTimer, QDateTime, QTime
 import PySide6.QtCore
 import PySide6.QtWidgets
-from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QLineEdit, QDateEdit, QInputDialog, QGroupBox, \
+from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QDateEdit, QGroupBox, \
     QRadioButton, QSizePolicy
 from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
-from common.common import UniteType, Types, LimitType, EnhancedJSONEncoder, SafeSignal
+from common.common import UniteType, Types, LimitType, SafeSignal
 from common.dolongprocess import DoLongProcessSlots, TaskParams
 from config import config
 from engine.compareengineinterface import CompareEngineInterface
 from engine.parameters import Parameters, copyit
 from engine.symbols import SimpleSymbol
-from gui.forminitializerinterface import FormInitializerInterface
-from gui.formobserverinterface import ResetRanges, FormObserverInterface
+from gui.formobserverinterface import ResetRanges
+from gui.graphhandler import GraphsHandler
 
 from gui.jupyterhandler import JupyterHandler
 from gui.listobserver import ListsObserver
@@ -40,88 +38,15 @@ except:
     import json_editor_ui
 
 
-class GraphsHandler(FormObserverInterface, FormInitializerInterface):
-    def __init__(self):
-        self.graphs = {}
-        self.lastgraphtext = ""
-
-    def load_existing_graphs(self):
-        try:
-            # gg=Deserializer(open(config.GRAPHFN,'rt'))
-            gg = json.load(open(config.GRAPHFN, 'rt'))  # ,object_hook=Deserializer
-            self.graphs = {k: Parameters.load_from_json_dict(v) for k, v in gg.items()}
-            self.update_graph_list()
-        except:
-            import traceback;
-            traceback.print_exc()
-            logging.warn(('err loading graphs'))
-            return
-
-    def update_graph_list(self):
-        self.window.graphList.clear()
-        self.window.graphList.addItems(list(self.graphs.keys()), )
-
-    def save_graph(self):
-        text, ok = QInputDialog().getText(self, "Enter Graph Name",
-                                          "Graph name:", QLineEdit.Normal,
-                                          self.lastgraphtext)
-        if ok and text:
-            self.internal_save(text)
-
-    def internal_save(self, text, upd=True):
-        self.graphs[text] = copyit(self.graphObj.params)
-        if upd:
-            self.lastgraphtext = text
-
-        open(config.GRAPHFN, 'wt').write(json.dumps(self.graphs, cls=EnhancedJSONEncoder))
-        self.update_graph_list()
-
-    def load_graph(self, text=None):
-        def after_task():
-            self.setup_controls_from_params(0, 1)
-            self.update_graph(ResetRanges.FORCE,
-                              force=True)  # There is a bug of the graph not fitting in screen. This solves it.
-
-        try:
-            if text == None:
-                if not self.window.graphList.currentItem():
-                    return
-                text = self.window.graphList.currentItem().text()
-            if text not in self.graphs:
-                logging.warn(f'graph {text} not found')
-                return
-            self.graphObj.params = copyit(self.graphs[text])
-            self.update_graph(ResetRanges.FORCE, force=True, after=after_task)
-            # should wait after update with controls -> after_task
-
-        except:
-            import traceback;
-            traceback.print_exc()
-            logging.debug(('failed loading graph'))
-
-    def save_last_graph(self):
-        if config.LASTGRAPHNAME:
-            self.internal_save(config.LASTGRAPHNAME, upd=False)
-
-    def load_last_if_needed(self):
-        if config.LOADLASTATBEGIN:
-            self.load_graph(config.LASTGRAPHNAME)
-        return config.LOADLASTATBEGIN
-
-
 class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def update_task(self, params):
-        # self.window.last_status.setText('data_generated refreshing')
-        # if params.ignore_minmax == ResetRanges.FORCE:
-        #    self.graphObj.adjust_date=True
         self.graphObj.update_graph(params)
-        # self.window.last_status.setText('finshed refreshing')
 
     def refresh_task(self, x, params):
-        self.window.last_status.setText('data_generated refreshing')
+        self.window.last_status.setText('refreshing data')
         self.graphObj.process(set(x), params)
         self.update_graph(1, True)
-        self.window.last_status.setText('finshed refreshing')
+        self.window.last_status.setText('finished refreshing')
 
     def decrease(self, *args):
         self._update_graph_task.command_waiting = self._update_graph_task.command_waiting - 1

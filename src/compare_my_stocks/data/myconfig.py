@@ -13,7 +13,7 @@ This is true also for myconfig.py.
 import datetime
 import pytz
 
-from common.common import InputSourceType, UseCache
+from common.common import InputSourceType, UseCache, VerifySave
 from transactions.transactioninterface import TransactionSourceType
 IGNORECONF = {} # sym : fromdate
 COMBINEDATEDIFF=20
@@ -149,3 +149,5 @@ FIXBUYSELLDIFFDAYS=3
 NORMALIZE_ON_TRANSACTIONSAVE=0
 DONT_RUN_NOTEBOOK=False
 STOP_EXCEPTION_IN_DEBUG=True
+VERIFY_SAVING = VerifySave.Ask
+CHECKRELOADINTERVAL=30

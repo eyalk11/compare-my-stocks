@@ -7,7 +7,12 @@ from datetime import datetime
 
 import matplotlib
 import numpy as np
+import pytz
 
+localize_it = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
+def unlocalize_it(date):
+    d=localize_it(date)
+    return d.replace(tzinfo=None)
 
 import sys
 
@@ -51,6 +56,10 @@ class Types(int,Flag):
     PRECDIFF = PRECENTAGE | DIFF
 
 
+class VerifySave(int,Enum):
+    DONT=0,
+    Ask=1,
+    ForceSave=2
 
 
 
@@ -82,14 +91,14 @@ class InputSourceType(Flag):
 
 from Pyro5.errors import format_traceback
 
-def simple_exception_handling(err_description=None,return_succ=False):
+def simple_exception_handling(err_description=None,return_succ=False,never_throw=False):
     def decorated(func):
         def internal(*args,**kwargs):
             tostop= os.environ.get('PYCHARM_HOSTED') == '1'
             if 'config' in globals():
                 tostop = tostop and globals()['config'].STOP_EXCEPTION_IN_DEBUG
 
-            if tostop:
+            if tostop and not never_throw:
                 return func(*args,**kwargs)
             else:
                 try:

@@ -6,10 +6,12 @@ import sys
 
 import PySide6
 from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QFile, Qt
+from PySide6.QtCore import QFile, Qt, QTimer
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
+
+from common.autoreloader import ModuleReloader
 from qtvoila import QtVoila
 
 from engine.symbolsinterface import SymbolsInterface
@@ -37,6 +39,7 @@ class MainWindow(QMainWindow, FormInitializer):
 
 
         self.load_ui()
+        self._modreloader= ModuleReloader()
 
         #self.window.resize(w,h)
 
@@ -81,6 +84,19 @@ class MainWindow(QMainWindow, FormInitializer):
         self.showMaximized()
         if self.load_last_if_needed():
             self.update_graph(1)
+
+        if  os.environ.get('PYCHARM_HOSTED') == '1':
+            if config.CHECKRELOADINTERVAL ==0:
+                return
+            logging.debug("checking and reloading")
+            timer = QTimer(self)
+            timer.setInterval(1000* config.CHECKRELOADINTERVAL)
+            timer.timeout.connect(self.check_reload)
+            timer.start()
+
+    def check_reload(self):
+        #We check and reload all modules if they are changed, if we run on pycharm
+        self._modreloader.check(True,True)
 
     #from PySide6.QtWidgets import QGroupBox
     #self.window.findChild(QGroupBox, name='graph_groupbox')

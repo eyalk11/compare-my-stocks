@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from config import config
 from common.common import NoDataException, MySignal, simple_exception_handling, Types, UniteType, InputSourceType
@@ -47,6 +48,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         self._cache_date = None
 
         self.read_groups_from_file()
+        self._datagenlock = threading.Lock()
 
     def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False):
         if not self._datagen.data_generated:
@@ -99,27 +101,36 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             self._inp.process(symbols_needed)
             self.adjust_date = True
 
-        df, type = self.call_data_generator()
 
-        if type is not None:
-            self.call_graph_generator(df, just_upd, type)
+        with self._datagenlock:
+            res= self.call_data_generator()
+            df= self._datagen.df
+            type=self._datagen.type
+            before_act =self._datagen.df_before_act
+
+        if res:
+            self.call_graph_generator(df, just_upd,type,before_act )
 
     @simple_exception_handling(err_description="Exception in generation")
     def call_data_generator(self):
+        if not self._datagen.verify_conditions():
+            self.statusChanges.emit(f'Graph Invalid!')
+            return False
         try:
-            return self._datagen.generate_data()
+            self._datagen.generate_data()
+            return True
         except NoDataException:
             self.statusChanges.emit(f'No Data For Graph!')
             logging.debug(('no data'))
-            return None, None
+            return False
         except Exception as e:
             self.statusChanges.emit(f'Exception in generation: {e}')
             raise
 
-    def call_graph_generator(self, df, just_upd, type):
+    def call_graph_generator(self, df, just_upd, type,orig_data):
         try:
             self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
-                                             just_upd, type)
+                                             just_upd, type,orig_data)
             self.statusChanges.emit("Generated Graph :)")
             logging.info("Generated graph")
             self.finishedGeneration.emit(1)

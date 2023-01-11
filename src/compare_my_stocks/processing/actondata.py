@@ -50,7 +50,7 @@ class ActOnData:
                 refarr = arr[ 0]
         else:
             if arr.shape[1]==0:
-                logging.debug(('errarr'))
+                logging.error(('errarr'))
                 raise NoDataException()
             if self.type & Types.RELTOMAX:
                 refarr = np.nanmax(arr,axis=1)
@@ -75,7 +75,7 @@ class ActOnData:
         transpose_compit = compit.transpose()
 
         if self.type & (Types.PRECENTAGE | Types.DIFF) == (Types.PRECENTAGE | Types.DIFF):
-            newarr = ((self.transpose_arr / self.refarr - transpose_compit / compit_initial)) * 100
+            newarr = (self.transpose_arr / self.refarr - transpose_compit / compit_initial) * 100
             ign = True
 
         elif self.type & Types.PRECENTAGE:  # by what factor was it better...
