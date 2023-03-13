@@ -8,6 +8,7 @@ from collections import defaultdict
 # from datetime import datetime
 import datetime
 from copy import copy
+from functools import lru_cache
 
 import matplotlib
 import numpy
@@ -94,7 +95,7 @@ class InputProcessor(InputProcessorInterface):
     def __init__(self, symb, transaction_handler, input_source=None):
         self._inputsource: InputSource = input_source
         if self._inputsource is None:
-            logging.debug("not using any source")
+            logging.warn("not using any source")
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
@@ -169,6 +170,7 @@ class InputProcessor(InputProcessorInterface):
             self.currency_hist.reindex(index=updated.index)
             self.currency_hist[currency] = updated
 
+    @lru_cache
     def get_currency_hist(self, currency, fromdate, enddate):
         pair = (config.BASECUR, currency)
         def get_good_keys():
@@ -182,7 +184,8 @@ class InputProcessor(InputProcessorInterface):
 
         for (mindate, maxdate) in ls:
             tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
-            self.update_currency_hist(currency,tmpdf)
+            if tmpdf is not None:
+                self.update_currency_hist(currency,tmpdf)
 
         df = self.currency_hist[currency]
         return df #whatever we get is ok
@@ -554,6 +557,7 @@ class InputProcessor(InputProcessorInterface):
             if requireddays/okdays<0.5:
                 logging.debug((f'mostly problematic {sym}'))
 
+    @lru_cache(2000)
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
         if self._inputsource is None:
             return 0

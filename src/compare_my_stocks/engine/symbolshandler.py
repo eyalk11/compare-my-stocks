@@ -1,6 +1,7 @@
 import json
+import logging
 
-from common.common import simple_exception_handling, Types, UniteType
+from common.common import simple_exception_handling, Types, UniteType, print_formatted_traceback
 from config import config
 from engine.parameters import Parameters
 
@@ -11,7 +12,7 @@ class SymbolsHandler:
         self._categories=None
         self._groups_by_cat = {}
         self._cur_category = None
-
+    @simple_exception_handling("error in options")
     def get_options_from_groups(self,ls):
 
         if not ls:
@@ -20,8 +21,12 @@ class SymbolsHandler:
         for g in ls:
             if g not in self.Groups:
                 raise Exception(f'{g} is not in Groups')
-
-            s = s.union(set(self.Groups[g]))
+            try:
+                s = s.union(set(self.Groups[g]))
+            except:
+                logging.error("bad group ",g)
+                print_formatted_traceback(detailed=False)
+                #simple_exception_handling(f"bad group {g}",never_throw=True)()
         if self.params.limit_to_portfolio:
             s=s.intersection(set(self.get_portfolio_stocks()))
         return list(s)

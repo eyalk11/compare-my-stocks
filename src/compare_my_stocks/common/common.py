@@ -34,6 +34,9 @@ def index_of(val, in_list):
 
 from enum import Flag, auto, Enum
 
+class CombineStrategy(int,Flag):
+    PREFERSTOCKS=auto()
+    PREFERIB=auto()
 
 class Types(int,Flag):
     ABS = 0
@@ -89,7 +92,15 @@ class InputSourceType(Flag):
     InvestPy=auto()
 
 
+def neverthrow(f,*args,**kwargs):
+    try:
+        return f(*args,**kwargs)
+    except:
+        return None
+
+
 from Pyro5.errors import format_traceback
+
 
 def simple_exception_handling(err_description=None,return_succ=False,never_throw=False):
     def decorated(func):
@@ -103,7 +114,8 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
             else:
                 try:
                     return func(*args,**kwargs)
-                except:
+                except Exception as e:
+                    TmpHook.GetExceptionHook().emit(e)
                     if err_description:
                         logging.error((err_description))
                     print_formatted_traceback()
@@ -114,8 +126,8 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
 
 
 
-def print_formatted_traceback():
-    logging.error((''.join([x[:500] for x in format_traceback(detailed=True)] )))
+def print_formatted_traceback(detailed=True):
+    logging.error((''.join([x[:500] for x in format_traceback(detailed=detailed)] )))
 
 def addAttrs(attr_names):
   def deco(cls):
@@ -226,4 +238,14 @@ def need_add_process(config):
 
 def log_conv(*tup):
     return '\t'.join([str(x) for x in tup ])
+
+
+class TmpHook:
+    EXCEPTIONHOOK=MySignal(Exception)
+    MyHook=None
+    @classmethod
+    def GetExceptionHook(cls):
+        if cls.MyHook is None:
+            cls.MyHook=TmpHook()
+        return cls.MyHook.EXCEPTIONHOOK
 

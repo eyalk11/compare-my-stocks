@@ -235,7 +235,7 @@
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
-                       <height>78</height>
+                       <height>76</height>
                       </size>
                      </property>
                      <property name="orientation">
@@ -1286,6 +1286,13 @@
                  <widget class="QPushButton" name="edit_groupBtn">
                   <property name="text">
                    <string>Edit Groups</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="sortGroupsBtn">
+                  <property name="text">
+                   <string>Sort Alphabetically</string>
                   </property>
                  </widget>
                 </item>

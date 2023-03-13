@@ -10,7 +10,7 @@ import matplotlib
 import pandas as pd
 from dateutil import parser
 
-from common.common import simple_exception_handling
+from common.common import simple_exception_handling, neverthrow
 from config import config
 from transactions.transactionhandler import TrasnasctionHandler
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
@@ -51,6 +51,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
         #x = x[['Portfolio', 'Symbol', 'Quantity', 'Cost Per Share', 'Type', 'Date']]
         #   x['TimeOfDay']
         x.columns = (list(x.columns[:-1]) + ["Notes"]) #Fix Notes
+        x=x.rename(columns={'Shares Owned':'Quantity','Transaction Date':'Date','Transaction Time':'TimeOfDay','Display Symbol':'DisplaySymbol'})
         for q in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],x['TimeOfDay'],x['Currency'],x['Exchange'],x["DisplaySymbol"],x["Notes"]):
             t=q[:-4]
             #   x['TimeOfDay']):
@@ -65,6 +66,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                     prot = self._manager.params.portfolio
 
             if (prot and t[0] != prot) or math.isnan(t[2]):
+                logging.warn(f"skipping over transaction {t}")
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
             # logging.debug((dt))
@@ -83,7 +85,11 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             # timezone = pytz.timezone("UTC")
             # dt=timezone.normalize(dt)
             # dt=dt.replace(tzinfo=None)
-            self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],'MYSTOCK')  # Qty,cost,sym
+
+            if (neverthrow(math.isnan,q[-1]) or neverthrow(lambda : len(q)==0)):
+                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],'MYSTOCK')  # Qty,cost,sym
+            else:
+                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],q[-1])  # Qty,cost,sym
             self._buysymbols.add(t[1])
             if q[-4]:
                 self.update_sym_property(t[1], q[-4])
@@ -91,7 +97,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             self.update_sym_property(t[1], q[-2], "DisplaySymbol")
             self.update_sym_property(t[1], q[-1], "Notes")
 
-
+    @simple_exception_handling(err_description="save_transaction_table")
     def save_transaction_table(self, buydict,file,normailze_to_cur=config.NORMALIZE_ON_TRANSACTIONSAVE):
         def loctim(dic,item): #not the most efficient.
             ll=list(dic.keys())
@@ -129,7 +135,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
         dt.set_index("Id",inplace=True)
         dt = dt.applymap(lambda x: "" if str(x) == "nan" else x )
         dt=dt.applymap(lambda x: '"%s"' % x if x != ''  else x)
-        dt.to_csv(file, quoting=csv.QUOTE_NONE)
+        dt.to_csv(file, quoting=csv.QUOTE_NONE,escapechar='\\')
         logging.debug(("saved"))
 
 

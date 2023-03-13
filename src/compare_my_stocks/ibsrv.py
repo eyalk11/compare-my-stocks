@@ -1,7 +1,28 @@
+import asyncio
+
 import Pyro5.server
+from Pyro5.serializers import SerpentSerializer
 
 from config import config
 from input.ibsource import IBSourceRem
+
+
+from Pyro5.api import register_class_to_dict, register_dict_to_class
+
+
+def thingy_class_to_dict(obj):
+    return { "__class__": "waheeee-custom-thingy",
+        "timeouterror":1
+             }
+def thingy_dict_to_class(classname, d):
+    return TimeoutError()
+
+register_class_to_dict(asyncio.exceptions.TimeoutError, thingy_class_to_dict)
+
+register_dict_to_class("waheeee-custom-thingy", thingy_dict_to_class)
+
+
+
 
 class MyDeamon(Pyro5.server.Daemon):
     def clientDisconnect(self,conn):

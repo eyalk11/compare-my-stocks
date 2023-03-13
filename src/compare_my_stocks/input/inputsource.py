@@ -1,6 +1,7 @@
 import logging
 import os
 from abc import ABC, abstractmethod, ABCMeta
+from functools import lru_cache
 
 import pandas as pd
 
@@ -60,6 +61,8 @@ class InputSource(InputSourceInterface):
 
     def can_handle_dict(self,sym):
         return True
+
+    @lru_cache(maxsize=2000)
     def resolve_symbol(self,sym):
         if self.can_handle_dict(sym) : #and (isinstance(sym, AbstractSymbol)  and sym.dic!=None) or type(sym)==dict
             if type(sym)==dict:

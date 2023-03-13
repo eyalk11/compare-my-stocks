@@ -24,7 +24,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self._cache_date=None
         self.need_to_save=True
     def doquery(self):
-        logging.debug(("running query"))
+        logging.info(("running query in IB  for transaction"))
         if not self.DOQUERY or not (self.query_id) or not self.token_id:
             return
         try:
@@ -62,12 +62,13 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
     def populate_buydic(self):
-
-        if ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT):
-            logging.debug(('using ib cache alone'))
+        usecache= ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT)
+        if usecache:
+            logging.info(('using ib cache alone'))
+            newres=[]
             self.need_to_save=False
-        else:
-            logging.debug(('doing query'))
+
+        if not usecache or self.TryToQueryAnyway:
             newres= self.doquery()
             logging.debug(('completed'))
             if newres is None:
@@ -75,10 +76,24 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
                 return
 
 
-
+            n=0
+            lastdate=None
             for x in newres:
                 if x.tradeID not in self._tradescache:
                     self._tradescache[x.tradeID]=x
+                    if lastdate and x.dateTime > lastdate:
+                        lastdate=x.dateTime
+                        n+=1
+
+        if lastdate:
+            logging.info(f"Last trade date is {lastdate}. New trades {n}")
+        elif newres:
+            logging.info(f"no new trades in query. Last trade {max([d.dateTime for d in self._tradescache.values()])}")
+        elif (not ( not usecache or self.TryToQueryAnyway)) and self._tradescache:
+            logging.info(f"Didnt query cache. Last trade {max([d.dateTime for d in self._tradescache])}")
+
+
+
 
 
         for z in self._tradescache.values():

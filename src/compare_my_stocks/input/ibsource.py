@@ -8,7 +8,7 @@ from functools import partial
 
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
-from common.common import conv_date, dictfilt, log_conv
+from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback
 from common.loghandler import TRACELEVEL
 from config import config
 from input.inputsource import InputSource
@@ -38,11 +38,21 @@ class IBSourceRem:
         logging.debug(('disconnected'))
         if IBSourceRem.ConnectedME:
             IBSourceRem.ConnectedME.ib.disconnect()
-            IBSourceRem.ConnectedME.ib= IB() #not needed
-            #IBSourceRem.ConnectedME=None
+            IBSourceRem.ConnectedME : IBSourceRem
+            try:
+                IBSourceRem.ConnectedME.init(IBSourceRem.ConnectedME._host,IBSourceRem.ConnectedME._port,IBSourceRem.ConnectedME._clientid,IBSourceRem.ConnectedME._readonly)
+            except:
+                logging.error("error re-connecting")
+                print_formatted_traceback()
+
+
 
     @Pyro5.server.expose
     def init(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
+        self._host=host
+        self._port=port
+        self._clientid=clientId
+        self._readonly=readonly
         logging.debug(('init'))
 
         #util.useQt('PySide6')
@@ -262,7 +272,7 @@ class IBSource(InputSource):
 
 
     def get_currency_history(self, pair, startdate, enddate):
-        f=pair[0]+pair[1]
+        f=pair[1]+pair[0]
         contract=Forex(f)
         return self.historicalhelper(startdate,enddate,contract)
 

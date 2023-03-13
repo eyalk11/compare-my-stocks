@@ -232,6 +232,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         else:
             self.groups_changed()
 
+    def sort_groups(self):
+        self.window.groups : QListWidget
+        self.window.groups.sortItems(order=PySide6.QtCore.Qt.SortOrder.AscendingOrder)
+
     def edit_groups(self):
 
         # jw=json_editor_ui.JSONEditorWindow(None)
@@ -277,6 +281,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.home_currency_combo.currentTextChanged, (genobsResetForce('currency_to_adjust')))
 
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
+        self.window.findChild(QPushButton, name="sortGroupsBtn").pressed.connect(self.sort_groups)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
             partial(self.update_graph, force=True, reset_ranges=ResetRanges.FORCE))
         self.window.use_groups.toggled = safeconnect(self.window.use_groups.toggled, (self.use_groups))

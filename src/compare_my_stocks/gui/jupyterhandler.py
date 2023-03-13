@@ -5,6 +5,7 @@ import webbrowser
 
 import psutil
 
+from common.common import simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
 from qtvoila import QtVoila
@@ -68,7 +69,7 @@ class JupyterHandler(FormInterface):
         self.file_name= name
         return True
 
-
+    @simple_exception_handling("launch notebook")
     def launch_notebook(self,filename=None):
         if filename==None:
             filename=config.DEFAULTNOTEBOOK
@@ -84,5 +85,5 @@ class JupyterHandler(FormInterface):
         else:
             logging.info(('didn\'t find instance, running'))
             import subprocess
-            cmd = [sys.executable, '-m', 'notebook', filename]
-            subprocess.Popen(cmd,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
+            cmd = ['start',sys.executable, '-m', 'notebook', filename]
+            subprocess.Popen(cmd,stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)

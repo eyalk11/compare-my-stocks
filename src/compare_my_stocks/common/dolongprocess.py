@@ -40,7 +40,6 @@ class DoLongProcess(QObject):
 
         self._realtask= partial(self._task,*params)
 
-        #self.thread.finished.connect(self.thread.deleteLater)
 
         self.thread.start()
         self.moveToThread(self.thread)
@@ -92,7 +91,7 @@ class DoLongProcessSlots(QObject):
         #     from ib_insync import IB,util
         #     util.useQt('PySide6')
 
-        realtask = simple_exception_handling(err_description="excpetion in real task")(partial(self._task, *taskparams.params))
+        realtask = simple_exception_handling(err_description="excpetion in real task",never_throw=True)(partial(self._task, *taskparams.params))
         self.started = True
         self.mutex.lock()
         try:
