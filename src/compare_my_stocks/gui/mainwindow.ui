@@ -52,7 +52,7 @@
         <property name="maximumSize">
          <size>
           <width>400</width>
-          <height>590</height>
+          <height>700</height>
          </size>
         </property>
         <property name="sizeIncrement">
@@ -85,7 +85,7 @@
               </size>
              </property>
              <property name="title">
-              <string>Add Stock</string>
+              <string>Pick Stock</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_22">
               <item row="1" column="0">
@@ -167,25 +167,6 @@
                 </item>
                 <item>
                  <layout class="QGridLayout" name="gridLayout_18">
-                  <item row="0" column="0">
-                   <widget class="QPushButton" name="addselected">
-                    <property name="sizePolicy">
-                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                      <horstretch>0</horstretch>
-                      <verstretch>0</verstretch>
-                     </sizepolicy>
-                    </property>
-                    <property name="maximumSize">
-                     <size>
-                      <width>1000</width>
-                      <height>16777215</height>
-                     </size>
-                    </property>
-                    <property name="text">
-                     <string>&lt; Add to</string>
-                    </property>
-                   </widget>
-                  </item>
                   <item row="0" column="2">
                    <widget class="QPushButton" name="addreserved">
                     <property name="sizePolicy">
@@ -205,6 +186,25 @@
                     </property>
                    </widget>
                   </item>
+                  <item row="0" column="0">
+                   <widget class="QPushButton" name="addselected">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>1000</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>&lt; Add to</string>
+                    </property>
+                   </widget>
+                  </item>
                  </layout>
                 </item>
                </layout>
@@ -216,10 +216,7 @@
             <layout class="QFormLayout" name="formLayout_2"/>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_2">
-             <property name="title">
-              <string>Lists</string>
-             </property>
+            <widget class="QFrame" name="frame_2">
              <layout class="QGridLayout" name="gridLayout_4">
               <item row="2" column="2">
                <widget class="QListWidget" name="refstocks"/>
@@ -364,18 +361,182 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_4">
+            <widget class="QGroupBox" name="groupBox">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>0</width>
-               <height>70</height>
+               <width>100</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="baseSize">
+              <size>
+               <width>100</width>
+               <height>80</height>
               </size>
              </property>
              <property name="title">
-              <string>Status</string>
+              <string>Filter Range</string>
              </property>
-             <layout class="QFormLayout" name="formLayout_4">
+             <layout class="QFormLayout" name="formLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_16">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Displayed Num</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabeledRangeSlider" name="max_num">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="baseSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksBelow</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_17">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Value</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabeledDoubleRangeSlider" name="min_crit">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>30</height>
+                 </size>
+                </property>
+                <property name="baseSize">
+                 <size>
+                  <width>90</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksBelow</enum>
+                </property>
+               </widget>
+              </item>
               <item row="2" column="0">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string> Based On:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QFrame" name="frame">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>true</bool>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_8">
+                 <property name="topMargin">
+                  <number>1</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>1</number>
+                 </property>
+                 <item row="0" column="0">
+                  <widget class="QRadioButton" name="limit_RANGE">
+                   <property name="text">
+                    <string>Range</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QRadioButton" name="limit_MAX">
+                   <property name="text">
+                    <string>Max</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QRadioButton" name="limit_MIN">
+                   <property name="text">
+                    <string> Min</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="groupBox_5">
+             <property name="title">
+              <string/>
+             </property>
+             <layout class="QFormLayout" name="formLayout_3">
+              <item row="0" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="minimumSize">
                  <size>
@@ -388,7 +549,7 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="0" column="1">
                <widget class="QLineEdit" name="last_status">
                 <property name="enabled">
                  <bool>false</bool>
@@ -407,93 +568,50 @@
                 </property>
                </widget>
               </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
-            <widget class="QGroupBox" name="groupBox_6">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>50</height>
-              </size>
-             </property>
-             <property name="title">
-              <string>Show Mode</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_13">
-              <item row="0" column="2">
-               <widget class="QRadioButton" name="nojpy_mode">
-                <property name="text">
-                 <string>No Jupyter</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QRadioButton" name="full_mode">
-                <property name="text">
-                 <string>Full Mode</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QRadioButton" name="jupyter_mode">
-                <property name="text">
-                 <string>Jupyter Mode</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QRadioButton" name="minimal_mode">
-                <property name="text">
-                 <string>Minimal Mode</string>
-                </property>
-               </widget>
+              <item row="1" column="0" colspan="2">
+               <layout class="QGridLayout" name="gridLayout_19">
+                <item row="0" column="0">
+                 <widget class="QRadioButton" name="minimal_mode">
+                  <property name="text">
+                   <string>Minimal Mode</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QRadioButton" name="jupyter_mode">
+                  <property name="text">
+                   <string>Jupyter Mode</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="2">
+                 <widget class="QRadioButton" name="nojpy_mode">
+                  <property name="text">
+                   <string>No Jupyter</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="3">
+                 <widget class="QRadioButton" name="full_mode">
+                  <property name="text">
+                   <string>Full Mode</string>
+                  </property>
+                  <property name="checked">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
-           </item>
-           <item>
-            <layout class="QGridLayout" name="gridLayout_20">
-             <item row="1" column="0">
-              <widget class="QPushButton" name="vis_to_selectedBtn">
-               <property name="text">
-                <string>Visible to selected</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <spacer name="verticalSpacer">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
            </item>
           </layout>
          </item>
         </layout>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QGroupBox" name="graph_groupbox">
-        <property name="title">
-         <string>Graph</string>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_3"/>
-       </widget>
-      </item>
-      <item row="1" column="0" colspan="2">
+      <item row="2" column="0" colspan="2">
        <widget class="QFrame" name="buttom_frame">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -523,13 +641,13 @@
             <widget class="QGroupBox" name="main_group">
              <property name="minimumSize">
               <size>
-               <width>850</width>
+               <width>620</width>
                <height>380</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>850</width>
+               <width>800</width>
                <height>360</height>
               </size>
              </property>
@@ -548,99 +666,6 @@
              <layout class="QGridLayout" name="gridLayout_7">
               <item row="0" column="0">
                <layout class="QGridLayout" name="gridLayout_9">
-                <item row="0" column="0" colspan="2">
-                 <widget class="QGroupBox" name="groupBox_datepicker">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>70</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>16777215</width>
-                    <height>85</height>
-                   </size>
-                  </property>
-                  <property name="title">
-                   <string>DatePicker</string>
-                  </property>
-                  <layout class="QHBoxLayout" name="horizontalLayout_14">
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_13">
-                     <item>
-                      <layout class="QGridLayout" name="gridLayout">
-                       <item row="0" column="0" colspan="2">
-                        <widget class="QDateRangeSlider" name="daterangepicker">
-                         <property name="orientation">
-                          <enum>Qt::Horizontal</enum>
-                         </property>
-                         <property name="tickPosition">
-                          <enum>QSlider::TicksAbove</enum>
-                         </property>
-                         <property name="start" stdset="0">
-                          <datetime>
-                           <hour>0</hour>
-                           <minute>0</minute>
-                           <second>0</second>
-                           <year>2020</year>
-                           <month>1</month>
-                           <day>1</day>
-                          </datetime>
-                         </property>
-                         <property name="end" stdset="0">
-                          <datetime>
-                           <hour>1</hour>
-                           <minute>0</minute>
-                           <second>0</second>
-                           <year>2021</year>
-                           <month>1</month>
-                           <day>2</day>
-                          </datetime>
-                         </property>
-                         <property name="freq" stdset="0">
-                          <string>D</string>
-                         </property>
-                         <property name="fmt" stdset="0">
-                          <string>%Y-%m-%d</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item row="1" column="0">
-                        <layout class="QFormLayout" name="formLayout_14">
-                         <item row="0" column="0">
-                          <widget class="QLabel" name="label_30">
-                           <property name="text">
-                            <string>Start</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QDateEdit" name="startdate"/>
-                         </item>
-                        </layout>
-                       </item>
-                       <item row="1" column="1">
-                        <layout class="QFormLayout" name="formLayout_13">
-                         <item row="0" column="0">
-                          <widget class="QLabel" name="label_29">
-                           <property name="text">
-                            <string>End</string>
-                           </property>
-                          </widget>
-                         </item>
-                         <item row="0" column="1">
-                          <widget class="QDateEdit" name="enddate"/>
-                         </item>
-                        </layout>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
                 <item row="1" column="0" rowspan="2">
                  <widget class="QFrame" name="frame">
                   <layout class="QHBoxLayout" name="horizontalLayout_15">
@@ -918,203 +943,98 @@
                      </layout>
                     </widget>
                    </item>
-                   <item>
-                    <spacer name="horizontalSpacer_5">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>40</width>
-                       <height>20</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
                   </layout>
                  </widget>
                 </item>
-                <item row="1" column="1">
-                 <widget class="QGroupBox" name="groupBox">
-                  <property name="sizePolicy">
-                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                    <horstretch>0</horstretch>
-                    <verstretch>0</verstretch>
-                   </sizepolicy>
-                  </property>
+                <item row="0" column="0">
+                 <widget class="QGroupBox" name="groupBox_datepicker">
                   <property name="minimumSize">
                    <size>
-                    <width>100</width>
-                    <height>100</height>
+                    <width>0</width>
+                    <height>70</height>
                    </size>
                   </property>
-                  <property name="baseSize">
+                  <property name="maximumSize">
                    <size>
-                    <width>100</width>
-                    <height>90</height>
+                    <width>16777215</width>
+                    <height>85</height>
                    </size>
                   </property>
                   <property name="title">
-                   <string>Ranges</string>
+                   <string>DatePicker</string>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_8">
-                   <property name="leftMargin">
-                    <number>9</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>9</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>9</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>9</number>
-                   </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_14">
                    <item>
-                    <layout class="QFormLayout" name="formLayout">
-                     <item row="0" column="0">
-                      <widget class="QLabel" name="label_16">
-                       <property name="text">
-                        <string>Displayed Num</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="0" column="1">
-                      <widget class="QLabeledRangeSlider" name="max_num">
-                       <property name="minimumSize">
-                        <size>
-                         <width>90</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="baseSize">
-                        <size>
-                         <width>90</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="tickPosition">
-                        <enum>QSlider::TicksBelow</enum>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="0">
-                      <widget class="QLabel" name="label_17">
-                       <property name="text">
-                        <string>Value</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="1" column="1">
-                      <widget class="QLabeledDoubleRangeSlider" name="min_crit">
-                       <property name="minimumSize">
-                        <size>
-                         <width>90</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="baseSize">
-                        <size>
-                         <width>90</width>
-                         <height>30</height>
-                        </size>
-                       </property>
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                       <property name="tickPosition">
-                        <enum>QSlider::TicksBelow</enum>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="2" column="0">
-                      <widget class="QLabel" name="label_3">
-                       <property name="text">
-                        <string>Filter Based On:</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="2" column="1">
-                      <widget class="QFrame" name="frame">
-                       <property name="autoFillBackground">
-                        <bool>true</bool>
-                       </property>
-                       <layout class="QGridLayout" name="gridLayout_8">
-                        <property name="topMargin">
-                         <number>1</number>
-                        </property>
-                        <property name="bottomMargin">
-                         <number>1</number>
-                        </property>
-                        <item row="0" column="0">
-                         <widget class="QRadioButton" name="limit_RANGE">
-                          <property name="text">
-                           <string>Range</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="1">
-                         <widget class="QRadioButton" name="limit_MAX">
-                          <property name="text">
-                           <string>Max</string>
-                          </property>
-                         </widget>
-                        </item>
-                        <item row="0" column="2">
-                         <widget class="QRadioButton" name="limit_MIN">
-                          <property name="text">
-                           <string> Min</string>
-                          </property>
-                         </widget>
-                        </item>
-                       </layout>
-                      </widget>
+                    <layout class="QHBoxLayout" name="horizontalLayout_13">
+                     <item>
+                      <layout class="QGridLayout" name="gridLayout">
+                       <item row="0" column="0" colspan="2">
+                        <widget class="QDateRangeSlider" name="daterangepicker">
+                         <property name="orientation">
+                          <enum>Qt::Horizontal</enum>
+                         </property>
+                         <property name="tickPosition">
+                          <enum>QSlider::TicksAbove</enum>
+                         </property>
+                         <property name="start" stdset="0">
+                          <datetime>
+                           <hour>0</hour>
+                           <minute>0</minute>
+                           <second>0</second>
+                           <year>2020</year>
+                           <month>1</month>
+                           <day>1</day>
+                          </datetime>
+                         </property>
+                         <property name="end" stdset="0">
+                          <datetime>
+                           <hour>1</hour>
+                           <minute>0</minute>
+                           <second>0</second>
+                           <year>2021</year>
+                           <month>1</month>
+                           <day>2</day>
+                          </datetime>
+                         </property>
+                         <property name="freq" stdset="0">
+                          <string>D</string>
+                         </property>
+                         <property name="fmt" stdset="0">
+                          <string>%Y-%m-%d</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item row="1" column="0">
+                        <layout class="QFormLayout" name="formLayout_14">
+                         <item row="0" column="0">
+                          <widget class="QLabel" name="label_30">
+                           <property name="text">
+                            <string>Start</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <widget class="QDateEdit" name="startdate"/>
+                         </item>
+                        </layout>
+                       </item>
+                       <item row="1" column="1">
+                        <layout class="QFormLayout" name="formLayout_13">
+                         <item row="0" column="0">
+                          <widget class="QLabel" name="label_29">
+                           <property name="text">
+                            <string>End</string>
+                           </property>
+                          </widget>
+                         </item>
+                         <item row="0" column="1">
+                          <widget class="QDateEdit" name="enddate"/>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
                      </item>
                     </layout>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item row="2" column="1">
-                 <widget class="QFrame" name="frame">
-                  <layout class="QGridLayout" name="gridLayout_10">
-                   <item row="0" column="2">
-                    <widget class="QPushButton" name="refresh_stock">
-                     <property name="text">
-                      <string>Refresh Stocks</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="1">
-                    <widget class="QPushButton" name="update_btn">
-                     <property name="text">
-                      <string>Update Graph</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="0">
-                    <widget class="QPushButton" name="selectallnone">
-                     <property name="text">
-                      <string>Select All/None</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="0" column="0">
-                    <widget class="QPushButton" name="showhide">
-                     <property name="text">
-                      <string>Show / Hide</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item row="2" column="1">
-                    <widget class="QPushButton" name="exportport">
-                     <property name="text">
-                      <string>Export Portofolio</string>
-                     </property>
-                    </widget>
                    </item>
                   </layout>
                  </widget>
@@ -1130,40 +1050,6 @@
                  </sizepolicy>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_6">
-                 <property name="sizeConstraint">
-                  <enum>QLayout::SetDefaultConstraint</enum>
-                 </property>
-                 <item row="0" column="5">
-                  <widget class="QCheckBox" name="unite_ADDTOTAL">
-                   <property name="enabled">
-                    <bool>true</bool>
-                   </property>
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Add Total to Graph</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="start_hidden">
                    <property name="enabled">
@@ -1189,20 +1075,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="2">
-                  <widget class="QCheckBox" name="filter_zeros">
-                   <property name="text">
-                    <string>Filter zero values at start</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                   <property name="tristate">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="7">
+                 <item row="0" column="1">
                   <widget class="QCheckBox" name="unite_ADDPROT">
                    <property name="enabled">
                     <bool>true</bool>
@@ -1233,10 +1106,97 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="4">
+                 <item row="0" column="2">
                   <widget class="QCheckBox" name="auto_update">
                    <property name="text">
                     <string>Auto Update</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QCheckBox" name="filter_zeros">
+                   <property name="text">
+                    <string>Filter zero values </string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <property name="tristate">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1" rowspan="2" colspan="2">
+                  <widget class="QGroupBox" name="groupBox_7">
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>90</height>
+                    </size>
+                   </property>
+                   <property name="title">
+                    <string/>
+                   </property>
+                   <layout class="QGridLayout" name="gridLayout_10">
+                    <item row="2" column="1">
+                     <widget class="QPushButton" name="exportport">
+                      <property name="text">
+                       <string>Export Portofolio</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="2" column="2">
+                     <widget class="QPushButton" name="vis_to_selectedBtn">
+                      <property name="text">
+                       <string>Visible to selected</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="2">
+                     <widget class="QPushButton" name="refresh_stock">
+                      <property name="text">
+                       <string>Refresh Stocks</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item row="0" column="1">
+                     <widget class="QPushButton" name="update_btn">
+                      <property name="text">
+                       <string>Update Graph</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QCheckBox" name="unite_ADDTOTAL">
+                   <property name="enabled">
+                    <bool>true</bool>
+                   </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>16777215</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>Add Total to Graph</string>
                    </property>
                    <property name="checked">
                     <bool>true</bool>
@@ -1251,6 +1211,18 @@
            </item>
            <item>
             <widget class="QGroupBox" name="note_group">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>500</width>
+               <height>0</height>
+              </size>
+             </property>
              <property name="maximumSize">
               <size>
                <width>1500</width>
@@ -1455,6 +1427,20 @@
                      </property>
                     </widget>
                    </item>
+                   <item>
+                    <widget class="QPushButton" name="selectallnone">
+                     <property name="text">
+                      <string>Select All/None</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="showhide">
+                     <property name="text">
+                      <string>Show / Hide</string>
+                     </property>
+                    </widget>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -1516,6 +1502,14 @@
           </layout>
          </item>
         </layout>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QGroupBox" name="graph_groupbox">
+        <property name="title">
+         <string>Graph</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3"/>
        </widget>
       </item>
      </layout>
