@@ -144,7 +144,7 @@ def main():
 
 def run_additional_process():
     global anotherproc
-    v = f"/c start /wait python \"{config.ADDPROCESS}\" "
-    anotherproc = subprocess.Popen(executable='C:\\Windows\\system32\\cmd.EXE', args=shlex.split(v, posix="false"))
+    v = ["start" "/wait" ,sys.executable, config.ADDPROCESS]
+    anotherproc = subprocess.Popen(v,shell=True)
     # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
     time.sleep(1)

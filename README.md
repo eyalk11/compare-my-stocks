@@ -30,7 +30,7 @@ For instance:
  
 ### **Stocks from all over the world**
  
-&nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Investpy
+&nbsp;&nbsp;&nbsp;&nbsp; ✅ Get price history from Interactive Brokers 
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Crypto support 
 
@@ -129,15 +129,30 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 ## Installation Instructions
 
 Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
+(Realized and unrealized profit among them)
 
- 1. Install [Qt6](https://www.qt.io/download) 
- 2. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git (or pip install -r requirments.txt)
- 3. Look at ~/.compare_my_stocks/myconfig.py and set it as you wish (will work without it).
+### For Developers 
+
+ 1. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git (or pip install -r requirments.txt)
+ 2. Install [Qt6](https://www.qt.io/download) If you want to edit ui file in designer
+
+* Depends on json_editor - https://github.com/eyalk11/json-editor 
+
+### For Users
+
+ 1. Extract compare-my-stocks.zip from the releases
+
+ Remark: Requires some developer's mentality (at the current stage).
+
+## For both 
+Remark: Really recommended steps, but will work basically without it
+
+ 3. Look at myconfig.py and set it as you wish .
 
     Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
- 
- 
- ### For IB 
+ 4. Follow the steps for configuring IB 
+
+## Configuring Interactive Brokers
  
  1. Run Trader Workstation and sign in (could be readonly). 
  2.  API -> Settings -> Enable ActiveX And Socket Clients
@@ -155,20 +170,18 @@ Remark: **Not fully tested, and prerelease. Some features may not work correctly
    3.3 set REGULAR_ACCOUNT and REGULAR_USERNAME to the IB details (Account starts with U)
  
  ## Running Instructions
- 1. (For IB) Run Trader Workstation and sign in (could be readonly). 
- 2. python -m compare_my_stocks 
- 
- 
+ 1. Run Trader Workstation and sign in (could be readonly). 
+ 2. (For developers) python -m compare_my_stocks 
+ 2. (For users) run compare-my-stocks.exe
 
-* Depends on inverstpy and json_editor. Needed https://github.com/eyalk11/investpy  https://github.com/eyalk11/json-editor 
 
 ## Legal Words
 
 I would like to add that: 
 
-1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with inderict usage of Investing.com (using investpy), as well as Interactive Brokers Api by this code. 
+1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with usage of Interactive Brokers Api by this code. 
 
-Please consult the corresponding sites' license before using this software, and use it accordingly. See also the disclaimer https://github.com/eyalk11/investpy.
+Please consult the corresponding sites' license before using this software, and use it accordingly. 
 
 2. The sofware might use csvs obtained from using  My Stocks Portfolio & Widget by peeksoft.   
 
@@ -176,14 +189,12 @@ Please consult the corresponding sites' license before using this software, and 
 
 4. I of course take no responsibilty on the correctness of the displayed graphs/data. 
 
+5. Investpy is not supported currently. So you have to have an account in interactive brokers to be able to work properly with it.
+
 ## Final words
 * This is being developed in QT with matplotlib amd pandas. I tried to use advanced features of pandas and numpy for fast calculation(sometimes).
 
-
-
 * I belive this software provides many useful features that are usually paid for. This despite developing this in a short period, on my spare time. I would very much apperiate community contribution. And welcome you to contribute, send bugs and discuss (will open gitter when appropriate). 
-
-* If you have an idea about how it will be best integrated with active stock research using Jupyter Lab or something else, let me know. 
 
 * The controls should be self explantory... Try it. 
  

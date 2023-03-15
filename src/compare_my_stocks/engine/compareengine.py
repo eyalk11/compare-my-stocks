@@ -52,7 +52,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
     def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False):
         if not self._datagen.data_generated:
-            logging.debug("didnt generated")
+            logging.debug("didnt generate")
         #the want it all is in the case of populating dict
         selected = set()
         if want_unite_symbols and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type

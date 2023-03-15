@@ -22,6 +22,8 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def __init__(self,input_processer):
         self._inp =input_processer
         self._buydicforexport={}
+        self._stockprices=None
+
 
     @property
     def symbol_info(self):
@@ -39,21 +41,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._buydicforexport={}
         self._buysymbols= set()
         handlers= []
-        self._ib : TransactionHandlerInterface
-        self._stock : TransactionHandlerInterface
-        (self._ib,self._stock)= tuple(self.get_handlers())
-
-        logging.info(( f"Loaded  {len(self._stock.buydic ) if self._stock else '0'} MyStocks , {len(self._ib.buydic ) if self._ib else '0'} IB transactions! "  ))
-
-        if self._ib and self._stock:
-            #combine
-            self.combine()
-
-        elif self._ib:
-            self._buydic=self._ib.buydic
-        elif self._stock:
-            self._buydic = self._stock.buydic
-        logging.info((f" Number of combined transactions {len(self._buydic)}"))
+        self.combine_transactions()
 
         self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
 
@@ -61,9 +49,22 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._stockprices=StockPrices(self,self.buysymbols)
         self._stockprices.process_transactions()
 
+    @simple_exception_handling("error in combine transactions")
+    def combine_transactions(self):
+        self._ib: TransactionHandlerInterface
+        self._stock: TransactionHandlerInterface
+        (self._ib, self._stock) = tuple(self.get_handlers())
+        logging.info((
+                         f"Loaded  {len(self._stock.buydic) if self._stock else '0'} MyStocks , {len(self._ib.buydic) if self._ib else '0'} IB transactions! "))
+        if self._ib and self._stock:
+            # combine
+            self.combine()
 
-
-
+        elif self._ib:
+            self._buydic = self._ib.buydic
+        elif self._stock:
+            self._buydic = self._stock.buydic
+        logging.info((f" Number of combined transactions {len(self._buydic)}"))
 
     def try_fix_dic(self,cur_action : Tuple[datetime,BuyDictItem],last_action :  Tuple[datetime,BuyDictItem],curhold):
         if last_action is None:

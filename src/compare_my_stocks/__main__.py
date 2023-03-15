@@ -1,5 +1,5 @@
 import sys
-
+import win32api
 if 'ipykernel_launcher' in sys.argv:
     print(('strangeeee'))
     if sys.path[0] == '':

@@ -41,7 +41,8 @@ setup(
 "nbmanager @ git+https://github.com/jupyter/nbmanager.git",
 "ib_insync",
 "Pyro5",
-"ibflex"
+"ibflex",
+"colorlog"
     ],
     include_package_data=True,
     use_scm_version=True,

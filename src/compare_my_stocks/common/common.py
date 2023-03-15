@@ -105,9 +105,16 @@ from Pyro5.errors import format_traceback
 def simple_exception_handling(err_description=None,return_succ=False,never_throw=False):
     def decorated(func):
         def internal(*args,**kwargs):
+            try:
+                from config import config
+                bol=config.STOP_EXCEPTION_IN_DEBUG
+            except:
+                bol=False
+                logging.error("error loading config")
+
             tostop= os.environ.get('PYCHARM_HOSTED') == '1'
-            if 'config' in globals():
-                tostop = tostop and globals()['config'].STOP_EXCEPTION_IN_DEBUG
+
+            tostop = tostop and bol
 
             if tostop and not never_throw:
                 return func(*args,**kwargs)

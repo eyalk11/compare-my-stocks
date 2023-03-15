@@ -804,7 +804,8 @@ class InputProcessor(InputProcessorInterface):
         t = time.process_time()
         if not self._initial_process_done:
             self.load_cache(True)
-            self._transaction_handler.process_transactions()
+
+            self.process_transactions()
             self._initial_process_done = True
         elapsed_time = time.process_time() - t
         logging.debug(('elasped populating : %s' % elapsed_time))
@@ -823,6 +824,10 @@ class InputProcessor(InputProcessorInterface):
         # do some stuff
         elapsed_time = time.process_time() - t
         logging.debug(('elasped : %s' % elapsed_time))
+
+    @simple_exception_handling(err_description="error in process transactions")
+    def process_transactions(self):
+        self._transaction_handler.process_transactions()
     #self._proccessing_mutex.unlock()
 
 
