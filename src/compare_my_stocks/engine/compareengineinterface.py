@@ -86,3 +86,8 @@ class CompareEngineInterface(SymbolsInterface):
     @abstractmethod
     def show_hide(self,val):
         ...
+
+    @property
+    @abstractmethod
+    def final_columns(self):
+        ...

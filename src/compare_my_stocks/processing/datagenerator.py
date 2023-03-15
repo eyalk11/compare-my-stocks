@@ -31,6 +31,7 @@ class DataGenerator(DataGeneratorInterface):
         self.maxValue = None
 
         self.cols = None  # not exported by compareengine
+        self.finalcols = None
         self.act = None
 
         self.used_unitetype = None
@@ -223,6 +224,7 @@ class DataGenerator(DataGeneratorInterface):
         b = self.update_ranges()
 
         self.filter_ranges(b)
+        self.finalcols=self.df.columns
         self.df_before_act = self.df_before_act [ self.df.columns]
 
         def conv_index(df):

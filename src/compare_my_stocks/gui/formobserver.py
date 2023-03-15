@@ -76,6 +76,13 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self._update_graph_task.finished.connect(self.decrease)
         self.current_mode = DisplayModes.FULL
         self.placeholder = QGroupBox()
+    def vis_to_selected(self,*args):
+        cols=set(self.graphObj.final_columns)
+        if not self.window.use_groups.isChecked():
+            sel :QListWidget  =  self.window.orgstocks
+            torem=[ t for x in range(sel.count()) if (t:=sel.item(x)).text() not in cols]
+            for t in torem:
+                sel.takeItem(sel.row(t))
 
     def refresh_stocks(self, *args):
         TOLLERANCEGETIT = 5
@@ -280,6 +287,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.home_currency_combo.currentTextChanged = safeconnect(
             self.window.home_currency_combo.currentTextChanged, (genobsResetForce('currency_to_adjust')))
 
+        self.window.findChild(QPushButton,name="vis_to_selectedBtn").pressed.connect(self.vis_to_selected)
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="sortGroupsBtn").pressed.connect(self.sort_groups)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(

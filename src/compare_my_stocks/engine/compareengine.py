@@ -227,6 +227,10 @@ class CompareEngine(InternalCompareEngine):
     def usable_symbols(self):
         return self._inp.usable_symbols
 
+    @property
+    def final_columns(self):
+        return self._datagen.finalcols
+
     def show_hide(self,val):
         return self._generator.show_hide(val)
 
