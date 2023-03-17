@@ -62,6 +62,9 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
     def populate_buydic(self):
+        n=None
+        lastdate=None
+        lastdateCache = max([d.dateTime for d in self._tradescache.values()])
         usecache= ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT)
         if usecache:
             logging.info(('using ib cache alone'))
@@ -77,20 +80,21 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
             n=0
-            lastdate=None
             for x in newres:
                 if x.tradeID not in self._tradescache:
                     self._tradescache[x.tradeID]=x
                     if lastdate and x.dateTime > lastdate:
                         lastdate=x.dateTime
                         n+=1
-
-        if lastdate:
-            logging.info(f"Last trade date is {lastdate}. New trades {n}")
+        if not lastdate:
+            lastdate=lastdateCache
+        if n:
+            logging.info(f"Last trade date is {lastdate}. Last trade in cache {lastdateCache}. New trades {n}")
         elif newres:
-            logging.info(f"no new trades in query. Last trade {max([d.dateTime for d in self._tradescache.values()])}")
+            logging.info(f"no new trades in query. Last trade {lastdate}")
         elif (not ( not usecache or self.TryToQueryAnyway)) and self._tradescache:
-            logging.info(f"Didnt query cache. Last trade {max([d.dateTime for d in self._tradescache])}")
+
+            logging.info(f"Didnt query cache. Last trade {lastdate}")
 
 
 

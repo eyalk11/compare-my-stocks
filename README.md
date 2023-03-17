@@ -142,7 +142,7 @@ Remark: **Not fully tested, and prerelease. Some features may not work correctly
 
  1. Extract compare-my-stocks.zip from the releases
 
- Remark: Requires some developer's mentality (at the current stage).
+ Remark: This program is quite complex and requires non-trivial configuration to work with it properly. I haven't got the time to make it completely user-friendly, so I'd say it requires some developer's mentality as things stand now.
 
 ## For both 
 Remark: Really recommended steps, but will work basically without it
@@ -181,9 +181,9 @@ I would like to add that:
 
 1. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. That is also true for the any claim associated with usage of Interactive Brokers Api by this code. 
 
-Please consult the corresponding sites' license before using this software, and use it accordingly. 
+Please consult the corresponding site's license before using this software, and use it accordingly. 
 
-2. The sofware might use csvs obtained from using  My Stocks Portfolio & Widget by peeksoft.   
+2. The sofware can use CSVs obtained from using My Stocks Portfolio & Widget by Peeksoft.   
 
 3. This project was developed individually in my free time and without any compensation. I am an in no way affiliated with the mentioned companies. 
 

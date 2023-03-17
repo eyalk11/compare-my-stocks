@@ -17,3 +17,4 @@ ib_insync
 Pyro5
 ibflex
 colorlog
+git+https://github.com/eyalk11/qt-collapsible-section.git

@@ -417,8 +417,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
                 # self.window.currencygroup.show()
             if tosize:
-                self.window.frame_9.setMaximumSize(400, 900)
-                # x.resize(x.maximumSize())
+                #self.window.frame_9.setMaximumSize(400, 900)
+                x.resize(x.maximumSize())
             else:
                 self.window.frame_9.setMaximumSize(400, 400)
 
@@ -440,6 +440,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.adjust_group.show()
             self.window.main_group.show()
             self.window.note_group.show()
+            #self.window.resize()
         elif mode == DisplayModes.NOJUPYTER:
             self.window.buttom_frame.show()
             self.window.adjust_group.show()
@@ -454,5 +455,5 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.note_group.show()
         self.current_mode = mode
         timer = QTimer()
-        timer.singleShot(1, update_sizes)
+        timer.singleShot(10, update_sizes)
 

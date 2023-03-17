@@ -17,6 +17,7 @@ from qtvoila import QtVoila
 from engine.symbolsinterface import SymbolsInterface
 from gui.daterangeslider import QDateRangeSlider
 from gui.forminitializer import FormInitializer
+from qt_collapsible_section import Section
 
 try:
     from config import config
@@ -61,6 +62,7 @@ class MainWindow(QMainWindow, FormInitializer):
         loader.registerCustomWidget(QLabeledRangeSlider)
         loader.registerCustomWidget(QLabeledDoubleRangeSlider)
         loader.registerCustomWidget(QtVoila)
+        loader.registerCustomWidget(Section)
         path = os.fspath(Path(__file__).resolve().parent / "mainwindow.ui")
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)

@@ -44,6 +44,8 @@ class FormInitializer(FormObserver, FormInitializerInterface):
                                                                                            name="unite_ADDPROT") + self.window.findChildren(
             QCheckBox, name="unite_ADDTOTAL") + self.window.findChildren(QCheckBox, name="COMPARE")
         self.prepare_graph_widget()
+        self.window.filterrangesection.setTitle("Filter Range")
+        self.window.filterrangesection.setContentLayout(self.window.formLayout)
 
 
 

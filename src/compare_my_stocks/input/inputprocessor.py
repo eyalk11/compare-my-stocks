@@ -567,6 +567,8 @@ class InputProcessor(InputProcessorInterface):
                                                        iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
 
         self.symbol_info[sym] = (l if l else {}) #just for debug I think
+        if (cont := self.symbol_info[sym].get('contract')):
+            logging.debug(f"resolved {sym} is {cont}")
         if hist is None:
             raise SymbolError("bad symbol")
         else:
