@@ -128,8 +128,6 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 ## Installation Instructions
 
-Remark: **Not fully tested, and prerelease. Some features may not work correctly.** 
-(Realized and unrealized profit among them)
 
 ### For Developers 
 
@@ -142,15 +140,18 @@ Remark: **Not fully tested, and prerelease. Some features may not work correctly
 
  1. Extract compare-my-stocks.zip from the releases
 
- Remark: This program is quite complex and requires non-trivial configuration to work with it properly. I haven't got the time to make it completely user-friendly, so I'd say it requires some developer's mentality as things stand now.
-
-## For both 
+### For both 
 Remark: Really recommended steps, but will work basically without it
 
  3. Look at myconfig.py and set it as you wish .
 
     Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
  4. Follow the steps for configuring IB 
+
+### Remarks 
+* **Not fully tested, and prerelease. Some features may not work correctly.** 
+* *This program is quite complex and requires non-trivial configuration to work with it properly. I haven't got the time to make it completely user-friendly, so I'd say it requires some developer's mentality as things stand now.*
+
 
 ## Configuring Interactive Brokers
  
