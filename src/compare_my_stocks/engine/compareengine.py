@@ -228,6 +228,9 @@ class CompareEngine(InternalCompareEngine):
         return self._inp.usable_symbols
 
     @property
+    def visible_columns(self):
+        return self._generator.get_visible_cols()
+    @property
     def final_columns(self):
         return self._datagen.finalcols
 

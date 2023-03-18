@@ -1,5 +1,18 @@
 import logging
 import sys
+# Implemntation taken from :
+# Impacket - Collection of Python classes for working with network protocols.
+#
+# Copyright (C) 2022 Fortra. All rights reserved.
+#
+# This software is provided under a slightly modified version
+# of the Apache Software License. See the accompanying LICENSE file
+# for more information.
+#
+# Description:
+#   This logger is intended to be used by impacket instead
+#   of printing directly. This will allow other libraries to use their
+#   custom logging implementation.
 
 TRACELEVEL=5
 
@@ -46,16 +59,39 @@ class ImpacketFormatterTimeStamp(ImpacketFormatter):
   def formatTime(self, record, datefmt=None):
       return ImpacketFormatter.formatTime(self, record, datefmt="%Y-%m-%d %H:%M:%S")
 
-def init_log(ts=False):
-    if hasattr(logging,'inited'):
-        return
+class MyFilter(object):
+    def __init__(self, level):
+        self.__level = level
+
+    def filter(self, logRecord):
+        return logRecord.levelno <= self.__level
+
+def init_log(mod=None,ts=False,logfile=None,logerrorfile=None):
+    def set_format(handler):
+        if not ts:
+            handler.setFormatter(ImpacketFormatter())
+        else:
+            handler.setFormatter(ImpacketFormatterTimeStamp())
     # We add a StreamHandler and formatter to the root logger
     logging.addLevelName(TRACELEVEL,"TRACE")
+    log=logging.getLogger(mod)
+    log.handlers.clear()
+
     handler = colorlog.StreamHandler(sys.stdout)
-    if not ts:
-        handler.setFormatter(ImpacketFormatter())
-    else:
-        handler.setFormatter(ImpacketFormatterTimeStamp())
-    logging.getLogger().addHandler(handler)
-    logging.inited=1
+    set_format(handler)
+    log.addHandler(handler)
+    if logfile:
+        fh = logging.FileHandler(logfile)
+        fh.setLevel(logging.DEBUG)
+        set_format(fh)
+        log.addHandler(fh)
+    if logerrorfile:
+        ch = logging.FileHandler(logerrorfile)
+        ch.setLevel(logging.ERROR)
+        set_format(ch)
+        log.addHandler(ch)
+    return log
+
     #logging.getLogger().setLevel(logging.INFO)
+
+

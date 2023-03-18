@@ -1,9 +1,14 @@
+'''
+This file resolves config and presents all its config attributes as globals
+'''
 import logging
-import logging
+from common.loghandler import init_log
 import os
 import sys
 
 from common.common import log_conv
+
+CONFIGFILENAME = 'myconfig.py'
 
 MYPROJ='compare_my_stocks'
 PROJPATHENV = 'COMPARE_STOCK_PATH'
@@ -31,25 +36,12 @@ def resolvefile(filename):
         for loc in PROJDIR , "/etc/"+MYPROJ, os.environ.get(PROJPATHENV,'didntfind'),datapath,os.curdir:
             fil=os.path.join( loc,filename)
             if os.path.exists(fil):
-                return True, fil
+                return True, os.path.abspath(fil)
 
         return False, os.path.join( PROJDIR,filename) #default location
     except:
         return False,None
-
-res,config_file=resolvefile('myconfig.py')
-
-if not res:
-    print_if_ok('No config file, aborting')
-    sys.exit(-1)
-print_if_ok(log_conv("Using Config File: " , config_file))
-
-with open(config_file) as f:
-    code = compile(f.read(), config_file, 'exec')
-    exec(code, globals(), locals())
-
-FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","DEFAULTNOTEBOOK",'DATAFILEPTR','EXPORTEDPORT']
-for f in FILE_LIST_TO_RES:
+def resolve_it(f):
     if not f in globals():
         print_if_ok(f'You must have {f} in config')
         sys.exit(-1)
@@ -57,7 +49,7 @@ for f in FILE_LIST_TO_RES:
 
     if fil==None:
         print_if_ok(f'Invalid value {f}')
-        continue
+        return
 
     if res==False:
         print_if_ok(f'Failed resolving {f}. Using: {fil}')
@@ -66,4 +58,30 @@ for f in FILE_LIST_TO_RES:
 
     globals()[f]=fil
 
+
+
+res,config_file=resolvefile(CONFIGFILENAME)
+
+
+if not res:
+    print_if_ok('No config file, aborting')
+    sys.exit(-1)
+
+with open(config_file) as f:
+    code = compile(f.read(), config_file, 'exec')
+    exec(code, globals(), locals())
+for x in ['LOGFILE','LOGERRORFILE']:
+    resolve_it(x)
+
+try:
+    init_log(logfile=LOGFILE,logerrorfile=LOGERRORFILE)
+except:
+    logging.error("initialize logging failed!")
+print_if_ok(log_conv("Using Config File: " , config_file))
+
+
+
+FILE_LIST_TO_RES=["HIST_F","HIST_F_BACKUP","JSONFILENAME","SERIALIZEDFILE","REVENUEFILE","INCOMEFILE","COMMONSTOCK","GRAPHFN","DEFAULTNOTEBOOK",'DATAFILEPTR','EXPORTEDPORT']
+for f in FILE_LIST_TO_RES:
+    resolve_it(f)
 

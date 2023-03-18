@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QDateEdit, QG
 from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
-from common.common import UniteType, Types, LimitType, SafeSignal
+from common.common import UniteType, Types, LimitType, SafeSignal, simple_exception_handling
 from common.dolongprocess import DoLongProcessSlots, TaskParams
 from config import config
 from engine.compareengineinterface import CompareEngineInterface
@@ -76,8 +76,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self._update_graph_task.finished.connect(self.decrease)
         self.current_mode = DisplayModes.FULL
         self.placeholder = QGroupBox()
+
+    @simple_exception_handling("visible to selected")
     def vis_to_selected(self,*args):
-        cols=set(self.graphObj.final_columns)
+        cols=set(self.graphObj.visible_columns)
         if not self.window.use_groups.isChecked():
             sel :QListWidget  =  self.window.orgstocks
             torem=[ t for x in range(sel.count()) if (t:=sel.item(x)).text() not in cols]

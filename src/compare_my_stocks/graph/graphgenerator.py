@@ -25,6 +25,7 @@ from common.common import Types, simple_exception_handling
 
 # plt.rcParams["figure.autolayout"] = False
 
+
 @simple_exception_handling(err_description="simple err",never_throw=True)
 def show_annotation(sel, cls=None, ax=None, generation=None):
     cls.generation_mutex.lock()
@@ -76,6 +77,13 @@ def show_annotation(sel, cls=None, ax=None, generation=None):
 
 class GraphGenerator:
     B = (1, 0.5)
+
+    def get_visible_cols(self):
+        ax=self._axes
+        vis=[l.get_visible() for l in ax.lines]
+        names = [k._label for k in ax.legend_.legendHandles]
+        l=filter(lambda x: x[1] ,zip(names, vis))
+        return list(map(lambda x:x[0],l))
 
     @property
     def params(self):

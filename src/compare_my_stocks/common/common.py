@@ -3,7 +3,7 @@ import dataclasses
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime,date
 
 import matplotlib
 import numpy as np
@@ -18,12 +18,12 @@ import sys
 
 from django.core.serializers.json import DjangoJSONEncoder
 
-from common.loghandler import init_log
+
 
 #Found to work. Not the best.
 logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger('Voila').setLevel(logging.ERROR)
-init_log()
+#init_log()
 matplotlib.set_loglevel("INFO")
 
 def index_of(val, in_list):
@@ -218,11 +218,17 @@ def ifnn(t, v, els=lambda: None):
         return els()
 
 import dateutil.parser
-def conv_date(dat):
+def conv_date(dat,premissive=True):
+    if premissive and dat is None:
+        dat=datetime.now()
     if type(dat)==str:
          return dateutil.parser.parse(dat)
     elif type(dat)==datetime:
         return dat
+    elif 'Timestamp' in str(type(dat)):
+        return dat.to_pydatetime()
+    elif type(dat)==date:
+        return datetime.fromordinal(dat.toordinal())
     else:
         raise AttributeError("no attr")
 

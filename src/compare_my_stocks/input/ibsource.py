@@ -1,11 +1,13 @@
 import logging
 import asyncio
 import datetime
+import math
 import multiprocessing
 import threading
 from dataclasses import asdict
 from functools import partial
 
+import pandas as pd
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
 from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback
@@ -102,7 +104,12 @@ class IBSourceRem:
         logging.debug("get_current_currency {pair}")
         f=pair[0]+pair[1]
         contract=Forex(f)
-        return self.get_realtime_contract(contract).markPrice
+        m= self.get_realtime_contract(contract).markPrice
+        if math.isnan(m):
+            logging.warn('getting historical data instead of real')
+            a=self.reqHistoricalData(contract,datetime.datetime.now(),1)
+            if len(a)>0:
+                return a[0].close
 
     def get_realtime_contract(self, contract):
         tick = self.ib.reqMktData(contract, '233,221')
@@ -178,7 +185,7 @@ class IBSource(InputSource):
         self.lock = threading.Lock()
 
     def get_current_currency(self, pair):
-        return 0
+        return self.ibrem.get_current_currency(pair)
 
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
@@ -232,19 +239,23 @@ class IBSource(InputSource):
         return l, self.historicalhelper(startdate, enddate, l['contract'])
 
     def historicalhelper(self, startdate, enddate, contract):
-        startdate=conv_date(startdate)
+        startdate=conv_date(startdate,premissive=False)
         enddate = conv_date(enddate)
         #startdate=datetime.datetime(startdate)
         #enddate=datetime.da
-        td = enddate - startdate
+        if enddate.date() ==startdate.date():
+            td=1
+        else:
+            td = enddate.date()-startdate.date()
+            td = td.days + 1
         with self.lock:
             cont = asdict(contract)
             if not contract.exchange:
                 logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
                 cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
-            td=td.days
+
             try:
-                bars = self.ibrem.reqHistoricalData_ext(cont, enddate, td) #we might get more than we opted for because it returns all the traded days up to the enddate..
+                bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
             except RequestError as e:
                 if e.code == WRONG_EXCHANGE:
                     logging.debug((f'bad exchange for symbol. try resolve? {cont}. {e.message}'))
@@ -257,6 +268,8 @@ class IBSource(InputSource):
             df = df.rename(columns={'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
             df.set_index('date',inplace=True)
             df=df.rename(index={i: conv_date(str(i)) for i in df.index})
+            df = df.loc[df.index >= pd.to_datetime(startdate.date())]
+            df = df.loc[df.index <= pd.to_datetime(enddate.date())]
             return df
 
 

@@ -76,7 +76,7 @@ def func(x=None,tolog=True):
 
 anotherproc=None
 def main():
-    #init_log()
+    init_log()
 
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)

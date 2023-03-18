@@ -20,7 +20,7 @@ from PySide6.QtCore import QRecursiveMutex
 from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    simple_exception_handling, localize_it, unlocalize_it, VerifySave
+    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningscommon import localize_me
@@ -104,7 +104,7 @@ class InputProcessor(InputProcessorInterface):
         self.symbol_info = collections.defaultdict(lambda:dict())
         self._usable_symbols = set()
         self._bad_symbols = set()
-        self.currency_hist= {}
+        self.currency_hist= None
 
 
 
@@ -165,14 +165,18 @@ class InputProcessor(InputProcessorInterface):
         elif currency not in self.currency_hist:
             self.currency_hist = self.currency_hist.join(df)
         else: #merging
-            old=self.currency_hist[currency]
-            updated= old.combine_first(df)
-            self.currency_hist.reindex(index=updated.index)
-            self.currency_hist[currency] = updated
+            #old=self.currency_hist[currency]
+            #updated= old.combine_first(df)
+            #self.currency_hist.reindex(index=updated.index)
+            #self.currency_hist[currency] = updated
+            self.currency_hist=self.currency_hist.combine_first(df)
+
 
     @lru_cache
     def get_currency_hist(self, currency, fromdate, enddate):
-        pair = (config.BASECUR, currency)
+        fromdate=conv_date(fromdate,premissive=False)
+        enddate=conv_date(enddate)
+        pair = ( currency,config.BASECUR)
         def get_good_keys():
             zz = self.currency_hist[currency].isna().any(axis=1)
             return list(self.currency_hist[currency].index[~zz])
@@ -180,13 +184,14 @@ class InputProcessor(InputProcessorInterface):
         # if isinstance(self.currency_hist,dict):
         #     self.currency_hist=None
         ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist is not None  and currency in self.currency_hist else [(fromdate,enddate)])
-
+        ls =list(ls)
 
         for (mindate, maxdate) in ls:
             tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
             if tmpdf is not None:
                 self.update_currency_hist(currency,tmpdf)
-
+        if not currency in self.currency_hist:
+            raise ValueError("cant get currency to adjust")
         df = self.currency_hist[currency]
         return df #whatever we get is ok
         #goodind=  list(set([x for x in  self.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
@@ -275,7 +280,7 @@ class InputProcessor(InputProcessorInterface):
             else:
                 hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
 
-            self.currency_hist = None
+            #self.currency_hist = None
             if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
 
@@ -486,12 +491,17 @@ class InputProcessor(InputProcessorInterface):
     @staticmethod
     def get_range_gap(dates,fromdate,todate):
         TOLLERENCE = 5  # config
+        if (todate-fromdate).days<TOLLERENCE*5:
+            TOLLERENCE=0
         #yields the gaps in data between dates ..
-        dates=sorted(list(dates))
+        dates=sorted(list(map(conv_date,dates)))
         if len(dates)<2 or dates[-1]<=fromdate:
             yield  fromdate,todate
         reachedfrom=False
+        fromdate,todate = fromdate.date(),todate.date()
+        af=None
         for da,af  in zip( dates[:-1],dates[1:]):
+            da,af=da.date(),af.date()
             if da<=fromdate:
                 if da==fromdate:
                     reachedfrom=True
@@ -503,10 +513,10 @@ class InputProcessor(InputProcessorInterface):
                     reachedfrom=True
             if da>=todate:
                 break
-            if (af-da).days>TOLLERENCE: #gap
+            if (af-da).days>TOLLERENCE and (af-da).days>1: #gap
                 yield da,min(af,todate) #we miss all the days inbetween
 
-        if af<todate and (todate-af).days>TOLLERENCE:
+        if af and af<todate and (todate-af).days>TOLLERENCE:
             yield af,  todate
 
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):

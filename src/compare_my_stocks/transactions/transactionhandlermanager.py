@@ -1,4 +1,4 @@
-import logging
+from common.logger import *
 import collections
 import math
 from datetime import datetime

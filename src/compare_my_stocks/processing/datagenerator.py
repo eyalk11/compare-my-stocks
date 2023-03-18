@@ -270,21 +270,33 @@ class DataGenerator(DataGeneratorInterface):
 
     def readjust_for_currency(self, ncurrency):
 
-        currency_hist = self._inp.get_currency_hist(ncurrency, self._inp.currencyrange[0],
-                                                    self._inp.currencyrange[1])  # should be fine, the range
+        currency_hist = self._inp.get_currency_hist(ncurrency, self.params.fromdate,
+                                                    self.params.todate)  # should be fine, the range
         simplified = (currency_hist['Open'] + currency_hist['Close']) / 2
         rate = self._inp.get_relevant_currency(ncurrency)
         if rate is None:
             logging.error(("cant adjust"))
             return
-        nn = self._inp.adjusted_panel.copy()  # adjusted_panel is already at base.
-        for x in self._inp.TOADJUST:
+        nn = self._inp.adjusted_panel.copy()  # adjusted_panel is already at base currency.
+        for x in SymbolsInterface.TOADJUST:
             nn[x] = nn[x].mul(1 / rate)
         simplified = pandas.DataFrame(simplified, columns=['data'])
         simplified = simplified.set_index(matplotlib.dates.date2num(list(simplified.index)))
+        oldind = min(simplified.index)
+        oldnindex=min(nn.index)
+        oldmaxind= max(simplified.index)
+        oldnmaxind=max(nn.index)
         missingvalues = set(list(nn.index)) - set(list(simplified.index))
         logging.debug((log_conv('missing in readjust', len(missingvalues))))
-        simplified = simplified.reindex(nn.index, method='pad')
+
+        simplified = simplified.reindex(nn.index, method='pad')#padding just in between values
+
+        if oldnindex<oldind:
+            simplified.loc[oldnindex:oldind]=numpy.nan
+        if oldnmaxind>oldmaxind:
+            simplified.loc[oldmaxind:oldnmaxind] = numpy.nan
+
+
 
         for y in SymbolsInterface.TOADJUSTLONG:
             nn[y] = nn[y].mul(simplified['data'], axis=0)

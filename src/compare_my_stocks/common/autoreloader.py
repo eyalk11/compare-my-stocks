@@ -1,4 +1,4 @@
-import logging
+from common.logger import log
 import os
 import sys
 import traceback
@@ -142,12 +142,12 @@ class ModuleReloader:
                     else:
                         superreload(m, reload, self.old_objects)
 
-                    logging.info(f"reloaded {m}")
+                    log.info(f"reloaded {m}")
 
                     if py_filename in self.failed:
                         del self.failed[py_filename]
                 except:
-                    logging.error(
+                    log.error(
                         "[autoreload of {} failed: {}]".format(
                             modname, traceback.format_exc(10)
                         )
