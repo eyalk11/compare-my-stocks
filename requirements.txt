@@ -9,7 +9,7 @@ pytz~=2021.3
 git+https://github.com/eyalk11/json-editor.git
 git+https://github.com/eyalk11/investpy.git
 git+https://github.com/eyalk11/qtvoila.git
-superqt~=0.2.5.post1
+superqt~=0.4.1
 mplcursors~=0.4
 Django~=3.2.9
 git+https://github.com/jupyter/nbmanager.git

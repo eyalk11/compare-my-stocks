@@ -58,7 +58,10 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                          f"Loaded  {len(self._stock.buydic) if self._stock else '0'} MyStocks , {len(self._ib.buydic) if self._ib else '0'} IB transactions! "))
         if self._ib and self._stock:
             # combine
-            self.combine()
+            if len(self._stock.buydic)*len(self._ib.buydic)!=0:
+                self._buydic=self._stock.buydic if len(self._stock.buydic) else self._ib.buydic
+            else:
+                self.combine()
 
         elif self._ib:
             self._buydic = self._ib.buydic

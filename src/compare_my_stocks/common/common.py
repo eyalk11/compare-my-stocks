@@ -22,9 +22,32 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 #Found to work. Not the best.
 logging.getLogger().setLevel(logging.DEBUG)
-logging.getLogger('Voila').setLevel(logging.ERROR)
+logging.getLogger('Voila').setLevel(logging.DEBUG)
 #init_log()
 matplotlib.set_loglevel("INFO")
+
+
+import yaml
+from enum import Enum
+
+def to_yaml(enum_class):
+    def to_yaml_inner(cls,enum_value):
+        return cls.represent_scalar(f'{enum_class.__name__}',u'{.name}'.format(enum_value),style=' ' )
+
+    def from_yaml(loader, node):
+        #x=loader.construct_scalar(node)
+        return enum_class[node.value]
+
+    # add the to_yaml method to the enum class
+    enum_class.to_yaml = lambda self: yaml.dump({self.name: self}, default_flow_style=False)
+    enum_class.from_yaml = from_yaml
+
+    # add the representer to the yaml serializer
+    yaml.add_representer(enum_class, to_yaml_inner)
+    yaml.add_constructor(f'{enum_class.__name__}',from_yaml,Loader=yaml.CLoader)
+
+    return enum_class
+
 
 def index_of(val, in_list):
     try:
@@ -66,6 +89,7 @@ class VerifySave(int,Enum):
 
 
 
+@to_yaml
 class UseCache(int,Enum):
     DONT=0
     USEIFAVALIABLE=1
@@ -92,11 +116,11 @@ class InputSourceType(Flag):
     InvestPy=auto()
 
 
-def neverthrow(f,*args,**kwargs):
+def neverthrow(f,*args,default=None,**kwargs):
     try:
         return f(*args,**kwargs)
     except:
-        return None
+        return default
 
 
 from Pyro5.errors import format_traceback

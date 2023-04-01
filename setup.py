@@ -35,7 +35,7 @@ setup(
 "pytz==2021.3",
 "json_editor @ git+https://github.com/eyalk11/json-editor.git#egg=json_editor-1.0.0",
 "investpy @ git+https://github.com/eyalk11/investpy.git#egg=investpy-1.0.7a",
-"superqt==0.2.5.post1",
+"superqt==0.4.1",
 "mplcursors==0.4",
 "Django==3.2.9",
 "nbmanager @ git+https://github.com/jupyter/nbmanager.git",

@@ -64,7 +64,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
     def populate_buydic(self):
         n=None
         lastdate=None
-        lastdateCache = max([d.dateTime for d in self._tradescache.values()])
+        lastdateCache = max([d.dateTime for d in self._tradescache.values()]) if len(self._tradescache)>0 else "nocache"
         usecache= ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT)
         if usecache:
             logging.info(('using ib cache alone'))

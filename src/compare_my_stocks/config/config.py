@@ -14,7 +14,7 @@ MYPROJ='compare_my_stocks'
 PROJPATHENV = 'COMPARE_STOCK_PATH'
 
 MYPATH=os.path.dirname(__file__)
-datapath=os.path.realpath((os.path.join(MYPATH,'..','data')))
+
 PROJDIR= os.path.join(os.path.expanduser("~"),"."+MYPROJ)
 
 def print_if_ok(*args):
@@ -24,16 +24,25 @@ def print_if_ok(*args):
 if not os.path.exists(PROJDIR):
     print_if_ok("""project directory doesn't exists... Creating...
     Consider copying your config files there """)
-    print_if_ok(f" cp {datapath}\\* {PROJDIR} ")
     os.makedirs(PROJDIR)
 
 def resolvefile(filename):
+    if not 'python' in sys.executable:
+        t = os.path.dirname(sys.executable)
+        datapath = os.path.join(t, 'data')
+    else:
+        datapath = os.path.realpath((os.path.join(MYPATH, '..', 'data')))
+    env = os.environ.get(PROJPATHENV)
+    paths= [PROJDIR , "/etc/"+MYPROJ]+ (env if env else []) + [os.curdir,datapath]
     try:
         if filename=='':
             return False,None
         if os.path.isabs(filename):
             return os.path.exists(filename), filename
-        for loc in PROJDIR , "/etc/"+MYPROJ, os.environ.get(PROJPATHENV,'didntfind'),datapath,os.curdir:
+
+
+
+        for loc in paths+[datapath]:
             fil=os.path.join( loc,filename)
             if os.path.exists(fil):
                 return True, os.path.abspath(fil)

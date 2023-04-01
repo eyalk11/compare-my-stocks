@@ -13,8 +13,7 @@ This is true also for myconfig.py.
 import datetime
 import pytz
 
-from common.common import InputSourceType, UseCache, VerifySave
-from transactions.transactioninterface import TransactionSourceType
+from common.common import InputSourceType, UseCache, VerifySave,CombineStrategy
 IGNORECONF = {} # sym : fromdate
 COMBINEDATEDIFF=20
 COMBINEAMOUNTPERC=10
@@ -34,6 +33,7 @@ TRANSACTION_HANDLERS={
         "File":r'ibtrans.cache',
         "CacheSpan": datetime.timedelta(hours=5),
         "Use": UseCache.USEIFAVALIABLE,
+        "TryToQueryAnyway": False,
         "DOQUERY":True,
         "FLEXTOKEN":'YOURTOKEN',
         "FLEXQUERY" : 'QUERYNU'
@@ -44,18 +44,22 @@ TRANSACTION_HANDLERS={
         # This is the file name of the portfolio. You may export the csv from my stocks portfolio.
         # https://play.google.com/store/apps/details?id=co.peeksoft.stocks&hl=iw&gl=US 
         # Or you can generate buy dictionary yourself...  
-        "SrcFile": None,
-        "PortofolioName": None,
+        "SrcFile": "example_mystock.csv",
+        "PortofolioName": "My Portfolio",
         "Use": UseCache.USEIFAVALIABLE
     }
 }
 
-TRANSACTIONSOURCE = TransactionSourceType.IB | TransactionSourceType.MyStock
+try:
+    from transactions.transactioninterface import TransactionSourceType
+    TRANSACTIONSOURCE = TransactionSourceType.IB | TransactionSourceType.MyStock
+except:
+    pass #ibsrv doesnt compile it
 
 HOSTIB='127.0.0.1'
 PORTIB=7596
 IBSRVPORT=9091 #When you open IB SERVER in a sec process
-ADDPROCESS=r'..\compare_my_stocks\ibsrv.py'
+ADDPROCESS= ['ibsrv.exe']
 LOADLASTATBEGIN=True #Load last graph when the program starts 
 ADDITIONALOPTIONS={} #Additonal graph options #{'marker':'o'}
 
@@ -151,3 +155,9 @@ DONT_RUN_NOTEBOOK=False
 STOP_EXCEPTION_IN_DEBUG=True
 VERIFY_SAVING = VerifySave.Ask
 CHECKRELOADINTERVAL=30
+COMBINESTRATEGY=CombineStrategy.PREFERSTOCKS
+IGNORECONF = {} # sym : fromdate
+LOGFILE='log.txt'
+LOGERRORFILE='error.log'
+VOILA_PYTHON_PROCESS_PATH=None #The path of voila. Use if not running inside python.
+AUTO_RESOVLE_VOILA_PYTHON=True

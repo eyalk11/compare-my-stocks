@@ -1,5 +1,9 @@
 import logging
+import re
 import sys
+
+from common.common import neverthrow
+
 # Implemntation taken from :
 # Impacket - Collection of Python classes for working with network protocols.
 #
@@ -15,6 +19,24 @@ import sys
 #   custom logging implementation.
 
 TRACELEVEL=5
+
+import logging
+import os
+
+class MyFormatter(logging.Formatter):
+    log_format = ' Run %(run_number)s | %(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s'
+    run_number=None
+    def __init__(self):
+        super().__init__(MyFormatter.log_format)
+
+    def format(self, record):
+        record.run_number = self.run_number
+        record.filename = os.path.basename(record.pathname)
+        record.function = record.funcName
+        record.lineno = record.lineno
+        return super().format(record)
+
+
 
 
 import colorlog
@@ -80,16 +102,28 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None):
     handler = colorlog.StreamHandler(sys.stdout)
     set_format(handler)
     log.addHandler(handler)
+    last_run = 0
+    if logfile and MyFormatter.run_number is None:
+        if os.path.exists(logfile):
+            for z in open(logfile):
+                 last_run=max(last_run,neverthrow(lambda: int(re.search('Run (\d+) \|',z).group(1)),default=0))
+
+        last_run+=1
+        MyFormatter.run_number=last_run
+
     if logfile:
         fh = logging.FileHandler(logfile)
         fh.setLevel(logging.DEBUG)
-        set_format(fh)
+        fh.setFormatter(MyFormatter())
         log.addHandler(fh)
     if logerrorfile:
+        if not logfile:
+            MyFormatter.run_number= 'UNK'
         ch = logging.FileHandler(logerrorfile)
         ch.setLevel(logging.ERROR)
-        set_format(ch)
+        fh.setFormatter(MyFormatter())
         log.addHandler(ch)
+
     return log
 
     #logging.getLogger().setLevel(logging.INFO)

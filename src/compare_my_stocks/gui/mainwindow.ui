@@ -158,6 +158,9 @@
                       <height>30</height>
                      </size>
                     </property>
+                    <property name="toolTip">
+                     <string>Lookup the exact contract by name. Can provide part of the description.</string>
+                    </property>
                     <property name="text">
                      <string>Lookup</string>
                     </property>
@@ -181,6 +184,9 @@
                       <height>16777215</height>
                      </size>
                     </property>
+                    <property name="toolTip">
+                     <string>Add stock to referenced list</string>
+                    </property>
                     <property name="text">
                      <string>Add to &gt;</string>
                     </property>
@@ -199,6 +205,9 @@
                       <width>1000</width>
                       <height>16777215</height>
                      </size>
+                    </property>
+                    <property name="toolTip">
+                     <string>Add stock to selected list</string>
                     </property>
                     <property name="text">
                      <string>&lt; Add to</string>
@@ -386,7 +395,7 @@
                <height>80</height>
               </size>
              </property>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <property name="geometry">
                <rect>
                 <x>9</x>
@@ -726,6 +735,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="VALUE">
+                            <property name="toolTip">
+                             <string>Current assest value</string>
+                            </property>
                             <property name="text">
                              <string>Value</string>
                             </property>
@@ -747,6 +759,9 @@
                          <layout class="QVBoxLayout" name="verticalLayout">
                           <item>
                            <widget class="QRadioButton" name="TOTPROFIT">
+                            <property name="toolTip">
+                             <string>Realized and unrealized profit</string>
+                            </property>
                             <property name="text">
                              <string>Total Profit</string>
                             </property>
@@ -810,6 +825,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="PRECENTAGE">
+                        <property name="toolTip">
+                         <string>The percentage change relative to the required place. If do comparision is on, then calc the percentage relative to the reference.</string>
+                        </property>
                         <property name="text">
                          <string>Percentage</string>
                         </property>
@@ -817,6 +835,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="DIFF">
+                        <property name="toolTip">
+                         <string>Price difference between selected stock and reference stock. Can be meaningless.</string>
+                        </property>
                         <property name="text">
                          <string>Diff</string>
                         </property>
@@ -824,6 +845,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="PRECDIFF">
+                        <property name="toolTip">
+                         <string>The delta in percentage change between refernce stock and current stock. Same as percentage if do_comparision is off. </string>
+                        </property>
                         <property name="text">
                          <string>Percentage Diff</string>
                         </property>
@@ -905,6 +929,9 @@
                        <height>230</height>
                       </size>
                      </property>
+                     <property name="toolTip">
+                      <string/>
+                     </property>
                      <property name="title">
                       <string>Way to unite</string>
                      </property>
@@ -944,6 +971,9 @@
                         <property name="enabled">
                          <bool>true</bool>
                         </property>
+                        <property name="toolTip">
+                         <string>The sum of every group is taken as single value to the graph</string>
+                        </property>
                         <property name="text">
                          <string>Sum</string>
                         </property>
@@ -951,6 +981,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="unite_AVG">
+                        <property name="toolTip">
+                         <string>The avarage of every group is taken as single value to the graph</string>
+                        </property>
                         <property name="text">
                          <string>Average</string>
                         </property>
@@ -1083,6 +1116,9 @@
                      <height>30</height>
                     </size>
                    </property>
+                   <property name="toolTip">
+                    <string>Start where all graph lines are hidden </string>
+                   </property>
                    <property name="text">
                     <string>Start Hidden</string>
                    </property>
@@ -1124,6 +1160,9 @@
                  </item>
                  <item row="0" column="2">
                   <widget class="QCheckBox" name="auto_update">
+                   <property name="toolTip">
+                    <string>Update in real time. No need to turn it off.</string>
+                   </property>
                    <property name="text">
                     <string>Auto Update</string>
                    </property>
@@ -1159,6 +1198,9 @@
                    <layout class="QGridLayout" name="gridLayout_10">
                     <item row="2" column="1">
                      <widget class="QPushButton" name="exportport">
+                      <property name="toolTip">
+                       <string>Export Portfolio which is a combination of IB transactions and manually entered transactions</string>
+                      </property>
                       <property name="text">
                        <string>Export Portofolio</string>
                       </property>
@@ -1166,6 +1208,9 @@
                     </item>
                     <item row="2" column="2">
                      <widget class="QPushButton" name="vis_to_selectedBtn">
+                      <property name="toolTip">
+                       <string>Visible stocks in graph become the selected stock in list. Only if use groups is off.</string>
+                      </property>
                       <property name="text">
                        <string>Visible to selected</string>
                       </property>
@@ -1173,6 +1218,9 @@
                     </item>
                     <item row="0" column="2">
                      <widget class="QPushButton" name="refresh_stock">
+                      <property name="toolTip">
+                       <string>Refresh data in the range in the graph. Queries the input source (IB) for data.</string>
+                      </property>
                       <property name="text">
                        <string>Refresh Stocks</string>
                       </property>
@@ -1180,6 +1228,9 @@
                     </item>
                     <item row="0" column="1">
                      <widget class="QPushButton" name="update_btn">
+                      <property name="toolTip">
+                       <string>Redraw the graph. Sometimes usefull in case of glitches.</string>
+                      </property>
                       <property name="text">
                        <string>Update Graph</string>
                       </property>
@@ -1344,6 +1395,9 @@
                 </item>
                 <item>
                  <widget class="QPushButton" name="sortGroupsBtn">
+                  <property name="toolTip">
+                   <string>Sort groups alphabetically</string>
+                  </property>
                   <property name="text">
                    <string>Sort Alphabetically</string>
                   </property>
@@ -1365,12 +1419,15 @@
                    <item row="0" column="0">
                     <widget class="QLabel" name="label_21">
                      <property name="text">
-                      <string>Home Currency</string>
+                      <string>Current Currency</string>
                      </property>
                     </widget>
                    </item>
                    <item row="0" column="1">
                     <widget class="QComboBox" name="home_currency_combo">
+                     <property name="toolTip">
+                      <string>The currency in which graphs are displayed</string>
+                     </property>
                      <property name="editable">
                       <bool>true</bool>
                      </property>
@@ -1378,6 +1435,9 @@
                    </item>
                    <item row="1" column="0">
                     <widget class="QLabel" name="label_22">
+                     <property name="toolTip">
+                      <string>The stock to compare with. This stock would be the referenced one in percentage / differnce calculations.</string>
+                     </property>
                      <property name="text">
                       <string>Compare With</string>
                      </property>
@@ -1407,6 +1467,9 @@
                   <layout class="QVBoxLayout" name="checkboxeslay_2">
                    <item>
                     <widget class="QCheckBox" name="usereferncestock">
+                     <property name="toolTip">
+                      <string>Include reference stock </string>
+                     </property>
                      <property name="text">
                       <string>Use refernce stocks</string>
                      </property>
@@ -1414,6 +1477,9 @@
                    </item>
                    <item>
                     <widget class="QCheckBox" name="limit_to_port">
+                     <property name="toolTip">
+                      <string>Don't use all the stocks in the groups, but just the stocks in the portfolio</string>
+                     </property>
                      <property name="text">
                       <string>Limit to portfolio stocks</string>
                      </property>
@@ -1421,6 +1487,9 @@
                    </item>
                    <item>
                     <widget class="QCheckBox" name="adjust_currency">
+                     <property name="toolTip">
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Adjust currency of stocks to usd (won't display its real value). &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     </property>
                      <property name="text">
                       <string>Adjust Currency</string>
                      </property>
@@ -1428,6 +1497,9 @@
                    </item>
                    <item>
                     <widget class="QCheckBox" name="use_groups">
+                     <property name="toolTip">
+                      <string>Use groups to fill selected stocks list (all stocks in the selected groups). If not, the selected stocks list effects the graph directly. </string>
+                     </property>
                      <property name="text">
                       <string>Use Groups</string>
                      </property>
@@ -1438,6 +1510,9 @@
                    </item>
                    <item>
                     <widget class="QCheckBox" name="COMPARE">
+                     <property name="toolTip">
+                      <string>Display graph relative to selected stock</string>
+                     </property>
                      <property name="text">
                       <string>Do Comparision</string>
                      </property>
@@ -1445,6 +1520,9 @@
                    </item>
                    <item>
                     <widget class="QPushButton" name="selectallnone">
+                     <property name="toolTip">
+                      <string>Selects all groups/None. Use with caution.</string>
+                     </property>
                      <property name="text">
                       <string>Select All/None</string>
                      </property>
@@ -1452,6 +1530,9 @@
                    </item>
                    <item>
                     <widget class="QPushButton" name="showhide">
+                     <property name="toolTip">
+                      <string>Show/Hide every stock. Should be in the other panel.</string>
+                     </property>
                      <property name="text">
                       <string>Show / Hide</string>
                      </property>
@@ -1468,6 +1549,9 @@
                   <layout class="QGridLayout" name="gridLayout_12">
                    <item row="1" column="1">
                     <widget class="QPushButton" name="save_graph_btn">
+                     <property name="toolTip">
+                      <string>Saves the current configuration for later use</string>
+                     </property>
                      <property name="text">
                       <string>Save</string>
                      </property>
@@ -1475,6 +1559,9 @@
                    </item>
                    <item row="1" column="0">
                     <widget class="QPushButton" name="load_graph_btn">
+                     <property name="toolTip">
+                      <string>Load a saved configuration of graph</string>
+                     </property>
                      <property name="text">
                       <string>Load</string>
                      </property>

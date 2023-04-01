@@ -38,7 +38,13 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
 
     def populate_buydic(self):
         try:
-            x = pd.read_csv(self.SrcFile)
+            ok, path = config.resolvefile(self.SrcFile)
+            if not ok:
+                logging.error((f'Srcfile {self.SrcFile} not found for {self.NAME}'))
+                return
+            else:
+                logging.info(f"Mystock src file is {self.SrcFile}")
+            x = pd.read_csv(path)
         except Exception as e:
             logging.debug((f'{e} while getting buydic data'))
             return

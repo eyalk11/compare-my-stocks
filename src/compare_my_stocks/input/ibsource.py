@@ -22,9 +22,9 @@ import Pyro5.api
 WRONG_EXCHANGE = 200
 
 def get_ib_source() :
-    ibsource = IBSource()
-    #proxy= True if config.ADDPROCESS else False
-    #ibsource= IBSource(proxy=proxy)
+    #ibsource = IBSource()
+    proxy= True if config.ADDPROCESS else False
+    ibsource= IBSource(proxy=proxy)
     return ibsource
 
 #class MyIBSourceProxy(Pyro5.api.Proxy):

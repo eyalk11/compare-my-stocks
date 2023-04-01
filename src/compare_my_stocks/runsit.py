@@ -80,6 +80,7 @@ def main():
 
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)
+    logging.info("Started")
     #import signal
     #signal.signal(signal.SIGTERM,
     if hasattr(config,'ADDPROCESS') and config.ADDPROCESS and need_add_process(config):
@@ -133,7 +134,7 @@ def main():
             except Exception as e :
                 logging.error(f'fatal error {e}')
                 raise
-            logging.debug(('exit'))
+            logging.info(('Exit'))
         sys.exit(f())
         a = 1
     else:
@@ -144,7 +145,17 @@ def main():
 
 def run_additional_process():
     global anotherproc
-    v = ["start" "/wait" ,sys.executable, config.ADDPROCESS]
+    if type(config.ADDPROCESS)==str:
+        rpath= os.path.abspath(config.ADDPROCESS)
+        if not os.path.exists(rpath):
+            logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
+            return
+        else:
+            logging.info(f"IBSRV path reosolved to {rpath}")
+        v = ["start" ,"/wait" ,rpath]
+    else:
+        v = ["start" ,"/wait" ]+config.ADDPROCESS
+    logging.debug("Running " + str(v))
     anotherproc = subprocess.Popen(v,shell=True)
     # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
     time.sleep(1)
