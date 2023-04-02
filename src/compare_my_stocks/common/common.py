@@ -27,8 +27,8 @@ logging.getLogger('Voila').setLevel(logging.DEBUG)
 matplotlib.set_loglevel("INFO")
 
 
-import yaml
-from enum import Enum
+from enum import Enum, Flag, auto
+
 
 def to_yaml(enum_class):
     def to_yaml_inner(cls,enum_value):
@@ -37,14 +37,15 @@ def to_yaml(enum_class):
     def from_yaml(loader, node):
         #x=loader.construct_scalar(node)
         return enum_class[node.value]
-
-    # add the to_yaml method to the enum class
-    enum_class.to_yaml = lambda self: yaml.dump({self.name: self}, default_flow_style=False)
-    enum_class.from_yaml = from_yaml
-
+    def add_stuff(yaml):
     # add the representer to the yaml serializer
-    yaml.add_representer(enum_class, to_yaml_inner)
-    yaml.add_constructor(f'{enum_class.__name__}',from_yaml,Loader=yaml.CLoader)
+        #yaml.add_representer(enum_class, to_yaml_inner)
+        yaml.add_constructor(f'{enum_class.__name__}',from_yaml,Loader=yaml.CLoader)
+    # add the to_yaml method to the enum class
+    enum_class.to_yaml = to_yaml_inner #lambda self: yaml.dump({self.name: self}, default_flow_style=False)
+    enum_class.from_yaml = from_yaml
+    enum_class.add_stuff = add_stuff
+
 
     return enum_class
 
@@ -57,6 +58,7 @@ def index_of(val, in_list):
 
 from enum import Flag, auto, Enum
 
+@to_yaml
 class CombineStrategy(int,Flag):
     PREFERSTOCKS=auto()
     PREFERIB=auto()
@@ -82,6 +84,7 @@ class Types(int,Flag):
     PRECDIFF = PRECENTAGE | DIFF
 
 
+@to_yaml
 class VerifySave(int,Enum):
     DONT=0,
     Ask=1,
@@ -110,6 +113,7 @@ class UniteType(int,Flag):
     ADDPROT=auto()
     ADDTOTALS= ADDPROT | ADDTOTAL
 #did this trick to keep ADDTOTAL
+@to_yaml
 class InputSourceType(Flag):
     Cache=0
     IB=auto()
@@ -134,7 +138,7 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
                 bol=config.STOP_EXCEPTION_IN_DEBUG
             except:
                 bol=False
-                logging.error("error loading config")
+                #logging.debug("error loading config in simple exception handling. Probably fine.")
 
             tostop= os.environ.get('PYCHARM_HOSTED') == '1'
 
@@ -286,3 +290,10 @@ class TmpHook:
             cls.MyHook=TmpHook()
         return cls.MyHook.EXCEPTIONHOOK
 
+
+@to_yaml
+class TransactionSourceType(Flag):
+    Cache=0
+    IB=auto()
+    MyStock=auto()
+    Both= IB | MyStock

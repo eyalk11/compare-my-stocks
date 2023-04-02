@@ -8,10 +8,10 @@ import numpy
 
 from common.common import UseCache, simple_exception_handling
 from common.loghandler import TRACELEVEL
-from config import config
+from config import config,resolvefile
 from transactions.transactioninterface import TransactionHandlerInterface,TransactionHandlerImplementator
 
-
+import dataclasses
 
 class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplementator):
 
@@ -23,8 +23,8 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.File=None
         self.Use=None
         self.CacheSpan=None
-        self.__dict__.update(config.TRANSACTION_HANDLERS[self.NAME])
-        ok,path = config.resolvefile(self.File)
+        self.__dict__.update(dataclasses.asdict(getattr(config.TransactionHandlers,self.NAME)))
+        ok,path = resolvefile(self.File)
         if not ok:
             logging.info((f'Cache not found for {self.NAME}'))
         self.File=path
@@ -95,7 +95,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             pickle.dump(tuple([self._cache_date] + list(self.get_vars_for_cache())), open(self.File, 'wb'))
         else:
             pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
-        logging.debug(('cache saved'))
+        logging.debug((f'cache saved {self.NAME}'))
 
     def process_transactions(self):
 

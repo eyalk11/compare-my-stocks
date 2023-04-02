@@ -6,10 +6,7 @@ from typing import Dict
 
 BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract",defaults=[None]*5)
 BuyDictType=Dict[datetime,BuyDictItem]
-class TransactionSourceType(Flag):
-    Cache=0
-    IB=auto()
-    MyStock=auto()
+
 
 class TransactionHandlerInterface(metaclass=ABCMeta):
     '''

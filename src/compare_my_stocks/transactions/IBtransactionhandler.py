@@ -15,17 +15,17 @@ def get_ib_handler(man):
 class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator):
     NAME="IB"
     def __init__(self,man):
-        self.DOQUERY=True
-        #self.FLEXTOKEN, self.FLEXQUERY = None,None
+        self.DoQuery=True
+        #self.FlexToken, self.FlexQuery = None,None
         super().__init__(man)
-        self.query_id = self.FLEXQUERY
-        self.token_id =  self.FLEXTOKEN
+        self.query_id = self.FlexQuery
+        self.token_id =  self.FlexToken
         self._tradescache :dict  = {}
         self._cache_date=None
         self.need_to_save=True
     def doquery(self):
         logging.info(("running query in IB  for transaction"))
-        if not self.DOQUERY or not (self.query_id) or not self.token_id:
+        if not self.DoQuery or not (self.query_id) or not self.token_id:
             return
         try:
             response = client.download(self.token_id, self.query_id)

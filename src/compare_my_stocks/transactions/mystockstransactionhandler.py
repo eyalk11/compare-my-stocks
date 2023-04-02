@@ -11,7 +11,7 @@ import pandas as pd
 from dateutil import parser
 
 from common.common import simple_exception_handling, neverthrow
-from config import config
+from config import config,resolvefile
 from transactions.transactionhandler import TrasnasctionHandler
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
 
@@ -38,7 +38,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
 
     def populate_buydic(self):
         try:
-            ok, path = config.resolvefile(self.SrcFile)
+            ok, path = resolvefile(self.SrcFile)
             if not ok:
                 logging.error((f'Srcfile {self.SrcFile} not found for {self.NAME}'))
                 return
@@ -72,7 +72,8 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                     prot = self._manager.params.portfolio
 
             if (prot and t[0] != prot) or math.isnan(t[2]):
-                logging.warn(f"skipping over transaction {t}")
+                if not config.SUPRESS_COMMON:
+                    logging.warn(f"skipping over transaction {t}")
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
             # logging.debug((dt))

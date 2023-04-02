@@ -551,7 +551,6 @@ class InputProcessor(InputProcessorInterface):
 
 
 
-            skipget=False
             ls = self.get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
             okdays=0
             requireddays=0
@@ -642,7 +641,7 @@ class InputProcessor(InputProcessorInterface):
         NONADJUSTEDDICTS= len(self.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
         seldict= self.dicts[:NONADJUSTEDDICTS]
-        symbols=list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update)
+
         try:
 
             #income, revenue, cs =# get_earnings()

@@ -9,13 +9,13 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from common.common import simple_exception_handling, CombineStrategy, localize_it
+from common.common import simple_exception_handling, CombineStrategy, localize_it, TransactionSourceType
 from config import config
 from engine.symbolsinterface import SymbolsInterface
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
 from transactions.stockprices import StockPrices
-from transactions.transactioninterface import TransactionHandlerInterface, TransactionSourceType, BuyDictItem
+from transactions.transactioninterface import TransactionHandlerInterface, BuyDictItem
 
 
 class TransactionHandlerManager(TransactionHandlerInterface):
@@ -58,7 +58,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                          f"Loaded  {len(self._stock.buydic) if self._stock else '0'} MyStocks , {len(self._ib.buydic) if self._ib else '0'} IB transactions! "))
         if self._ib and self._stock:
             # combine
-            if len(self._stock.buydic)*len(self._ib.buydic)!=0:
+            if len(self._stock.buydic)*len(self._ib.buydic)==0:
                 self._buydic=self._stock.buydic if len(self._stock.buydic) else self._ib.buydic
             else:
                 self.combine()
@@ -90,10 +90,10 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
                 if (firstinst.get(v.Symbol) and s.date() >= firstinst[v.Symbol] and s.date() <= maxdate[v.Symbol]):
                     if v.Symbol not in config.BOTHSYMBOLS and config.COMBINESTRATEGY == CombineStrategy.PREFERIB:
-                        log(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
+                        log.debug(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
                         continue
                 if v.Symbol in config.IGNORECONF and s > config.IGNORECONF[v.Symbol]:
-                    log(("ignoring trans: %s %s because of conf  %s" % (s, v,"real" if real else "simul" )))
+                    log.debug(("ignoring trans: %s %s because of conf  %s" % (s, v,"real" if real else "simul" )))
                     continue
                 if 'IB:' in v.Notes and CombineStrategy.PREFERSTOCKS and real:
                     logging.warning(("trans: %s %s is of note ib" %(s,v)))

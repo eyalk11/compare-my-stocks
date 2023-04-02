@@ -23,7 +23,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
     namesChanged = MySignal(int)
 
     @staticmethod
-    @simple_exception_handling(err_description='Input source initialization failed. ')
+    @simple_exception_handling(err_description='Input source initialization failed. ',never_throw=True)
     def get_input_source(input_type  : InputSourceType = None):
         if input_type is None:
             input_type =config.INPUTSOURCE
