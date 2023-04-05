@@ -35,9 +35,13 @@ class IBSourceRem:
     # def __del__(self):
     #     if self.IB:
     #         self.on_disconnect()
-    @staticmethod
-    def on_disconnect():
+    Retries=0
+    @classmethod
+    def on_disconnect(cls):
         logging.debug(('disconnected'))
+        if cls.Retries>config.MAXIBCONNECTIONRETRIES:
+            logging.error("too many retries")
+            return
         if IBSourceRem.ConnectedME:
             IBSourceRem.ConnectedME.ib.disconnect()
             IBSourceRem.ConnectedME : IBSourceRem

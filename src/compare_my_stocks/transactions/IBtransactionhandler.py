@@ -8,8 +8,8 @@ from config import config
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
 from ibflex import client, parser, Trade
 from transactions.transactionhandler import TrasnasctionHandler
-def get_ib_handler(man):
-    return IBTransactionHandler(man)
+def get_ib_handler(manager):
+    return IBTransactionHandler(manager)
 
 
 class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator):

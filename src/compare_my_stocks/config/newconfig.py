@@ -4,8 +4,6 @@ import traceback
 from typing import Dict, List, Union, Set
 
 import dacite
-import dataconf
-import toml
 from dataclasses import dataclass, field
 
 from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave
@@ -17,7 +15,8 @@ import sys
 from typing import Optional
 from common.common import log_conv
 from common.paramaware import paramaware
-
+FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
+                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT']
 
 @dataclass
 class StockPricesConf:
@@ -51,6 +50,13 @@ class TransactionHandlersConf:
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
+    IGNORECONF: Dict = field(default_factory=lambda: {})
+    COMBINESTRATEGY: CombineStrategy = CombineStrategy.PREFERSTOCKS
+    NORMALIZE_ON_TRANSACTIONSAVE: int = 0
+    MAXPERCDIFFIBSTOCKWARN: float = 0.2 #ignored currently
+    FIXBUYSELLDIFFDAYS: int = 3
+    BOTHSYMBOLS: List = field(default_factory=lambda: [])
+    SUPRESS_COMMON : bool = False
 
 
 # TRANSACTION_HANDLERS = {
@@ -78,82 +84,111 @@ class TransactionHandlersConf:
 # }
 @dataclass
 class RapidKeyConf:
-    X_RapidAPI_Host: str
-    X_RapidAPI_Key: Optional[str]
+    X_RapidAPI_Host: Optional[str] = None
+    X_RapidAPI_Key: Optional[str] = None
+
+@dataclass
+class IBConnectionConf:
+    HOSTIB: str = '127.0.0.1'
+    PORTIB: int = 7596
+    IBSRVPORT: int = 9091
+    ADDPROCESS: Optional[Union[str, List]] = 'ibsrv.exe'
+    MAXIBCONNECTIONRETRIES: int = 3
+@dataclass
+class UIConf:
+    ADDITIONALOPTIONS: dict = field(default_factory=lambda: {})
+
+    USEWX: int = 0
+    USEWEB: int = 0
+    USEQT: int = 1
+    MINCOLFORCOLUMS: int = 20
+    DEF_FIG_SIZE: tuple = (13.2 * 0.5, 6 * 0.5)
+    SIMPLEMODE: int = 0
+
+
+@dataclass
+class RunningConf:
+    STOP_EXCEPTION_IN_DEBUG: bool = True
+    VERIFY_SAVING: VerifySave = VerifySave.Ask
+    DEBUG: int = 1
+    CHECKRELOADINTERVAL: Optional[int] = 30 #reload modules
+    LASTGRAPHNAME: str = "Last"
+    LOADLASTATBEGIN: bool = True
+    LOGFILE: Optional[str] = "log.txt"
+    LOGERRORFILE: Optional[str] = "error.log"
+
+@dataclass
+class EarningConf:
+    SKIP_EARNINGS: int = 1
+    TRYSTORAGEFOREARNINGS: int = 1
+@dataclass
+class DefaultParamsConf:
+    CACHEUSAGE: UseCache = UseCache.FORCEUSE
+    EXT: list = field(default_factory=list)
+
+
+@dataclass
+class SymbolsConf:
+    VALIDEXCHANGES: list = field(default_factory=list)
+    TRANSLATE_EXCHANGES: dict = field(default_factory=dict)
+    EXCHANGE_CURRENCY: dict = field(default_factory=dict)
+    STOCK_CURRENCY: dict = field(default_factory=dict)
+    IGNORED_SYMBOLS: list = field(default_factory=list)
+    TRANSLATEDIC: dict = field(default_factory=dict)
+    CRYPTO: set = field(default_factory=set)
+    EXCHANGES: list = field(default_factory=list)
+    DEFAULTCURR: list = field(default_factory=list) #currency list
+    BASECUR: str = "USD"
+
+
+
+@dataclass
+class FileConf:
+    HIST_F: str = r'hist_file.cache'
+    HIST_F_BACKUP: str = HIST_F + '.back'
+    DEFAULTNOTEBOOK: str = r'jupyter\defaultnotebook.ipynb'
+    JSONFILENAME: str = r'groups.json'
+    SERIALIZEDFILE: str = r'serialized.dat'
+    EARNINGSTORAGE: str = 'earnings.dat'
+    REVENUEFILE: str = 'NOEARNINGS'
+    INCOMEFILE: str = 'NOEARNINGS'
+    COMMONSTOCK: str = 'NOEARNINGS'
+    DATAFILEPTR: str = 'DATA_FILE'
+    GRAPHFN: str = 'graphs.json'
+    EXPORTEDPORT: str = "exported.csv"
+
+@dataclass
+class InputConf:
+    MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
+    INPUTSOURCE: InputSourceType = InputSourceType.IB
+    IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT
+    DOWNLOADDATAFORPROT: bool = True
+    DEFAULTFROMDATE: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
+    TZINFO: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
+
+@dataclass
+class VoilaConf:
+    DONT_RUN_NOTEBOOK: bool = False
+    VOILA_PYTHON_PROCESS_PATH: Optional[str] = None
+    AUTO_RESOVLE_VOILA_PYTHON: bool = True
+    MAX_VOILA_WAIT: int = 7
 
 @paramaware
 @dataclass
 class Config:
-    TZINFO: datetime.timezone  # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
-    HOSTIB: str = '127.0.0.1'
-    PORTIB: int = 7596
-    IBSRVPORT: int = 9091
-    ADDPROCESS: str = 'ibsrv.exe'
-    LOADLASTATBEGIN: bool = True
-    ADDITIONALOPTIONS: dict = field(default_factory=lambda: {})
-    LASTGRAPHNAME: str = "Last"
-    IGNORE_ADJUST: int = 1
-    SKIP_EARNINGS: int = 1
-    TRYSTORAGEFOREARNINGS: int = 1
-    DATAFILEPTR: str = 'DATA_FILE'
-    USEWX: int = 0
-    USEWEB: int = 0
-    USEQT: int = 1
-    SIMPLEMODE: int = 0
-    DEFAULTCURR: list = field(default_factory=list)
 
-    MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
-    HIST_F: str = r'hist_file.cache'
-    HIST_F_BACKUP: str = HIST_F + '.back'
-    DEFAULTNOTEBOOK: str = r'jupyter\defaultnotebook.ipynb'
-    PORT: int = 4001
-    EXT: list = field(default_factory=list)
-    DEF_FIG_SIZE: tuple = (13.2 * 0.5, 6 * 0.5)
-    EXCHANGES: list = field(default_factory=list)
-    VALIDEXCHANGES: list = field(default_factory=list)
-    TRANSLATE_EXCHANGES: dict = field(default_factory=dict)
-    DEFAULTFROMDATE: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
-    EXCHANGE_CURRENCY: dict = field(default_factory=dict)
-    STOCK_CURRENCY: dict = field(default_factory=dict)
-    INPUTSOURCE: InputSourceType = InputSourceType.IB
-    MINCOLFORCOLUMS: int = 20
-    MAXCOLS: int = 30
-    MINCHECKREQ: int = 10
-    MINIMALPRECREQ: float = 0.2
-    CACHEUSAGE: UseCache = UseCache.FORCEUSE
-    DOWNLOADDATAFORPROT: bool = True
-    JSONFILENAME: str = r'groups.json'
-    SERIALIZEDFILE: str = r'serialized.dat'
-    EARNINGSTORAGE: str = 'earnings.dat'
-    TRANSLATEDIC: dict = field(default_factory=dict)
-    CRYPTO: set = field(default_factory=set)
-    DEBUG: int = 1
-    GRAPHFN: str = 'graphs.json'
-    BASECUR: str = "USD"
-    REVENUEFILE: str = 'NOEARNINGS'
-    INCOMEFILE: str = 'NOEARNINGS'
-    COMMONSTOCK: str = 'NOEARNINGS'
-    IGNORED_SYMBOLS: list = field(default_factory=list)
-    EXPORTEDPORT: str = "exported.csv"
-    BOTHSYMBOLS: List = field(default_factory=lambda: [])
-    MAXPERCDIFFIBSTOCKWARN: float = 0.2
-    FIXBUYSELLDIFFDAYS: int = 3
-    NORMALIZE_ON_TRANSACTIONSAVE: int = 0
-    DONT_RUN_NOTEBOOK: bool = False
-    STOP_EXCEPTION_IN_DEBUG: bool = True
-    VERIFY_SAVING: VerifySave = VerifySave.Ask
-    CHECKRELOADINTERVAL: int = 30
-    COMBINESTRATEGY: CombineStrategy = CombineStrategy.PREFERSTOCKS
-    IGNORECONF: Dict = field(default_factory=lambda: {})
-    LOGFILE: Optional[str] = "log.txt"
-    LOGERRORFILE: Optional[str] = "error.log"
-    VOILA_PYTHON_PROCESS_PATH: Optional[str] = None
-    AUTO_RESOVLE_VOILA_PYTHON: bool = True
+    Running: RunningConf = field(default_factory=RunningConf)
+    Earnings: EarningConf = field(default_factory=EarningConf)
+    DefaultParams: DefaultParamsConf = field(default_factory=DefaultParamsConf)
+    Symbols: SymbolsConf = field(default_factory=SymbolsConf)
+    File: FileConf = field(default_factory=FileConf)
+    Input: InputConf = field(default_factory=InputConf)
+    Voila: VoilaConf = field(default_factory=VoilaConf)
+    UI: UIConf = field(default_factory=UIConf)
+    IBConnection: IBConnectionConf = field(default_factory=IBConnectionConf)
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
     SEEKINGALPHAHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
-    MAX_VOILA_WAIT: int = 7
-    SUPRESS_COMMON : bool = False
 
 CONFIGFILENAME = 'myconfig.yaml'
 
@@ -170,10 +205,7 @@ def print_if_ok(*args):
         logging.info(*args)
 
 
-if not os.path.exists(PROJDIR):
-    print_if_ok("""project directory doesn't exists... Creating...
-    Consider copying your config files there """)
-    os.makedirs(PROJDIR)
+
 
 
 def resolvefile(filename):
@@ -225,13 +257,28 @@ class ConfigLoader():
         setattr(cls.config, f, fil)
 
     @classmethod
-    def load_config(cls) -> Config:
+    def main(cls) -> Config:
         if cls.config is not None:
             return cls.config
-        # yaml.dump(Config(),open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\myconfig.yaml','wt'))
-        config_file = cls.load_yaml()
 
-        cls.validate_conf()
+        if not os.path.exists(PROJDIR):
+            print_if_ok("""project directory doesn't exists... Creating...
+            Consider copying your config files there """)
+            os.makedirs(PROJDIR)
+
+        # yaml.dump(Config(),open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\myconfig.yaml','wt'))
+        res, config_file = resolvefile(CONFIGFILENAME)
+        if not res:
+            logging.error('No config file, aborting')
+            sys.exit(-1)
+
+        try:
+            cls.config = cls.load_config(config_file)
+        except:
+            logging.error("Failed loading config file. aborting")
+            sys.exit(-1)
+
+
 
         for x in ['LOGFILE', 'LOGERRORFILE']:
             cls.resolve_it(x)
@@ -244,8 +291,7 @@ class ConfigLoader():
         print_if_ok(log_conv("Using Config File: ", config_file))
 
 
-        FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
-                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT']
+
         for f in FILE_LIST_TO_RES:
             cls.resolve_it(f)
 
@@ -255,7 +301,7 @@ class ConfigLoader():
         return cls.config
 
     @classmethod
-    def load_yaml(cls):
+    def load_config(cls,config_file):
         from ruamel.yaml import YAML
         yaml = YAML(typ='unsafe')
         import common.common
@@ -275,27 +321,24 @@ class ConfigLoader():
         yaml.register_class(MyStocksConf)
         yaml.register_class(RapidKeyConf)
 
-        res, config_file = resolvefile(CONFIGFILENAME)
-        if not res:
-            logging.error('No config file, aborting')
-            sys.exit(-1)
+
+
         from common.common import simple_exception_handling
-        cls.config = simple_exception_handling(err_description="excpetion in loading config")(
-            lambda: yaml.load(open(config_file)))()
+        #make the following a method with decorator
 
+        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True)
+        def load_config_int():
+            return yaml.load(open(config_file))
 
-        if cls.config is None:
-            sys.exit(-1)
-
-
-
-        return config_file
+        conf= load_config_int()
+        cls.validate_conf(conf)
+        return conf
 
     @classmethod
-    def validate_conf(cls):
+    def validate_conf(cls,config):
 
         try:
-            tmp = dataclasses.asdict(cls.config)
+            tmp = dataclasses.asdict(config)
 
             # tmp["FlexQuery"]='aaa' #to be string
             # tmp["FlexToken"]='bbb'
@@ -304,7 +347,7 @@ class ConfigLoader():
             dacite.from_dict(data_class=Config, data=tmp)
         except Exception as e:
             logging.error(f"Validating conf failed {e}")
-            sys.exit(-1)
+            raise e
 
 # dataconf.dump(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\data\myconfig.yaml',c,'yaml')
 # import dataclasses

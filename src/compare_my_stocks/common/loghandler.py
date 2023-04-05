@@ -24,7 +24,7 @@ import logging
 import os
 
 class MyFormatter(logging.Formatter):
-    log_format = ' Run %(run_number)s | %(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s'
+    log_format = 'Run %(run_number)s | %(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s'
     run_number=None
     def __init__(self):
         super().__init__(MyFormatter.log_format)

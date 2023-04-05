@@ -104,28 +104,37 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
         with self._datagenlock:
             res= self.call_data_generator()
-            df= self._datagen.df
-            type=self._datagen.type
-            before_act =self._datagen.df_before_act
+
+
 
         if res:
+            df = self._datagen.df
+            type = self._datagen.type
+            before_act = self._datagen.df_before_act
             self.call_graph_generator(df, just_upd,type,before_act )
 
     @simple_exception_handling(err_description="Exception in generation")
-    def call_data_generator(self):
-        if not self._datagen.verify_conditions():
-            self.statusChanges.emit(f'Graph Invalid!')
-            return False
-        try:
-            self._datagen.generate_data()
-            return True
-        except NoDataException:
-            self.statusChanges.emit(f'No Data For Graph!')
-            logging.debug(('no data'))
-            return False
-        except Exception as e:
-            self.statusChanges.emit(f'Exception in generation: {e}')
-            raise
+    def call_data_generator(self,auto_reprocess=True):
+
+        for tries in range(2):
+            if not self._datagen.verify_conditions():
+                self.statusChanges.emit(f'Graph Invalid! Check parameters')
+                return False
+            try:
+                self._datagen.generate_data()
+                return True
+            except NoDataException:
+                if auto_reprocess:
+                    logging.debug("No data first try. reprocessing")
+                    self._inp.process(self.required_syms(True, True))
+                    continue
+                else:
+                    self.statusChanges.emit(f'No Data For Graph!')
+                    logging.debug(('no data'))
+                    return False
+            except Exception as e:
+                self.statusChanges.emit(f'Exception in generation: {e}')
+                raise
 
     def call_graph_generator(self, df, just_upd, type,orig_data):
         try:

@@ -80,6 +80,9 @@ class DataGenerator(DataGeneratorInterface):
         else:  # colswithoutext non-trivial
             fulldf = df
             cols = set(df.columns)
+        #if fulldf is empty, raise exception
+        if len(fulldf) == 0:
+            raise NoDataException("Fulldf is empty")
 
             ##else we need everything...
         self.bef_rem_data = fulldf.copy()

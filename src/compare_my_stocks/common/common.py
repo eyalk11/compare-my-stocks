@@ -9,7 +9,10 @@ import matplotlib
 import numpy as np
 import pytz
 
-localize_it = lambda x: (pytz.UTC.localize(x, True) if not x.tzinfo else x)
+def localize_it (x):
+    if x is None:
+        return None
+    return (pytz.UTC.localize(x, True) if not x.tzinfo else x)
 def unlocalize_it(date):
     d=localize_it(date)
     return d.replace(tzinfo=None)
@@ -130,7 +133,7 @@ def neverthrow(f,*args,default=None,**kwargs):
 from Pyro5.errors import format_traceback
 
 
-def simple_exception_handling(err_description=None,return_succ=False,never_throw=False):
+def simple_exception_handling(err_description=None,return_succ=False,never_throw=False,always_throw=False):
     def decorated(func):
         def internal(*args,**kwargs):
             try:
@@ -154,6 +157,8 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
                     if err_description:
                         logging.error((err_description))
                     print_formatted_traceback()
+                    if always_throw:
+                        raise e
                     if return_succ:
                         return 0
         return internal
@@ -233,11 +238,22 @@ dictfilt = lambda x, y: dict([(i, x[i]) for i in x if i in set(y)])
 dictnfilt = lambda x, y: dict([(i, x[i]) for i in x if not(i in set(y))])
 
 lmap= lambda x,y: list(map(x,y))
+smap = lambda x,y: set(map(x,y))
+
 # def ifnn(t,v,els=None):
 #     if t is not None:
 #         return v
 #     else:
 #         return els
+
+#Write a function that gets two dates and converts the first to timezone aware if the other one is timezone aware
+def tzawareness(d1,d2):
+    if d2.tzinfo is not None:
+        return localize_it(d1)
+    else:
+        return unlocalize_it(d1)
+
+
 
 def ifnn(t, v, els=lambda: None):
     if t is not None:

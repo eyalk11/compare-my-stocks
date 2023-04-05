@@ -20,7 +20,7 @@ from PySide6.QtCore import QRecursiveMutex
 from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date
+    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date, tzawareness
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningscommon import localize_me
@@ -133,9 +133,9 @@ class InputProcessor(InputProcessorInterface):
 
         if currency == 'unk':
             logging.debug((f'resolving currency for {sym}'))
-            currency = config.STOCK_CURRENCY.get(sym, 'unk')
+            currency = config.Input.STOCK_CURRENCY.get(sym, 'unk')
         if currency == 'unk':
-            currency = config.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
+            currency = config.Input.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             logging.debug((f'unk currency for {sym}'))
         return currency
@@ -365,93 +365,105 @@ class InputProcessor(InputProcessorInterface):
             logging.warn(("WARNING: No History at all!"))
             return
         hh = pytz.UTC  # timezone('Israel')
-        if not partial_symbols_update:
-            self._fset=set()
-        simphist=iter(sorted(self._simp_hist_by_date.items()))
-        t=1
+        #copy to temporary var and restore at the end
+        from_date ,to_date = self.process_params.transactions_fromdate, self.process_params.transactions_todate
 
-        dic={}
-        while cur_action or t:
-            try:
-                t, dic = next(simphist)
-                mini=False
-            except StopIteration:
-                logging.log(TRACELEVEL,("stop iter"))
-                if len(buyoperations)>0:
+        self.process_params.transactions_todate = localize_it(self.process_params.transactions_todate)
+        self.process_params.transactions_fromdate = localize_it(self.process_params.transactions_todate)
+        try:
+            if not partial_symbols_update:
+                self._fset=set()
+            simphist=iter(sorted(self._simp_hist_by_date.items()))
+            t=1
+
+            dic={}
+            while cur_action or t:
+                try:
+                    t, dic = next(simphist)
+                    mini=False
+                except StopIteration:
+                    logging.log(TRACELEVEL,("stop iter"))
+                    if len(buyoperations)>0:
+                        cur_action = buyoperations.popitem(False)
+                        t=cur_action[0]
+                        mini=True
+                    else:
+                        break
+
+
+
+
+
+                if partial_symbols_update:
+                    dic = dictfilt(dic, partial_symbols_update)
+
+                #t=tzawareness(t,self.process_params.transactions_todate)
+                t=localize_it(t)
+
+                if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
+                    break
+                holdopt = set(_cur_holding_bystock.keys()).intersection(
+                    partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
+
+                for sym in holdopt:
+                    calc_splited(sym,_last_action_time.get(sym), t)
+
+                while cur_action and (t >= cur_action[0]):
+                    calc_splited(cur_action[1][2], _last_action_time.get(cur_action[1][2]),cur_action[0])
+                    update_curholding()
+                    if len(buyoperations) == 0:
+                        cur_action = None
+                        break
                     cur_action = buyoperations.popitem(False)
-                    t=cur_action[0]
-                    mini=True
-                else:
-                    break
 
-
-
-
-
-            if partial_symbols_update:
-                dic = dictfilt(dic, partial_symbols_update)
-            t = hh.localize(t, True) if t.tzinfo is None else t
-            # t=pytz.normalize(t,cur_action[0].tzinfo())#t.replace(tzinfo=pytz.UTC)
-            if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
-                break
-            holdopt = set(_cur_holding_bystock.keys()).intersection(
-                partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
-
-            for sym in holdopt:
-                calc_splited(sym,_last_action_time.get(sym), t)
-
-            while cur_action and (t >= cur_action[0]):
-                calc_splited(cur_action[1][2], _last_action_time.get(cur_action[1][2]),cur_action[0])
-                update_curholding()
-                if len(buyoperations) == 0:
-                    cur_action = None
-                    break
-                cur_action = buyoperations.popitem(False)
-
-            tim = matplotlib.dates.date2num(t)
-            holdopt = set(_cur_holding_bystock.keys()).intersection(
-                partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
-            for sym in holdopt:
-                if partial_symbols_update and not sym in partial_symbols_update:
+                tim = matplotlib.dates.date2num(t)
+                holdopt = set(_cur_holding_bystock.keys()).intersection(
+                    partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
+                for sym in holdopt:
+                    if partial_symbols_update and not sym in partial_symbols_update:
+                        continue
+                    self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
+                    self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
+                    self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
+                    self._split_by_stock[sym][tim] = _cur_splits_bystock[sym]
+                if mini:
                     continue
-                self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
-                self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
-                self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
-                self._split_by_stock[sym][tim] = _cur_splits_bystock[sym]
-            if mini:
-                continue
-            symopt = self._usable_symbols.intersection(
-                partial_symbols_update) if partial_symbols_update else self._usable_symbols
-            for sym in symopt:
-                if partial_symbols_update and not sym in partial_symbols_update:
-                    continue
-                if sym in dic:
-                    v = dic[sym]
-                else:
-                    v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
+                symopt = self._usable_symbols.intersection(
+                    partial_symbols_update) if partial_symbols_update else self._usable_symbols
+                for sym in symopt:
+                    if partial_symbols_update and not sym in partial_symbols_update:
+                        continue
+                    if sym in dic:
+                        v = dic[sym]
+                    else:
+                        v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
 
-                self._alldates[sym][tim] = v[0]
-                self._alldates_adjusted[sym][tim]=v[1]
-                _cur_stock_price[sym] = v
-                #v = v[0]
-                self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
-                self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
-                _cur_unrelprofit_bystock[sym]= v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
-                                               _cur_avg_cost_bystock[sym]
+                    self._alldates[sym][tim] = v[0]
+                    self._alldates_adjusted[sym][tim]=v[1]
+                    _cur_stock_price[sym] = v
+                    #v = v[0]
+                    self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
+                    self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
+                    _cur_unrelprofit_bystock[sym]= v[0] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
+                                                   _cur_avg_cost_bystock[sym]
 
-                self._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
-                self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
-                                               _cur_avg_cost_bystock[sym]
-                self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
-                _last_action[sym] = cur_action
-            self._fset.add(tim)
-        if not partial_symbols_update:
-            self.fast_conv_to_df(
-                {"Holding" : _cur_holding_bystock,
-                 "Unrelprofit": _cur_unrelprofit_bystock,
-                 "Relprofit":  _cur_relprofit_bystock
-            })
-            self._cur_splits=_cur_splits_bystock
+                    self._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
+                    self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
+                                                   _cur_avg_cost_bystock[sym]
+                    self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
+                    _last_action[sym] = cur_action
+                self._fset.add(tim)
+            if not partial_symbols_update:
+                self.fast_conv_to_df(
+                    {"Holding" : _cur_holding_bystock,
+                     "Unrelprofit": _cur_unrelprofit_bystock,
+                     "Relprofit":  _cur_relprofit_bystock
+                })
+                self._cur_splits=_cur_splits_bystock
+        finally:
+            pass#self.process_params.transactions_todate=to_date
+            #self.process_params.transactions_fromdate=from_date
+
         #self._cur_holding_bystock=_cur_holding_bystock
 
     def fast_conv_to_df(self, dicdics):

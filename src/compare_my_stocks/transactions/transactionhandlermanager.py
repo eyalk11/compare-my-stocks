@@ -22,7 +22,10 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def __init__(self,input_processer):
         self._inp =input_processer
         self._buydicforexport={}
-        self._stockprices=None
+        self._handlers= (self._ib, self._stock) = tuple(self.get_handlers())
+        self._buysymbols=set()
+        self._stockprices = StockPrices(self, self.buysymbols)
+
 
 
     @property
@@ -39,21 +42,27 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def process_transactions(self): #from all sources
         self._buydic = {}
         self._buydicforexport={}
-        self._buysymbols= set()
+        self._buysymbols.clear()
         handlers= []
         self.combine_transactions()
 
         self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
 
+        #replace the following assigment  with a property
+        #self._stockprices._tickers=self.buysymbols
+        self._stockprices._tickers = self.buysymbols
 
-        self._stockprices=StockPrices(self,self.buysymbols)
         self._stockprices.process_transactions()
 
     @simple_exception_handling("error in combine transactions")
     def combine_transactions(self):
         self._ib: TransactionHandlerInterface
         self._stock: TransactionHandlerInterface
-        (self._ib, self._stock) = tuple(self.get_handlers())
+        for k in self._handlers:
+            if k is not None:
+                k.process_transactions()
+                self._buysymbols.update(k.buysymbols)
+
         logging.info((
                          f"Loaded  {len(self._stock.buydic) if self._stock else '0'} MyStocks , {len(self._ib.buydic) if self._ib else '0'} IB transactions! "))
         if self._ib and self._stock:
@@ -160,8 +169,6 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         for x, fun in zip([TransactionSourceType.IB, TransactionSourceType.MyStock], [get_ib_handler, get_stock_handler]):
             if ((config.TRANSACTIONSOURCE & x) == x):
                 handler: TransactionHandlerInterface = fun(self)
-                handler.process_transactions()
-                self._buysymbols.update(handler.buysymbols)
                 yield handler
             else:
                 yield None
