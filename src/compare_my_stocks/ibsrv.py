@@ -36,7 +36,7 @@ class MyDeamon(Pyro5.server.Daemon):
 #Pyro5.server.config.SERIALIZER='marshal'
 Pyro5.server.config.SERVERTYPE="multiplex"
 Pyro5.server.config.DETAILED_TRACEBACK=True
-daemon = MyDeamon(host="localhost",port=config.IBSRVPORT)                # make a Pyro daemon
+daemon = MyDeamon(host="localhost",port=config.IBConnection.IBSRVPORT)                # make a Pyro daemon
 uri = daemon.register(IBSourceRem,objectId="aaa")   # register the greeting maker as a Pyro object
 
 print("Ready. Object uri =", uri)      # print the uri so we can use it in the client later

@@ -88,11 +88,11 @@ class MainWindow(QMainWindow, FormInitializer):
             self.update_graph(1)
 
         if  os.environ.get('PYCHARM_HOSTED') == '1':
-            if config.CHECKRELOADINTERVAL ==0:
+            if config.Running.CHECKRELOADINTERVAL ==0:
                 return
             logging.debug("checking and reloading")
             timer = QTimer(self)
-            timer.setInterval(1000* config.CHECKRELOADINTERVAL)
+            timer.setInterval(1000* config.Running.CHECKRELOADINTERVAL)
             timer.timeout.connect(self.check_reload)
             timer.start()
 

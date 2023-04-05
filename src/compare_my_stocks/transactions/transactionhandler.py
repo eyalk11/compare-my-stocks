@@ -44,7 +44,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         return self._buydic
 
     def get_portfolio_stocks(self):  # TODO:: to fix
-        return self._buysymbols #[config.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
+        return self._buysymbols #[config.Symbols.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
 
     def update_sym_property(self, symbol, value, prop='currency', updateanyway=True):
         def nanch(x):

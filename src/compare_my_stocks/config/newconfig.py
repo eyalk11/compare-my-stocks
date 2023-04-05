@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 import traceback
+from functools import reduce
+from io import StringIO
 from typing import Dict, List, Union, Set
 
 import dacite
@@ -18,6 +20,7 @@ from common.paramaware import paramaware
 FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
                             "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT']
 
+@paramaware
 @dataclass
 class StockPricesConf:
     Use: Union[UseCache, int] = UseCache.USEIFAVALIABLE
@@ -26,6 +29,7 @@ class StockPricesConf:
     IgnoreSymbols: Set[str] = field(default_factory=set)
 
 
+@paramaware
 @dataclass
 class IBConf:
     File: str = r'ibtrans.cache'
@@ -45,6 +49,7 @@ class MyStocksConf:
     Use: Union[UseCache, int] = UseCache.USEIFAVALIABLE
 
 
+@paramaware
 @dataclass()
 class TransactionHandlersConf:
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
@@ -57,6 +62,8 @@ class TransactionHandlersConf:
     FIXBUYSELLDIFFDAYS: int = 3
     BOTHSYMBOLS: List = field(default_factory=lambda: [])
     SUPRESS_COMMON : bool = False
+    COMBINEDATEDIFF : int = 20
+    COMBINEAMOUNTPERC : int  = 10
 
 
 # TRANSACTION_HANDLERS = {
@@ -87,6 +94,7 @@ class RapidKeyConf:
     X_RapidAPI_Host: Optional[str] = None
     X_RapidAPI_Key: Optional[str] = None
 
+@paramaware
 @dataclass
 class IBConnectionConf:
     HOSTIB: str = '127.0.0.1'
@@ -94,6 +102,9 @@ class IBConnectionConf:
     IBSRVPORT: int = 9091
     ADDPROCESS: Optional[Union[str, List]] = 'ibsrv.exe'
     MAXIBCONNECTIONRETRIES: int = 3
+    REGULAR_ACCOUNT: Optional[str] = None
+    REGULAR_USERNAME: Optional[str] =None
+@paramaware
 @dataclass
 class UIConf:
     ADDITIONALOPTIONS: dict = field(default_factory=lambda: {})
@@ -106,6 +117,7 @@ class UIConf:
     SIMPLEMODE: int = 0
 
 
+@paramaware
 @dataclass
 class RunningConf:
     STOP_EXCEPTION_IN_DEBUG: bool = True
@@ -117,16 +129,20 @@ class RunningConf:
     LOGFILE: Optional[str] = "log.txt"
     LOGERRORFILE: Optional[str] = "error.log"
 
+@paramaware
 @dataclass
-class EarningConf:
+class EarningsConf:
     SKIP_EARNINGS: int = 1
     TRYSTORAGEFOREARNINGS: int = 1
+@paramaware
 @dataclass
 class DefaultParamsConf:
     CACHEUSAGE: UseCache = UseCache.FORCEUSE
     EXT: list = field(default_factory=list)
+    DefaultGroups: list = field(default_factory=list)
 
 
+@paramaware
 @dataclass
 class SymbolsConf:
     VALIDEXCHANGES: list = field(default_factory=list)
@@ -142,6 +158,7 @@ class SymbolsConf:
 
 
 
+@paramaware
 @dataclass
 class FileConf:
     HIST_F: str = r'hist_file.cache'
@@ -157,6 +174,7 @@ class FileConf:
     GRAPHFN: str = 'graphs.json'
     EXPORTEDPORT: str = "exported.csv"
 
+@paramaware
 @dataclass
 class InputConf:
     MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
@@ -166,6 +184,7 @@ class InputConf:
     DEFAULTFROMDATE: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
     TZINFO: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
 
+@paramaware
 @dataclass
 class VoilaConf:
     DONT_RUN_NOTEBOOK: bool = False
@@ -178,7 +197,7 @@ class VoilaConf:
 class Config:
 
     Running: RunningConf = field(default_factory=RunningConf)
-    Earnings: EarningConf = field(default_factory=EarningConf)
+    Earnings: EarningsConf = field(default_factory=EarningsConf)
     DefaultParams: DefaultParamsConf = field(default_factory=DefaultParamsConf)
     Symbols: SymbolsConf = field(default_factory=SymbolsConf)
     File: FileConf = field(default_factory=FileConf)
@@ -240,10 +259,25 @@ def resolvefile(filename):
 # yaml.dump(c,open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\config.yaml','wt'))
 class ConfigLoader():
     config: Config = None
+    @classmethod
+    def generate_config(cls):
+        cls.main()
+        yaml= cls.get_yaml()
+        c=Config()
+        c.Input.TZINFO=None
+        st=StringIO()
+        yaml.dump(c, st)
+        st.seek(0)
+        c.Symbols=cls.config.Symbols
+        with open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\config.yaml', 'wt') as fil:
+             for k in st:
+                 if "_changed_keys" in k:
+                     continue
+                 fil.write(k)
 
     @classmethod
-    def resolve_it(cls, f):
-        res, fil = resolvefile(getattr(cls.config, f))
+    def resolve_it(cls, obj, f):
+        res, fil = resolvefile(getattr(obj, f))
 
         if fil == None:
             print_if_ok(f'Invalid value {f}')
@@ -254,10 +288,12 @@ class ConfigLoader():
         else:
             print_if_ok(f'{f} resolved to {fil}')
 
-        setattr(cls.config, f, fil)
+        setattr(obj, f, fil)
 
     @classmethod
     def main(cls) -> Config:
+
+
         if cls.config is not None:
             return cls.config
 
@@ -281,11 +317,12 @@ class ConfigLoader():
 
 
         for x in ['LOGFILE', 'LOGERRORFILE']:
-            cls.resolve_it(x)
+            cls.resolve_it(cls.config.Running, x)
 
         try:
-            init_log(logfile=cls.config.LOGFILE, logerrorfile=cls.config.LOGERRORFILE)
+            log=init_log(logfile=cls.config.Running.LOGFILE, logerrorfile=cls.config.Running.LOGERRORFILE,debug=cls.config.Running.DEBUG)
         except:
+
             logging.error("initialize logging failed!")
 
         print_if_ok(log_conv("Using Config File: ", config_file))
@@ -293,20 +330,41 @@ class ConfigLoader():
 
 
         for f in FILE_LIST_TO_RES:
-            cls.resolve_it(f)
+            cls.resolve_it(cls.config.File,f)
 
-        remained_keys = set(cls.config.__dataclass_fields__.keys()) - cls.config._changed_keys
-        logging.warn(f"The following keys weren't specified in config so were set to default {','.join(remained_keys)}")
+        keys = [(c,k) for k in cls.config.__dataclass_fields__ if hasattr(c:=getattr(cls.config,k),'_changed_keys')]
+        add_to_set = lambda x,y: set([f'{y}.{z}' for z in x])
+        remained_keys = reduce(lambda x,y: x.union(y), [ add_to_set( set(c.__dataclass_fields__.keys()) - c._changed_keys,k) for c,k in keys] )
+
+        #set(cls.config.__dataclass_fields__.keys()) - cls.config._changed_keys
+        if len(remained_keys)>0:
+            yy='\n'.join(remained_keys)
+            log.warn(f"The following keys weren't specified in config so were set to default:\n {yy}")
 
         return cls.config
 
     @classmethod
     def load_config(cls,config_file):
+        yaml= cls.get_yaml()
+
+        from common.common import simple_exception_handling
+        #make the following a method with decorator
+
+        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True)
+        def load_config_int():
+            return yaml.load(open(config_file))
+
+        conf= load_config_int()
+        cls.validate_conf(conf)
+        return conf
+
+
+    @staticmethod
+    def get_yaml():
         from ruamel.yaml import YAML
         yaml = YAML(typ='unsafe')
         import common.common
         from common.common import TransactionSourceType
-
         yaml.register_class(common.common.UseCache)
         yaml.register_class(common.common.CombineStrategy)
         yaml.register_class(common.common.InputSourceType)
@@ -320,19 +378,18 @@ class ConfigLoader():
         yaml.register_class(StockPricesConf)
         yaml.register_class(MyStocksConf)
         yaml.register_class(RapidKeyConf)
+        yaml.register_class(UIConf)
+        yaml.register_class(IBConnectionConf)
+        yaml.register_class(FileConf)
+        # register all classes defined here ends with Conf
+        yaml.register_class(VoilaConf)
+        yaml.register_class(EarningsConf)
+        yaml.register_class(RunningConf)
+        yaml.register_class(DefaultParamsConf)
+        yaml.register_class(SymbolsConf)
+        yaml.register_class(InputConf)
+        return yaml
 
-
-
-        from common.common import simple_exception_handling
-        #make the following a method with decorator
-
-        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True)
-        def load_config_int():
-            return yaml.load(open(config_file))
-
-        conf= load_config_int()
-        cls.validate_conf(conf)
-        return conf
 
     @classmethod
     def validate_conf(cls,config):

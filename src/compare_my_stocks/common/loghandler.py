@@ -88,7 +88,7 @@ class MyFilter(object):
     def filter(self, logRecord):
         return logRecord.levelno <= self.__level
 
-def init_log(mod=None,ts=False,logfile=None,logerrorfile=None):
+def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
     def set_format(handler):
         if not ts:
             handler.setFormatter(ImpacketFormatter())
@@ -123,7 +123,13 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None):
         ch.setLevel(logging.ERROR)
         fh.setFormatter(MyFormatter())
         log.addHandler(ch)
-
+    # Found to work. Not the best.
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger('Voila').setLevel(logging.DEBUG)
+    # init_log()
+    import matplotlib
+    matplotlib.set_loglevel("INFO")
     return log
 
     #logging.getLogger().setLevel(logging.INFO)

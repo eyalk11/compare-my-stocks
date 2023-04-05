@@ -36,11 +36,11 @@ def getearnings_int(st, aa):
 
 
 def get_earnings():
-    if config.SKIP_EARNINGS:
+    if config.Earnings.SKIP_EARNINGS:
         raise Exception("no earnings")
-    aa = json.load(open(config.INCOMEFILE))
-    bb = json.load(open(config.REVENUEFILE))
-    cs= json.load(open(config.COMMONSTOCK))
+    aa = json.load(open(config.File.INCOMEFILE))
+    bb = json.load(open(config.File.REVENUEFILE))
+    cs= json.load(open(config.File.COMMONSTOCK))
     income = getearnings_int(st, aa)
     revenue = getearnings_int(st, bb)
     cs = getearnings_int(st,cs)

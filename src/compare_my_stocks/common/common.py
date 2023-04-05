@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime,date
 
-import matplotlib
+
 import numpy as np
 import pytz
 
@@ -23,11 +23,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 
 
 
-#Found to work. Not the best.
-logging.getLogger().setLevel(logging.DEBUG)
-logging.getLogger('Voila').setLevel(logging.DEBUG)
-#init_log()
-matplotlib.set_loglevel("INFO")
 
 
 from enum import Enum, Flag, auto
@@ -138,7 +133,7 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
         def internal(*args,**kwargs):
             try:
                 from config import config
-                bol=config.STOP_EXCEPTION_IN_DEBUG
+                bol=config.Running.STOP_EXCEPTION_IN_DEBUG
             except:
                 bol=False
                 #logging.debug("error loading config in simple exception handling. Probably fine.")
@@ -291,7 +286,7 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
 
 
 def need_add_process(config):
-    return config.INPUTSOURCE== InputSourceType.IB
+    return config.Input.INPUTSOURCE== InputSourceType.IB
 
 def log_conv(*tup):
     return '\t'.join([str(x) for x in tup ])

@@ -19,7 +19,7 @@ from PySide6.QtCore import QMutex, QRecursiveMutex
 import numpy
 from config import config
 
-USEQT = config.USEQT
+USEQT = config.UI.USEQT
 from common.common import Types, simple_exception_handling
 
 
@@ -141,7 +141,7 @@ class GraphGenerator:
         return st
 
     def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data):
-        additional_options = config.ADDITIONALOPTIONS
+        additional_options = config.UI.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         logging.log(TRACELEVEL, ('generation locked'))
 
@@ -183,9 +183,9 @@ class GraphGenerator:
             ar.set_title(self.get_title())
 
             # Put a legend to the right of the current aris
-            if len(cols) >= config.MINCOLFORCOLUMS:
+            if len(cols) >= config.UI.MINCOLFORCOLUMS:
 
-                ar.legend(loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.MINCOLFORCOLUMS,
+                ar.legend(loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MINCOLFORCOLUMS,
                           handleheight=2.4, labelspacing=0.05)
             else:
                 ar.legend(loc='center left', bbox_to_anchor=self.B, handleheight=2.4, labelspacing=0.05)

@@ -109,8 +109,8 @@ class InputSource(InputSourceInterface):
                     upd(l['primaryExchange'])
                 return l
 
-            ls=list(set(orgls).intersection(set(config.VALIDEXCHANGES)))
-            ls.sort(key=lambda x: config.VALIDEXCHANGES.index(x))
+            ls=list(set(orgls).intersection(set(config.Symbols.VALIDSymbols.EXCHANGES)))
+            ls.sort(key=lambda x: config.Symbols.VALIDSymbols.EXCHANGES.index(x))
             if len(ls)==0:
                 logging.debug((f'couldnt find exchange (for a candidate) {l["symbol"]} , picking {orgls[0]}'))
                 upd(orgls[0])
@@ -137,7 +137,7 @@ class InputSource(InputSourceInterface):
                 return [],0,0
 
 
-        exchanges=config.EXCHANGES if config.INPUTSOURCE==InputSourceType.InvestPy else config.VALIDEXCHANGES
+        exchanges=config.Symbols.EXCHANGES if config.Input.INPUTSOURCE==InputSourceType.InvestPy else config.Symbols.VALIDEXCHANGES
         exchanges=lmap(lambda x:x.lower(),exchanges)
 
         ls= list(map(fix_valid_exchanges,ls))

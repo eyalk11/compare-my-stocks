@@ -248,7 +248,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def edit_groups(self):
 
         # jw=json_editor_ui.JSONEditorWindow(None)
-        self.json_editor.set_json_path(config.JSONFILENAME)
+        self.json_editor.set_json_path(config.File.JSONFILENAME)
         self.json_editor.show()
 
     def on_json_closed(self, *args):

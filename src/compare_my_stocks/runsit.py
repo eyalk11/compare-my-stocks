@@ -14,7 +14,7 @@ from common.common import InputSourceType, Types, UniteType, need_add_process
 from common.loghandler import init_log
 from config import config
 
-USEWX, USEWEB, USEQT, SIMPLEMODE = config.USEWX, config.USEWEB, config.USEQT, config.SIMPLEMODE
+USEWX, USEWEB, USEQT, SIMPLEMODE = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SIMPLEMODE
 # if USEQT:
 #     from PySide6.QtWidgets import QApplication
 
@@ -83,7 +83,7 @@ def main():
     logging.info("Started")
     #import signal
     #signal.signal(signal.SIGTERM,
-    if hasattr(config,'ADDPROCESS') and config.ADDPROCESS and need_add_process(config):
+    if config.IBConnection.ADDPROCESS and need_add_process(config):
         run_additional_process()
 
     pd_ignore_warning()
@@ -115,7 +115,7 @@ def main():
     gg = initialize_graph_and_ib(mainwindow.axes if not SIMPLEMODE else None)
 
     gg.gen_graph(Parameters(
-        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=config.CACHEUSAGE,
+        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=config.DefaultParams.DefaultGroups, use_cache=config.DefaultParams.CACHEUSAGE,
         show_graph=False))  # ,adjust_to_currency=True,currency_to_adjust='ILS'))
 
     if SIMPLEMODE:
@@ -145,8 +145,8 @@ def main():
 
 def run_additional_process():
     global anotherproc
-    if type(config.ADDPROCESS)==str:
-        rpath= os.path.abspath(config.ADDPROCESS)
+    if type(config.IBConnection.ADDPROCESS)==str:
+        rpath= os.path.abspath(config.IBConnection.ADDPROCESS)
         if not os.path.exists(rpath):
             logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
             return
@@ -154,7 +154,7 @@ def run_additional_process():
             logging.info(f"IBSRV path reosolved to {rpath}")
         v = ["start" ,"/wait" ,rpath]
     else:
-        v = ["start" ,"/wait" ]+config.ADDPROCESS
+        v = ["start" ,"/wait" ]+config.IBConnection.ADDPROCESS
     logging.debug("Running " + str(v))
     anotherproc = subprocess.Popen(v,shell=True)
     # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])

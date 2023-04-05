@@ -91,7 +91,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.window.findChild(QCheckBox, name="limit_to_port").setChecked(self.graphObj.params.limit_to_portfolio)
         self.window.findChild(QCheckBox, name="adjust_currency").setChecked(self.graphObj.params.adjust_to_currency)
         self.window.home_currency_combo.clear()
-        self.window.home_currency_combo.addItems(list(config.DEFAULTCURR), )
+        self.window.home_currency_combo.addItems(list(config.Symbols.DEFAULTCURR), )
 
 
         if not initial and self.graphObj.params.compare_with:

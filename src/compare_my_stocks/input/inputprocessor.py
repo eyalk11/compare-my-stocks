@@ -133,9 +133,9 @@ class InputProcessor(InputProcessorInterface):
 
         if currency == 'unk':
             logging.debug((f'resolving currency for {sym}'))
-            currency = config.Input.STOCK_CURRENCY.get(sym, 'unk')
+            currency = config.Symbols.STOCK_CURRENCY.get(sym, 'unk')
         if currency == 'unk':
-            currency = config.Input.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
+            currency = config.Symbols.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             logging.debug((f'unk currency for {sym}'))
         return currency
@@ -176,7 +176,7 @@ class InputProcessor(InputProcessorInterface):
     def get_currency_hist(self, currency, fromdate, enddate):
         fromdate=conv_date(fromdate,premissive=False)
         enddate=conv_date(enddate)
-        pair = ( currency,config.BASECUR)
+        pair = ( currency,config.Symbols.BASECUR)
         def get_good_keys():
             zz = self.currency_hist[currency].isna().any(axis=1)
             return list(self.currency_hist[currency].index[~zz])
@@ -223,7 +223,7 @@ class InputProcessor(InputProcessorInterface):
 
         if self.process_params.transactions_fromdate == None:
             if not cur_action:
-                self.process_params.transactions_fromdate = config.DEFAULTFROMDATE
+                self.process_params.transactions_fromdate = config.Input.DEFAULTFROMDATE
                 logging.warn(('Trasactions are empty.Strarting from default date. '))
             else:
                 self.process_params.transactions_fromdate = cur_action[0] #start from first buy
@@ -254,7 +254,7 @@ class InputProcessor(InputProcessorInterface):
             logging.log(TRACELEVEL,('entered'))
             self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
             logging.log(TRACELEVEL,('fin convert'))
-            if config.IGNORE_ADJUST:
+            if config.Input.IGNORE_ADJUST:
                 self.adjusted_panel=self.reg_panel.copy()
             else:
                 self.adjust_for_currency()
@@ -267,7 +267,7 @@ class InputProcessor(InputProcessorInterface):
         query_source = True
         try:
             if minimal: # Symbol info is needed by TransactionHandler . So we load just this...
-                _, symbinfo, _, _, _ = pickle.load(open(config.HIST_F, 'rb'))
+                _, symbinfo, _, _, _ = pickle.load(open(config.File.HIST_F, 'rb'))
                 self.symbol_info = collections.defaultdict(dict)
                 self.symbol_info.update(symbinfo)
                 #patch
@@ -278,10 +278,10 @@ class InputProcessor(InputProcessorInterface):
 
                 return
             else:
-                hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.HIST_F, 'rb'))
+                hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.File.HIST_F, 'rb'))
 
             #self.currency_hist = None
-            if self._cache_date - datetime.datetime.now() < config.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
+            if self._cache_date - datetime.datetime.now() < config.Input.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
                 self._hist_by_date = hist_by_date
 
             self.update_usable_symbols()
@@ -559,7 +559,7 @@ class InputProcessor(InputProcessorInterface):
 
             sym_corrected = self.process_params.resolve_hack.get(sym, None)
             if not sym_corrected:
-                sym_corrected = config.TRANSLATEDIC.get(sym, sym)
+                sym_corrected = config.Symbols.TRANSLATEDIC.get(sym, sym)
 
 
 
@@ -585,7 +585,7 @@ class InputProcessor(InputProcessorInterface):
         logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
         #self._inputsource.ownership()
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
-                                                       iscrypto= (str(sym_corrected) in config.CRYPTO))  # should be rounded
+                                                       iscrypto= (str(sym_corrected) in config.Symbols.CRYPTO))  # should be rounded
 
         self.symbol_info[sym] = (l if l else {}) #just for debug I think
         if (cont := self.symbol_info[sym].get('contract')):
@@ -600,7 +600,7 @@ class InputProcessor(InputProcessorInterface):
         else:
             currency= self.symbol_info[sym]['currency']
 
-        if currency != config.BASECUR and currency != 'unk':
+        if currency != config.Symbols.BASECUR and currency != 'unk':
             adjusted =  self.adjust_sym_for_currency(currency, maxdate, mindate, hist, sym)
         else:
             adjusted=None
@@ -620,11 +620,11 @@ class InputProcessor(InputProcessorInterface):
 
     def save_data(self):
         if self.process_params.use_cache == UseCache.DONT:
-            if config.VERIFY_SAVING == VerifySave.DONT:
+            if config.Running.VERIFY_SAVING == VerifySave.DONT:
                 logging.warn("Not saving data because not using cache")
                 return
             logging.warn("Saving data without using cache! Can earse data!")
-            if config.VERIFY_SAVING == VerifySave.Ask :
+            if config.Running.VERIFY_SAVING == VerifySave.Ask :
 
                 x=input('Are you sure you want to? (y to accept)')
                 if x.lower()!='y':
@@ -633,12 +633,12 @@ class InputProcessor(InputProcessorInterface):
 
         import shutil
         try:
-            shutil.copy(config.HIST_F, config.HIST_F_BACKUP)
+            shutil.copy(config.File.HIST_F, config.File.HIST_F_BACKUP)
         except:
             logging.debug(('error in backuping hist file'))
         try:
             pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist,
-                         self.currencyrange), open(config.HIST_F, 'wb'))
+                         self.currencyrange), open(config.File.HIST_F, 'wb'))
             logging.debug(('hist saved'))
         except:
             logging.error(("error in dumping hist"))
@@ -715,16 +715,16 @@ class InputProcessor(InputProcessorInterface):
         if self._inputsource is None:
             return
         if x not in self._relevant_currencies_rates:
-            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
+            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.Symbols.BASECUR, x))
         return  self._relevant_currencies_rates[x]
 
     def adjust_for_currency(self):
 
         relevant_currencies = set([v['currency'] for v in self.symbol_info.values() if not (v is None)]) - \
-                              set(['unk', config.BASECUR])
+                              set(['unk', config.Symbols.BASECUR])
         for x in relevant_currencies:
-            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.BASECUR, x))
-        dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
+            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.Symbols.BASECUR, x))
+        dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
 
         self._adjusted_panel=self.get_adjusted_df_for_currency(dic)
 
@@ -835,7 +835,7 @@ class InputProcessor(InputProcessorInterface):
         if not partial_symbol_update:
             self.used_unitetype = self.process_params.unite_by_group
             required = set(self._eng.required_syms(True, True))
-            if config.DOWNLOADDATAFORPROT:
+            if config.Input.DOWNLOADDATAFORPROT:
                 self._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
             else:
                 self._symbols_wanted = required.copy()

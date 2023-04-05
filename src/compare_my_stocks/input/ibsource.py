@@ -23,7 +23,7 @@ WRONG_EXCHANGE = 200
 
 def get_ib_source() :
     #ibsource = IBSource()
-    proxy= True if config.ADDPROCESS else False
+    proxy= True if config.IBConnection.ADDPROCESS else False
     ibsource= IBSource(proxy=proxy)
     return ibsource
 
@@ -39,7 +39,7 @@ class IBSourceRem:
     @classmethod
     def on_disconnect(cls):
         logging.debug(('disconnected'))
-        if cls.Retries>config.MAXIBCONNECTIONRETRIES:
+        if cls.Retries>config.IBConnection.MAXIBCONNECTIONRETRIES:
             logging.error("too many retries")
             return
         if IBSourceRem.ConnectedME:
@@ -54,7 +54,7 @@ class IBSourceRem:
 
 
     @Pyro5.server.expose
-    def init(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True):
+    def init(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=1,readonly=True):
         self._host=host
         self._port=port
         self._clientid=clientId
@@ -149,9 +149,9 @@ class IBSourceRem:
             #dic = c.contract.__dict__
             dic=asdict(c.contract)
             #if not c.contract:
-            #     c.contract.exchange= config.TRANSLATE_EXCHANGES.get(c.contract.primaryExchange, c.contract.primaryExchange)
+            #     c.contract.exchange= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(c.contract.primaryExchange, c.contract.primaryExchange)
             dic['derivativeSecTypes'] = c.derivativeSecTypes
-            #dic['exchange']= config.TRANSLATE_EXCHANGES.get(c.contract.primaryExchange,c.contract.primaryExchange)
+            #dic['exchange']= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(c.contract.primaryExchange,c.contract.primaryExchange)
             dic['contractdic']=asdict(c.contract)
             lsa+=[dic]
             if count == results:
@@ -177,10 +177,10 @@ class IBSourceRem:
                 yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
 
 class IBSource(InputSource):
-    def __init__(self,host=config.HOSTIB,port=config.PORTIB,clientId=1,readonly=True,proxy=True):
+    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=1,readonly=True,proxy=True):
         super().__init__()
         if proxy:
-            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBSRVPORT )
+            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBConnection.IBSRVPORT )
             self.ibrem.__class__._Proxy__check_owner = lambda self: 1
         else:
             self.ibrem=IBSourceRem()
@@ -256,7 +256,7 @@ class IBSource(InputSource):
             cont = asdict(contract)
             if not contract.exchange:
                 logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
-                cont['exchange']= config.TRANSLATE_EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
+                cont['exchange']= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
 
             try:
                 bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..

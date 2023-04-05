@@ -1,64 +1,92 @@
 !Config
-ADDPROCESS: ibsrv.exe
-AUTO_RESOVLE_VOILA_PYTHON: true
-BASECUR: USD
-BOTHSYMBOLS: []
-CACHEUSAGE: !UseCache FORCEUSE
-CHECKRELOADINTERVAL: 30
-COMBINESTRATEGY: !CombineStrategy PREFERSTOCKS
-COMMONSTOCK: NOEARNINGS
-CRYPTO: !!set {bitcoin: null, cardano: null, ethereum: null}
-DATAFILEPTR: DATA_FILE
-DEBUG: 1
-DEFAULTCURR: [USD, EUR, GBP, ILS]
-DEFAULTFROMDATE: 2020-01-01 00:00:00+00:00
-DEFAULTNOTEBOOK: jupyter\defaultnotebook.ipynb
-DEF_FIG_SIZE: !!python/tuple [6.6, 3.0]
-DONT_RUN_NOTEBOOK: false
-DOWNLOADDATAFORPROT: true
-EARNINGSTORAGE: earnings.dat
-EXCHANGES: [NYSE, nasdaq, xetra, NYSE, London, OTC Markets]
-EXCHANGE_CURRENCY: {London: GBP, Xetra: EUR}
-EXPORTEDPORT: exported.csv
-EXT: [QQQ]
-FIXBUYSELLDIFFDAYS: 3
-GRAPHFN: graphs.json
-HIST_F: hist_file.cache
-HIST_F_BACKUP: hist_file.cache.back
-HOSTIB: 127.0.0.1
-IBSRVPORT: 9091
-IGNORECONF: {}
-IGNORED_SYMBOLS: [FB]
-IGNORE_ADJUST: 1
-INCOMEFILE: NOEARNINGS
-INPUTSOURCE: !InputSourceType IB
-JSONFILENAME: groups.json
-LOADLASTATBEGIN: true
-LOGERRORFILE: error.log
-LOGFILE: log.txt
-MAXCACHETIMESPAN: !!python/object/apply:datetime.timedelta [1, 0, 0]
-MAXCOLS: 30
-MAXPERCDIFFIBSTOCKWARN: 0.2
-MIN: 4000
-MINCHECKREQ: 10
-MINCOLFORCOLUMS: 20
-MINIMALPRECREQ: 0.2
-NORMALIZE_ON_TRANSACTIONSAVE: 0
-PORT: 4001
-PORTIB: 7596
-REVENUEFILE: NOEARNINGS
-SERIALIZEDFILE: serialized.dat
-SIMPLEMODE: 0
-SKIP_EARNINGS: 1
-STOCK_CURRENCY: {VBTC1: EUR, VETH.DE: EUR}
-STOP_EXCEPTION_IN_DEBUG: true
-TRANSLATEDIC: {ADA-USD: cardano, VETHG.DE: VETHx, VTBC.DE: VBTC1, VUKE.L: VUKE}
-TRANSLATE_EXCHANGES: {NASDAQ: NYSE}
-TRYSTORAGEFOREARNINGS: 1
-TZINFO: !!python/object/apply:datetime.timezone
-- !!python/object/apply:datetime.timedelta [-1, 75600, 0]
-- GMT3
+DefaultParams: !DefaultParamsConf
+  CACHEUSAGE: !<UseCache> FORCEUSE
+  DefaultGroups: []
+  EXT:
+    - QQQ
+Earnings: !EarningsConf
+  SKIP_EARNINGS: 1
+  TRYSTORAGEFOREARNINGS: 1
+File: !FileConf
+  COMMONSTOCK: NOEARNINGS
+  DATAFILEPTR: DATA_FILE
+  DEFAULTNOTEBOOK: jupyter\defaultnotebook.ipynb
+  EARNINGSTORAGE: earnings.dat
+  EXPORTEDPORT: exported.csv
+  GRAPHFN: graphs.json
+  HIST_F: hist_file.cache
+  HIST_F_BACKUP: hist_file.cache.back
+  INCOMEFILE: NOEARNINGS
+  JSONFILENAME: groups.json
+  REVENUEFILE: NOEARNINGS
+  SERIALIZEDFILE: serialized.dat
+IBConnection: !IBConnectionConf
+  ADDPROCESS: ibsrv.exe
+  HOSTIB: 127.0.0.1
+  IBSRVPORT: 9091
+  MAXIBCONNECTIONRETRIES: 3
+  PORTIB: 7596
+  REGULAR_ACCOUNT: null
+  REGULAR_USERNAME: null
+Input: !InputConf
+  DEFAULTFROMDATE: 2020-01-01 00:00:00+00:00
+  DOWNLOADDATAFORPROT: true
+  IGNORE_ADJUST: 1
+  INPUTSOURCE: !<InputSourceType> IB
+  MAXCACHETIMESPAN: !!python/object/apply:datetime.timedelta [1, 0, 0]
+  TZINFO: !!python/object/apply:datetime.timezone
+    - !!python/object/apply:datetime.timedelta
+      - -1
+      - 75600
+      - 0
+    - GMT3
+Running: !RunningConf
+  CHECKRELOADINTERVAL: 30
+  DEBUG: 1
+  LASTGRAPHNAME: Last
+  LOADLASTATBEGIN: true
+  LOGERRORFILE: error.log
+  LOGFILE: log.txt
+  STOP_EXCEPTION_IN_DEBUG: true
+  VERIFY_SAVING: !<VerifySave> Ask
+SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: null, X_RapidAPI_Key: null}
+StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: null, X_RapidAPI_Key: null}
+Symbols: !SymbolsConf
+  BASECUR: USD
+  CRYPTO: !!set {}
+DEFAULTCURR:
+  - USD
+  - EUR
+  - GBP
+  - ILS
+EXCHANGES:
+  - NYSE
+  - nasdaq
+  - xetra
+  - NYSE
+  - London
+  - OTC Markets
+  EXCHANGE_CURRENCY:
+    London: GBP
+    Xetra: EUR
+  IGNORED_SYMBOLS: []
+  STOCK_CURRENCY: {}
+  TRANSLATEDIC: 
+    ADA-USD: cardano
+    VETHG.DE: VETHx
+    VTBC.DE: VBTC1
+    VUKE.L: VUKE
+
+  TRANSLATE_EXCHANGES: {}
+  VALIDEXCHANGES: 
+  - NYSE
+  - NASDAQ
+  - ISLAND
+  - XERTA
+  - LSE
 TransactionHandlers: !TransactionHandlersConf
+  BOTHSYMBOLS: []
+  COMBINESTRATEGY: !<CombineStrategy> PREFERSTOCKS
   IB: !IBConf
     CacheSpan: !!python/object/apply:datetime.timedelta [0, 18000, 0]
     DoQuery: true
@@ -66,27 +94,26 @@ TransactionHandlers: !TransactionHandlersConf
     FlexQuery: QUERYNU
     FlexToken: YOURTOKEN
     TryToQueryAnyway: false
-    Use: !UseCache USEIFAVALIABLE
+    Use: !<UseCache> USEIFAVALIABLE
+  IGNORECONF: {}
+  MAXPERCDIFFIBSTOCKWARN: 0.2
   MyStocks: !MyStocksConf
     File: buydicnk.cache
     PortofolioName: My Portfolio
     SrcFile: example_mystock.csv
-    Use: !UseCache USEIFAVALIABLE
+    Use: !<UseCache> USEIFAVALIABLE
+  NORMALIZE_ON_TRANSACTIONSAVE: 0
+  SUPRESS_COMMON: false
   StockPrices: !StockPricesConf
     CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
     File: stocksplit.cache
     IgnoreSymbols: !!set {}
-    Use: !UseCache USEIFAVALIABLE
-USEQT: 1
-USEWEB: 0
-USEWX: 0
-VALIDEXCHANGES: [NYSE, NASDAQ, ISLAND, XERTA, LSE]
-VERIFY_SAVING: !VerifySave Ask
-VOILA_PYTHON_PROCESS_PATH: null
-StockPricesHeaders:
-  X-RapidAPI-Host: stock-prices2.p.rapidapi.com
-  X-RapidAPI-Key: null
-
-SEEKINGALPHAHeaders:
-  X-RapidAPI-Host: seeking-alpha.p.rapidapi.com
-  X-RapidAPI-Key: null
+    Use: !<UseCache> USEIFAVALIABLE
+UI: !UIConf
+  ADDITIONALOPTIONS: {}
+  DEF_FIG_SIZE: !!python/tuple [6.6, 3.0]
+Voila: !VoilaConf
+  AUTO_RESOVLE_VOILA_PYTHON: true
+  DONT_RUN_NOTEBOOK: false
+  MAX_VOILA_WAIT: 7
+  VOILA_PYTHON_PROCESS_PATH: null

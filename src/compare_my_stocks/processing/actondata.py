@@ -21,7 +21,7 @@ class ActOnData:
         return dictnfilt(self.__dict__,set(['_ds']))
 
     def handle_operation(self):
-        if config.DEBUG:
+        if config.Running.DEBUG:
             self.org_arr=self.arr.copy()
 
         if self.type & Types.PRECENTAGE:
@@ -31,7 +31,7 @@ class ActOnData:
             newarr = self.transpose_arr - self.refarr
         else:  # if self.type & Types.ABS == Types.ABS:
             newarr = self.transpose_arr
-        if config.DEBUG:
+        if config.Running.DEBUG:
             self.refarr=self.refarr.copy()
             #self.newarr=newarr.copy()
         # we want to transpose the array anyway to get it fit to self.df...

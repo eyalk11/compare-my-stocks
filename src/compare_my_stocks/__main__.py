@@ -5,7 +5,7 @@ if 'ipykernel_launcher' in sys.argv:
     if sys.path[0] == '':
         del sys.path[0]
 
-    from ipykernel import kernelapp as app
+    from ipykernel import kernelapp as apip
     app.launch_new_instance()
 
     sys.exit(0)

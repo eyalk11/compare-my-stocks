@@ -128,7 +128,7 @@ class DataGenerator(DataGeneratorInterface):
             df = self._eng.input_processor.reg_panel
 
         if self.params.adjust_to_currency and self.params.currency_to_adjust:
-            if self.params.currency_to_adjust != config.BASECUR:
+            if self.params.currency_to_adjust != config.Symbols.BASECUR:
                 df = self.readjust_for_currency(self.params.currency_to_adjust)
 
         if div & Types.PROFIT:
@@ -311,8 +311,8 @@ class DataGenerator(DataGeneratorInterface):
         nn = pandas.concat([nn, t], axis=1)
         return nn
 
-    def serialize_me(self, filepath=config.SERIALIZEDFILE):
-        logging.debug((f'writing serialized file to {config.SERIALIZEDFILE}'))
+    def serialize_me(self, filepath=config.File.SERIALIZEDFILE):
+        logging.debug((f'writing serialized file to {config.File.SERIALIZEDFILE}'))
         with open(filepath, 'wb') as f:
             import pickle
             pickle.dump(self.serialized_data(), f)

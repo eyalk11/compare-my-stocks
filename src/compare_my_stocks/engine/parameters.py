@@ -6,7 +6,7 @@ from typing import List
 import dateutil
 import numpy
 
-from common.paramaware import paramaware
+from common.paramaware import paramawareold
 from config import config
 from common.common import Types, UseCache, UniteType, LimitType, dictnfilt
 from engine.symbols import AbstractSymbol
@@ -16,15 +16,15 @@ from engine.symbols import AbstractSymbol
 #from dataclasses_json import dataclass_json
 
 #@dataclass_json
-@paramaware
+@paramawareold
 @dataclass
 class Parameters:
     groups : list =field(default_factory=list)
     valuerange : List[float] = ( (-1)* numpy.inf, numpy.inf)
     numrange : List[int] = (None,None)
     type : Types =Types.VALUE
-    _ext : list =field(default_factory=config.EXT.copy)
-    ext: dataclasses.InitVar[list] = field(default=[]) #same as reference stock
+    _ext : list =field(default_factory=config.DefaultParams.EXT.copy)
+    ext: dataclasses.InitVar[list] = field(default_factory=list) #same as reference stock
     increase_fig: bool =1
     _fromdate : datetime=None
     _todate: datetime =None
@@ -35,7 +35,7 @@ class Parameters:
     compare_with: str =None
     portfolio: str  = None #The portfolio to read from transaction table in MyStocks
     use_cache : UseCache =UseCache.USEIFAVALIABLE
-    def_fig_size : tuple = config.DEF_FIG_SIZE
+    def_fig_size : tuple = config.UI.DEF_FIG_SIZE
     unite_by_group : UniteType =UniteType.NONE
     show_graph : bool =False
     use_groups: bool =True

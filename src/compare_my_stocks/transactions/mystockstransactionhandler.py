@@ -72,7 +72,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                     prot = self._manager.params.portfolio
 
             if (prot and t[0] != prot) or math.isnan(t[2]):
-                if not config.SUPRESS_COMMON:
+                if not config.TransactionHandlers.SUPRESS_COMMON:
                     logging.warn(f"skipping over transaction {t}")
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
@@ -128,7 +128,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             t : datetime.datetime
             syminfo=self._manager.symbol_info.get(z[2])
             if  syminfo:
-                currency=syminfo.get("currency",config.BASECUR)
+                currency=syminfo.get("currency",config.Symbols.BASECUR)
             else:
                 syminfo={}
             x=self.Row(Id=index,

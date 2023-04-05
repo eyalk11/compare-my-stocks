@@ -34,7 +34,7 @@ class SymbolsHandler:
     @simple_exception_handling(err_description='exception in  groups file')
     def read_groups_from_file(self):
 
-            jsongroups= json.load(open(config.JSONFILENAME,'rt'))
+            jsongroups= json.load(open(config.File.JSONFILENAME,'rt'))
             self._groups_by_cat = jsongroups
             self._categories= list(self._groups_by_cat.keys())
 

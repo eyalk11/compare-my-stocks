@@ -26,7 +26,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
     @simple_exception_handling(err_description='Input source initialization failed. ',never_throw=True)
     def get_input_source(input_type  : InputSourceType = None):
         if input_type is None:
-            input_type =config.INPUTSOURCE
+            input_type =config.Input.INPUTSOURCE
             if input_type == InputSourceType.IB:
                 return get_ib_source()  # IBSource()
             else:
@@ -87,7 +87,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
         if self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
             symbols_needed = set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols - set(
-                config.IGNORED_SYMBOLS) #TODO::make bad symbols property
+                config.Symbols.IGNORED_SYMBOLS) #TODO::make bad symbols property
 
             if len(symbols_needed) > 0:
                 reprocess = 1

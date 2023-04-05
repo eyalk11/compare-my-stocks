@@ -29,7 +29,9 @@ class JupyterHandler(FormInterface):
         self.file_name =None
         self._voila_task = DoLongProcessSlots(self.generation_task)
         self.wont_run=False
-        self.window.voila_widget :QtVoila
+
+
+
 
 
     def voila_loaded(self,k):
@@ -65,33 +67,35 @@ class JupyterHandler(FormInterface):
 
     @simple_exception_handling("Generation task")
     def generation_task(self):
+        self.window.voila_widget :QtVoila
+        self.window.voila_widget.max_voila_wait=config.Voila.MAX_VOILA_WAIT
         def resolve_voila():
             if (os.path.basename(sys.executable).lower() in ['python.exe',
-                                                                 'python3.exe']) or config.VOILA_PYTHON_PROCESS_PATH is not None:
+                                                                 'python3.exe']) or config.Voila.VOILA_PYTHON_PROCESS_PATH is not None:
                 return True
 
-            if config.AUTO_RESOVLE_VOILA_PYTHON:
+            if config.Voila.AUTO_RESOVLE_VOILA_PYTHON:
                 import shutil
                 self.window.voila_widget.python_process_path=shutil.which('python.exe')
                 if self.window.voila_widget.python_process_path!= None:
                     logging.warning(f'Auto-resolved voila process to {self.window.voila_widget.python_process_path}')
                     return True
-            logging.warning('Not using voila because of empty python config. \n run installvoila.bat , and fill in config.VOILA_PYTHON_PROCESS_PATH')
+            logging.warning('Not using voila because of empty python config. \n run installvoila.bat , and fill in config.Voila.VOILA_PYTHON_PROCESS_PATH')
             return False
 
         self.window.voila_widget: QtVoila
         self.in_generation=True
         if not self.generate_temp():
             return
-        self.window.voila_widget.external_notebook = config.DEFAULTNOTEBOOK
+        self.window.voila_widget.external_notebook = config.File.DEFAULTNOTEBOOK
         if self.window.voila_widget.python_process_path is None:
-            self.window.voila_widget.python_process_path = config.VOILA_PYTHON_PROCESS_PATH
+            self.window.voila_widget.python_process_path = config.Voila.VOILA_PYTHON_PROCESS_PATH
             self.wont_run = not resolve_voila()
         if self.wont_run:
             return
-        open(config.DATAFILEPTR,'wt').write(self.file_name)
+        open(config.File.DATAFILEPTR,'wt').write(self.file_name)
         if self.voila_run==State.UNINITALIZED:
-            if not config.DONT_RUN_NOTEBOOK:
+            if not config.Voila.DONT_RUN_NOTEBOOK:
                 self.voila_run = State.LOADING
                 self.window.voila_widget.run_voila()
         elif self.voila_run==State.RUNNING:
@@ -118,7 +122,7 @@ class JupyterHandler(FormInterface):
     @simple_exception_handling("launch notebook")
     def launch_notebook(self,filename=None):
         if filename==None:
-            filename=config.DEFAULTNOTEBOOK
+            filename=config.File.DEFAULTNOTEBOOK
         from nbmanager import api
         pids = {x['pid']:x for x in api.list_running_servers()}
         processes = list(filter(lambda p: p.pid in pids.keys(), psutil.process_iter()))
