@@ -1,12 +1,16 @@
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from datetime import datetime
-from enum import auto, Flag
+from enum import auto,  Enum 
 from typing import Dict
 
-BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract",defaults=[None]*5)
+class TransactionSource(Enum):
+    IB=1
+    STOCK=2
+    CACHEDIBINSTOCK=3
+    
+BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract Source",defaults=[None]*5)
 BuyDictType=Dict[datetime,BuyDictItem]
-
 
 class TransactionHandlerInterface(metaclass=ABCMeta):
     '''

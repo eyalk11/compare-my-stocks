@@ -89,7 +89,14 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.window.use_groups.setChecked(self.graphObj.params.use_groups)
         self.window.findChild(QCheckBox, name="usereferncestock").setChecked(self.graphObj.params.use_ext)
         self.window.findChild(QCheckBox, name="limit_to_port").setChecked(self.graphObj.params.limit_to_portfolio)
-        self.window.findChild(QCheckBox, name="adjust_currency").setChecked(self.graphObj.params.adjust_to_currency)
+        if self.graphObj.params.adjust_to_currency:
+            self.window.findChild(QCheckBox, name="adjust_currency").setCheckState(PySide6.QtCore.Qt.CheckState.Checked)
+        elif self.graphObj.params.adjusted_for_base_cur:
+            self.window.findChild(QCheckBox, name="adjust_currency").setCheckState(PySide6.QtCore.Qt.CheckState.PartiallyChecked)
+        else:
+            self.window.findChild(QCheckBox, name="adjust_currency").setCheckState(PySide6.QtCore.Qt.CheckState.Unchecked)
+
+
         self.window.home_currency_combo.clear()
         self.window.home_currency_combo.addItems(list(config.Symbols.DEFAULTCURR), )
 

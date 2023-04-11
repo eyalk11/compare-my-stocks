@@ -1,9 +1,10 @@
 import logging
 import os
 from compare_my_stocks.common.common import Serialized
+logging.getLogger().setLevel(logging.CRITICAL)
 from config import config
 import pickle
-logging.getLogger().setLevel(logging.CRITICAL)
+
 
 
 def load_data() -> Serialized:

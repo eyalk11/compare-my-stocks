@@ -55,7 +55,7 @@ class StockPrices(TrasnasctionHandler,RapidApi,TransactionHandlerImplementator):
 
     def get_hist_split(self,symbol):
         if not self.is_initialized():
-            logging.error("Couldnt get hist splits , update key!")
+            logging.warn("Couldnt get hist splits , update key!")
             return
         import requests
 

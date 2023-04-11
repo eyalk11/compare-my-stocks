@@ -27,9 +27,11 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
     def get_input_source(input_type  : InputSourceType = None):
         if input_type is None:
             input_type =config.Input.INPUTSOURCE
+            if input_type is None:
+                return None
             if input_type == InputSourceType.IB:
                 return get_ib_source()  # IBSource()
-            else:
+            elif input_type == InputSourceType.InvestPy:
                 return InvestPySource()
 
 
@@ -51,8 +53,6 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         self._datagenlock = threading.Lock()
 
     def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False):
-        if not self._datagen.data_generated:
-            logging.debug("didnt generate")
         #the want it all is in the case of populating dict
         selected = set()
         if want_unite_symbols and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
@@ -137,16 +137,24 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 raise
 
     def call_graph_generator(self, df, just_upd, type,orig_data):
+        def upd(msg,err=False):
+            self.statusChanges.emit(msg)
+            self._inp.failed_to_get_new_data=None #reset it
+            if err:
+                logging.error(msg)
+            else:
+                logging.info(msg)
+
         try:
             self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
                                              just_upd, type,orig_data)
-            self.statusChanges.emit("Generated Graph :)")
-            logging.info("Generated graph")
+            if self._inp.failed_to_get_new_data:
+                upd(f"Generated Graph with old data  (  Query failed :() ")
+            else:
+                upd("Generated Graph :)")
             self.finishedGeneration.emit(1)
         except TypeError as e:
-            e = e
-            logging.error("failed generating graph ")
-            self.statusChanges.emit(f"failed generating graph {e}")
+            upd(f"failed generating graph {e}",err=True)
             raise
 
     # makes the entire graph from the default attributes.

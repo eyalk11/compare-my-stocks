@@ -5,6 +5,7 @@ import webbrowser
 from enum import Enum, auto, IntEnum
 
 import psutil
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QFrame
 
 from common.common import simple_exception_handling
 from common.loghandler import TRACELEVEL
@@ -28,7 +29,46 @@ class JupyterHandler(FormInterface):
         self.last_file_name=None
         self.file_name =None
         self._voila_task = DoLongProcessSlots(self.generation_task)
-        self.wont_run=False
+        self._wont_run=False
+        self.reason=None
+        #make wont_run a property
+    @property
+    def wont_run(self):
+        return self._wont_run
+
+    @wont_run.setter
+    def wont_run(self,value):
+
+
+        if value and self._wont_run==False:
+            self.locate_label_over_voila()
+        self._wont_run = value
+    def locate_label_over_voila(self):
+
+        # Create the label that we want to place inside the frame
+        new_label = QLabel('''
+        Here should have been your jupyter notebook, with real time analysis of the data. 
+        
+        However, something didn't quite work out :( 
+        Please check the log for more information.
+        
+        On clean install, you may want to run install\installvoila.bat that installs python and the voila package (Needed to display the notebook).
+        '''+ f"\nThe reason seems to be:\n { self.reason}" if self.reason is not None else "")
+
+        # Create a QFrame to hold the new label
+        frame = QFrame()
+        # Set the frame's border style for visibility during testing
+        frame.setFrameStyle(QFrame.Box)
+
+        # Create a layout for the frame and add the new label to it
+        frame_layout = QVBoxLayout()
+        frame_layout.addWidget(new_label)
+        frame.setLayout(frame_layout)
+
+        # Replace the original widget with the frame
+        self.window.note_group.layout().replaceWidget( self.window.voila_widget, frame)
+
+
 
 
 
@@ -36,7 +76,8 @@ class JupyterHandler(FormInterface):
 
     def voila_loaded(self,k):
         if k==-1:
-            logging.error("major issue with voila. wont loaded")
+            self.reason="Major issue with voila. wasn't load."
+            logging.error(self.reason)
             self.wont_run=True
             self.voila_run = State.UNINITALIZED
             return
@@ -55,6 +96,7 @@ class JupyterHandler(FormInterface):
             return
         if self.window.note_group.isHidden():
             return
+
         if self.wont_run:
             return
         self.generation_task()
@@ -80,7 +122,8 @@ class JupyterHandler(FormInterface):
                 if self.window.voila_widget.python_process_path!= None:
                     logging.warning(f'Auto-resolved voila process to {self.window.voila_widget.python_process_path}')
                     return True
-            logging.warning('Not using voila because of empty python config. \n run installvoila.bat , and fill in config.Voila.VOILA_PYTHON_PROCESS_PATH')
+            self.reason='Not using voila because of empty python config. \n run installvoila.bat , and fill in config.Voila.VOILA_PYTHON_PROCESS_PATH'
+            logging.warning(self.reason)
             return False
 
         self.window.voila_widget: QtVoila

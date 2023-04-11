@@ -1,3 +1,5 @@
+import logging
+
 from common.logger import *
 import collections
 import math
@@ -9,13 +11,15 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from common.common import simple_exception_handling, CombineStrategy, localize_it, TransactionSourceType
+from common.common import simple_exception_handling, CombineStrategy, localize_it, TransactionSourceType, lmap
 from config import config
 from engine.symbolsinterface import SymbolsInterface
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
 from transactions.stockprices import StockPrices
 from transactions.transactioninterface import TransactionHandlerInterface, BuyDictItem
+
+#write a enum for transaction source 
 
 
 class TransactionHandlerManager(TransactionHandlerInterface):
@@ -78,6 +82,17 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             self._buydic = self._stock.buydic
         logging.info((f" Number of combined transactions {len(self._buydic)}"))
 
+        totsum = 0
+        totholding = 0
+        for k, v in sorted(lmap(lambda x: (localize_it(x[0]),x[1]) ,self._buydic.items())):
+            if v.Symbol!="TSLA":
+                continue
+            totholding += v[0]
+            totsum += v[0] * v[1]
+            print(v[0] * v[1],v.Qty , v.Cost, k, v.Notes, totsum, totholding)
+
+        b=1
+
     def try_fix_dic(self,cur_action : Tuple[datetime,BuyDictItem],last_action :  Tuple[datetime,BuyDictItem],curhold):
         if last_action is None:
             return
@@ -91,13 +106,14 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def combine(self):
 #include all old IB:
 #replace all new IB
-        def update_dic(firstinst, secondinst,dic,real):
-            datesymfirst = get_datesym(firstinst)
-            firstinst = {x: min([y[0] for y in datesymfirst[x]]) for x in datesymfirst}
+        def update_dic(mindate, secondinst, dic, real):
+            tmpcalc={}
+            datesymfirst = get_datesym(mindate)
+            mindate = {x: min([y[0] for y in datesymfirst[x]]) for x in datesymfirst}
             maxdate = {x: max([y[0] for y in datesymfirst[x]]) for x in datesymfirst}
             for s, v in secondinst.items():
 
-                if (firstinst.get(v.Symbol) and s.date() >= firstinst[v.Symbol] and s.date() <= maxdate[v.Symbol]):
+                if (mindate.get(v.Symbol) and s.date() >= mindate[v.Symbol] and s.date() <= maxdate[v.Symbol]):
                     if v.Symbol not in config.TransactionHandlers.BOTHSYMBOLS and config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERIB:
                         log.debug(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
                         continue
@@ -115,7 +131,13 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                         logging.debug(("ignoring trans: %s %s because of\n %s %s %s" % (s, v, l[0], l[2:],"real" if real else "simul" )))
                         break
                 else:
+                    if v.Symbol=="TSLA":
+                        tmpcalc[s]=v
+
                     dic[s] = v
+
+            a=1
+
 
         def get_datesym(buydic):
             datesymb = collections.defaultdict(list)
@@ -175,12 +197,20 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
     @simple_exception_handling("Error in export_portfolio")
     def export_portfolio(self):
-        self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT)
+        if config.TransactionHandlers.IncludeNormalizedOnSave:
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT,normailze_to_cur=False)
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT+"normailzed",normailze_to_cur=True)
+        else:
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT,
+                                               normailze_to_cur=False)
+
         dt=self._inp._current_status
         dfIB,dfMYSTOCK=  self._inp.complete_status()
         dt : pd.DataFrame
         dt=dt.join(dfIB,on="stock",rsuffix="_IB").join(dfMYSTOCK,on="stock",rsuffix="_MY")
         dt.to_csv(config.File.EXPORTEDPORT+".state.csv")
+    def update_buydic(self,key,val):
+        self._buydic[key]=val
 
 
     @property

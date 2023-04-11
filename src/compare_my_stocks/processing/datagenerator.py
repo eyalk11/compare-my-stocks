@@ -122,14 +122,18 @@ class DataGenerator(DataGeneratorInterface):
     def get_df_by_type(self, div, unitetyp):
 
         unitetypeff = unitetyp
-        if self.params.adjusted_for_base_cur:
+        if self.params.adjust_to_currency and self.params.currency_to_adjust:
+            if self.params.currency_to_adjust != config.Symbols.BASECUR:
+                df = self.readjust_for_currency(self.params.currency_to_adjust)
+            else:
+                df = self._eng.input_processor.adjusted_panel
+
+        elif self.params.adjusted_for_base_cur:
             df = self._eng.input_processor.adjusted_panel
         else:
             df = self._eng.input_processor.reg_panel
 
-        if self.params.adjust_to_currency and self.params.currency_to_adjust:
-            if self.params.currency_to_adjust != config.Symbols.BASECUR:
-                df = self.readjust_for_currency(self.params.currency_to_adjust)
+
 
         if div & Types.PROFIT:
             df = df['unrel_profit']
@@ -272,6 +276,9 @@ class DataGenerator(DataGeneratorInterface):
         return upd1 or diff
 
     def readjust_for_currency(self, ncurrency):
+        '''
+        Adapt to a new home currency
+        '''
 
         currency_hist = self._inp.get_currency_hist(ncurrency, self.params.fromdate,
                                                     self.params.todate)  # should be fine, the range

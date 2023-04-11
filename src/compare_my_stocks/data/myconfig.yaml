@@ -1,6 +1,6 @@
 !Config
 DefaultParams: !DefaultParamsConf
-  CACHEUSAGE: !<UseCache> FORCEUSE
+  CACHEUSAGE: !UseCache FORCEUSE
   DefaultGroups: []
   EXT:
     - QQQ
@@ -31,8 +31,8 @@ IBConnection: !IBConnectionConf
 Input: !InputConf
   DEFAULTFROMDATE: 2020-01-01 00:00:00+00:00
   DOWNLOADDATAFORPROT: true
-  IGNORE_ADJUST: 1
-  INPUTSOURCE: !<InputSourceType> IB
+  IGNORE_ADJUST: false 
+  INPUTSOURCE: !InputSourceType IB
   MAXCACHETIMESPAN: !!python/object/apply:datetime.timedelta [1, 0, 0]
   TZINFO: !!python/object/apply:datetime.timezone
     - !!python/object/apply:datetime.timedelta
@@ -48,24 +48,24 @@ Running: !RunningConf
   LOGERRORFILE: error.log
   LOGFILE: log.txt
   STOP_EXCEPTION_IN_DEBUG: true
-  VERIFY_SAVING: !<VerifySave> Ask
-SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: null, X_RapidAPI_Key: null}
-StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: null, X_RapidAPI_Key: null}
+  VERIFY_SAVING: !VerifySave Ask
+SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: 'seeking-alpha.p.rapidapi.com', X_RapidAPI_Key: null}
+StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: 'stock-prices2.p.rapidapi.com', X_RapidAPI_Key: null}
 Symbols: !SymbolsConf
   BASECUR: USD
   CRYPTO: !!set {}
-DEFAULTCURR:
-  - USD
-  - EUR
-  - GBP
-  - ILS
-EXCHANGES:
-  - NYSE
-  - nasdaq
-  - xetra
-  - NYSE
-  - London
-  - OTC Markets
+  DEFAULTCURR:
+    - USD
+    - EUR
+    - GBP
+    - ILS
+  EXCHANGES:
+    - NYSE
+    - nasdaq
+    - xetra
+    - NYSE
+    - London
+    - OTC Markets
   EXCHANGE_CURRENCY:
     London: GBP
     Xetra: EUR
@@ -73,7 +73,7 @@ EXCHANGES:
   STOCK_CURRENCY: {}
   TRANSLATEDIC: 
     ADA-USD: cardano
-    VETHG.DE: VETHx
+    VETHG.DE: VETH
     VTBC.DE: VBTC1
     VUKE.L: VUKE
 
@@ -85,30 +85,29 @@ EXCHANGES:
   - XERTA
   - LSE
 TransactionHandlers: !TransactionHandlersConf
+  TRANSACTIONSOURCE:  !TransactionSourceType Both 
   BOTHSYMBOLS: []
-  COMBINESTRATEGY: !<CombineStrategy> PREFERSTOCKS
+  COMBINESTRATEGY: !CombineStrategy PREFERSTOCKS
   IB: !IBConf
     CacheSpan: !!python/object/apply:datetime.timedelta [0, 18000, 0]
     DoQuery: true
     File: ibtrans.cache
-    FlexQuery: QUERYNU
-    FlexToken: YOURTOKEN
+    FlexQuery: null #QUERYNU
+    FlexToken: null #YOURTOKEN
     TryToQueryAnyway: false
-    Use: !<UseCache> USEIFAVALIABLE
+    Use: !UseCache USEIFAVALIABLE
   IGNORECONF: {}
   MAXPERCDIFFIBSTOCKWARN: 0.2
   MyStocks: !MyStocksConf
     File: buydicnk.cache
     PortofolioName: My Portfolio
     SrcFile: example_mystock.csv
-    Use: !<UseCache> USEIFAVALIABLE
-  NORMALIZE_ON_TRANSACTIONSAVE: 0
+    Use: !UseCache USEIFAVALIABLE
   SUPRESS_COMMON: false
   StockPrices: !StockPricesConf
     CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
     File: stocksplit.cache
-    IgnoreSymbols: !!set {}
-    Use: !<UseCache> USEIFAVALIABLE
+    Use: !UseCache USEIFAVALIABLE
 UI: !UIConf
   ADDITIONALOPTIONS: {}
   DEF_FIG_SIZE: !!python/tuple [6.6, 3.0]

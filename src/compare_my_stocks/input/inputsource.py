@@ -36,6 +36,9 @@ class InputSourceInterface(metaclass=ABCMeta):
 
     @abstractmethod
     def get_current_currency(self, pair):
+        '''
+            returns the current amount of pair[1] in 1 of pair[0]. meaning is pair[0] is usd , the number of pair[1] in 1 usd.
+        '''
         pass
 
     @abstractmethod
@@ -62,7 +65,7 @@ class InputSource(InputSourceInterface):
     def can_handle_dict(self,sym):
         return True
 
-    @lru_cache(maxsize=2000)
+
     def resolve_symbol(self,sym):
         if self.can_handle_dict(sym) : #and (isinstance(sym, AbstractSymbol)  and sym.dic!=None) or type(sym)==dict
             if type(sym)==dict:
@@ -92,6 +95,7 @@ class InputSource(InputSourceInterface):
             logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
+    @lru_cache(maxsize=2000)
     def get_best_matches(self, sym, results=10, strict=True):
         def fix_valid_exchanges(l):
             def upd(v):
@@ -109,8 +113,8 @@ class InputSource(InputSourceInterface):
                     upd(l['primaryExchange'])
                 return l
 
-            ls=list(set(orgls).intersection(set(config.Symbols.VALIDSymbols.EXCHANGES)))
-            ls.sort(key=lambda x: config.Symbols.VALIDSymbols.EXCHANGES.index(x))
+            ls=list(set(orgls).intersection(set(config.Symbols.VALIDEXCHANGES)))
+            ls.sort(key=lambda x: config.Symbols.VALIDEXCHANGES.index(x))
             if len(ls)==0:
                 logging.debug((f'couldnt find exchange (for a candidate) {l["symbol"]} , picking {orgls[0]}'))
                 upd(orgls[0])

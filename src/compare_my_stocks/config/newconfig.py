@@ -4,14 +4,13 @@ import traceback
 from functools import reduce
 from io import StringIO
 from typing import Dict, List, Union, Set
-
 import dacite
 from dataclasses import dataclass, field
 
-from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave
+from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave, TransactionSourceType
 import pytz
 import logging
-from common.loghandler import init_log
+from common.loghandler import init_log,dont_print
 import os
 import sys
 from typing import Optional
@@ -52,12 +51,16 @@ class MyStocksConf:
 @paramaware
 @dataclass()
 class TransactionHandlersConf:
+    TRANSACTIONSOURCE:  TransactionSourceType = TransactionSourceType.Both
+    TrackStockList : list = field(default_factory=list)
+    DontAdjustSplitsMyStock : bool=False
+    SaveCaches: bool = True
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
     IGNORECONF: Dict = field(default_factory=lambda: {})
     COMBINESTRATEGY: CombineStrategy = CombineStrategy.PREFERSTOCKS
-    NORMALIZE_ON_TRANSACTIONSAVE: int = 0
+    IncludeNormalizedOnSave: bool = True
     MAXPERCDIFFIBSTOCKWARN: float = 0.2 #ignored currently
     FIXBUYSELLDIFFDAYS: int = 3
     BOTHSYMBOLS: List = field(default_factory=lambda: [])
@@ -128,7 +131,8 @@ class RunningConf:
     LOADLASTATBEGIN: bool = True
     LOGFILE: Optional[str] = "log.txt"
     LOGERRORFILE: Optional[str] = "error.log"
-
+    USE_ALTERANTIVE_LOCATION: Optional[bool] = None #to load data from original location
+    TWS_PROCESS_NAME : Optional[str] = "tws.exe"
 @paramaware
 @dataclass
 class EarningsConf:
@@ -177,6 +181,7 @@ class FileConf:
 @paramaware
 @dataclass
 class InputConf:
+    AdjustUnrelProfitToReflectSplits: bool = True
     MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
     INPUTSOURCE: InputSourceType = InputSourceType.IB
     IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT
@@ -220,21 +225,25 @@ PROJDIR = os.path.join(os.path.expanduser("~"), "." + MYPROJ)
 
 
 def print_if_ok(*args):
-    if 'SILENT' in __builtins__ and __builtins__['SILENT'] == False:
+    if dont_print():
+        return
+
+    if 'SILENT' in __builtins__ and __builtins__['SILENT'] == False\
+            or any('testit' in x for x in sys.argv):
         logging.info(*args)
 
 
 
 
 
-def resolvefile(filename):
+def resolvefile(filename,use_alternative=False):
     if not 'python' in sys.executable:
         t = os.path.dirname(sys.executable)
         datapath = os.path.join(t, 'data')
     else:
         datapath = os.path.realpath((os.path.join(MYPATH, '..', 'data')))
     env = os.environ.get(PROJPATHENV)
-    paths = [PROJDIR, "/etc/" + MYPROJ] + (env if env else []) + [os.curdir, datapath]
+    paths =(env if env else []) +  [PROJDIR, "/etc/" + MYPROJ]  if not use_alternative else [] + [os.curdir, datapath]
     try:
         if filename == '':
             return False, None
@@ -246,7 +255,7 @@ def resolvefile(filename):
             if os.path.exists(fil):
                 return True, os.path.abspath(fil)
 
-        return False, os.path.join(PROJDIR, filename)  # default location
+        return False, os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename) # default location
     except:
         return False, None
 
@@ -258,6 +267,7 @@ def resolvefile(filename):
 
 # yaml.dump(c,open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\config.yaml','wt'))
 class ConfigLoader():
+    logging_initialized = False
     config: Config = None
     @classmethod
     def generate_config(cls):
@@ -276,8 +286,8 @@ class ConfigLoader():
                  fil.write(k)
 
     @classmethod
-    def resolve_it(cls, obj, f):
-        res, fil = resolvefile(getattr(obj, f))
+    def resolve_it(cls, obj, f,use_alternative=None):
+        res, fil = resolvefile(getattr(obj, f),use_alternative=use_alternative)
 
         if fil == None:
             print_if_ok(f'Invalid value {f}')
@@ -291,10 +301,10 @@ class ConfigLoader():
         setattr(obj, f, fil)
 
     @classmethod
-    def main(cls) -> Config:
+    def main(cls,config_file=None, use_alternative=None) -> Config:
 
 
-        if cls.config is not None:
+        if cls.config is not None and not use_alternative and config_file is not None:
             return cls.config
 
         if not os.path.exists(PROJDIR):
@@ -303,7 +313,7 @@ class ConfigLoader():
             os.makedirs(PROJDIR)
 
         # yaml.dump(Config(),open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\myconfig.yaml','wt'))
-        res, config_file = resolvefile(CONFIGFILENAME)
+        res, config_file = resolvefile(CONFIGFILENAME,use_alternative)
         if not res:
             logging.error('No config file, aborting')
             sys.exit(-1)
@@ -311,35 +321,42 @@ class ConfigLoader():
         try:
             cls.config = cls.load_config(config_file)
         except:
-            logging.error("Failed loading config file. aborting")
+            logging.error(f"Failed loading config file {config_file}. aborting")
             sys.exit(-1)
+        if use_alternative is not None:
+            cls.config.Running.USE_ALTERANTIVE_LOCATION=use_alternative
+        else:
+            use_alternative = cls.config.Running.USE_ALTERANTIVE_LOCATION
 
-
+        if not 'SILENT' in __builtins__ and not  any('testit' in x for x in sys.argv):
+            logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
 
         for x in ['LOGFILE', 'LOGERRORFILE']:
-            cls.resolve_it(cls.config.Running, x)
+            cls.resolve_it(cls.config.Running, x,use_alternative)
+        if not cls.logging_initialized:
+            try:
+                init_log(logfile=cls.config.Running.LOGFILE, logerrorfile=cls.config.Running.LOGERRORFILE,debug=cls.config.Running.DEBUG if not dont_print() else False)
+                cls.logging_initialized=True
+            except:
+                logging.error("initialize logging failed!")
 
-        try:
-            log=init_log(logfile=cls.config.Running.LOGFILE, logerrorfile=cls.config.Running.LOGERRORFILE,debug=cls.config.Running.DEBUG)
-        except:
-
-            logging.error("initialize logging failed!")
 
         print_if_ok(log_conv("Using Config File: ", config_file))
 
 
 
         for f in FILE_LIST_TO_RES:
-            cls.resolve_it(cls.config.File,f)
+            cls.resolve_it(cls.config.File,f,use_alternative)
 
         keys = [(c,k) for k in cls.config.__dataclass_fields__ if hasattr(c:=getattr(cls.config,k),'_changed_keys')]
         add_to_set = lambda x,y: set([f'{y}.{z}' for z in x])
-        remained_keys = reduce(lambda x,y: x.union(y), [ add_to_set( set(c.__dataclass_fields__.keys()) - c._changed_keys,k) for c,k in keys] )
+        remained_keys = list(reduce(lambda x,y: x.union(y), [ add_to_set( set(c.__dataclass_fields__.keys()) - c._changed_keys,k) for c,k in keys] ))
+        vals=   [ getattr(getattr(cls.config,(arr:=x.split('.'))[0]),arr[1]) for x in remained_keys]# gross
 
         #set(cls.config.__dataclass_fields__.keys()) - cls.config._changed_keys
         if len(remained_keys)>0:
-            yy='\n'.join(remained_keys)
-            log.warn(f"The following keys weren't specified in config so were set to default:\n {yy}")
+            yy='\n'.join([': '.join( [x,str(y)]) for x,y in  zip( remained_keys,vals)])
+            logging.warn(f"The following keys weren't specified in config so were set to default:\n {yy}")
 
         return cls.config
 

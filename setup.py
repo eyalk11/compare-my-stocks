@@ -1,21 +1,34 @@
 import os
 
 from setuptools import setup, find_packages
-import pathlib
 
-import pkg_resources
-import setuptools
+minimal_reqs = [
+    'dacite~=1.8.0',
+    'ruamel.yaml'
+    ,'numpy==1.22.0'
+    ,'pandas==1.3.5',
+    'django',
+    'colorlog'
+]
 
-MYPROJ='compare_my_stocks' #should be same as in config.py
-dir=os.path.join(os.path.expanduser("~"), "." + MYPROJ)
+data_files = []
+for root, dirs, files in os.walk("src/compare_my_stocks/data"):
+    for file in files:
+        path = os.path.join(root, file)
+        data_files.append(path)
+
+with open('requirements.txt') as f:
+    requirements = f.read().splitlines()
+    requirements = [r for r in requirements if not r.startswith('git+') and r not in minimal_reqs]
 
 setup(
     name='compare-my-stocks',
     version='1.0.0',
-    packages=find_packages(),
+    packages=find_packages(where="src"),
     data_files=[
-        ( dir , ["compare_my_stocks/data/myconfig.py" , "compare_my_stocks/data/mygroups.json"]),
-        ( "compare_my_stocks/gui" , ["compare_my_stocks/gui/mainwindow.ui"])
+        ( "compare_my_stocks/data" , data_files),
+        ( "compare_my_stocks/gui" , ["src/compare_my_stocks/gui/mainwindow.ui"]),
+        ( "compare_my_stocks/common" , ["src/compare_my_stocks/common/impacketLICENSE"])
     ],
     entry_points={'console_scripts': ['compare-my-stocks = compare_my_stocks.__main__:main']},
     url='https://github.com/eyalk11/compare-my-stocks',
@@ -23,27 +36,17 @@ setup(
     author='Eyal Karni',
     author_email='eyalk5@gmail.com',
     description='A system for visualizing interesting stocks/etf/crypto using matplotlib and QT. Synchronizes transaction data from MyStocksProtoflio.  ',
-    install_requires=
-    [
-"Flask==2.0.2",
-"numpy==1.22.0",
-"requests==2.26.0",
-"PySide6==6.2.0",
-"matplotlib==3.5.1",
-"pandas==1.3.5",
-"python-dateutil==2.8.2",
-"pytz==2021.3",
+    install_requires=minimal_reqs,
+    extra_require=
+    {
+        "full": [
 "json_editor @ git+https://github.com/eyalk11/json-editor.git#egg=json_editor-1.0.0",
 "investpy @ git+https://github.com/eyalk11/investpy.git#egg=investpy-1.0.7a",
-"superqt==0.4.1",
-"mplcursors==0.4",
-"Django==3.2.9",
 "nbmanager @ git+https://github.com/jupyter/nbmanager.git",
-"ib_insync",
-"Pyro5",
-"ibflex",
-"colorlog"
-    ],
+    ]+requirements
+    }
+        ,
+    package_dir={'': 'src'},
     include_package_data=True,
     use_scm_version=True,
     setup_requires=['setuptools_scm'],

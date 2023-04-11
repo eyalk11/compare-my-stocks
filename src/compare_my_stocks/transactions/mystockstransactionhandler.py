@@ -13,7 +13,7 @@ from dateutil import parser
 from common.common import simple_exception_handling, neverthrow
 from config import config,resolvefile
 from transactions.transactionhandler import TrasnasctionHandler
-from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
+from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
 
 
 def get_stock_handler(man):
@@ -38,7 +38,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
 
     def populate_buydic(self):
         try:
-            ok, path = resolvefile(self.SrcFile)
+            ok, path = resolvefile(self.SrcFile,use_alternative=config.Running.USE_ALTERANTIVE_LOCATION)
             if not ok:
                 logging.error((f'Srcfile {self.SrcFile} not found for {self.NAME}'))
                 return
@@ -94,9 +94,9 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             # dt=dt.replace(tzinfo=None)
 
             if (neverthrow(math.isnan,q[-1]) or neverthrow(lambda : len(q)==0)):
-                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],'MYSTOCK')  # Qty,cost,sym
+                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],'MYSTOCK',Source=TransactionSource.STOCK)  # Qty,cost,sym
             else:
-                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],q[-1])  # Qty,cost,sym
+                self._buydic[dt] = BuyDictItem(t[2] * ((-1) if t[-3] == 'Sell' else 1), t[3], t[1],q[-1], Source=TransactionSource.CACHEDIBINSTOCK if "IB" in q[-1] else TransactionSource.STOCK )  # Qty,cost,sym
             self._buysymbols.add(t[1])
             if q[-4]:
                 self.update_sym_property(t[1], q[-4])
@@ -105,7 +105,8 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             self.update_sym_property(t[1], q[-1], "Notes")
 
     @simple_exception_handling(err_description="save_transaction_table")
-    def save_transaction_table(self, buydict,file,normailze_to_cur=config.NORMALIZE_ON_TRANSACTIONSAVE):
+    def save_transaction_table(self, buydict,file,normailze_to_cur=False):
+        #overide buy dict
         def loctim(dic,item): #not the most efficient.
             ll=list(dic.keys())
             ind=bisect.bisect_left(ll, item)
@@ -133,7 +134,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                 syminfo={}
             x=self.Row(Id=index,
                 Symbol=z[2],Portfolio=self.PortofolioName,TimeOfDay=str(t.time().strftime("%H:%M:%S")),Date=re.sub("GMT$","GMT+0000", str(t.date().strftime("%Y-%m-%d GMT%z"))),
-                DisplaySymbol=syminfo.get("DisplaySymbol",z[2]),Currency= currency,Type="Buy" if z[0]>0 else "Sell",Method="FIFO",Notes=z[3]+":"+syminfo.get("Notes",""),
+                DisplaySymbol=syminfo.get("DisplaySymbol",z[2]),Currency= currency,Type="Buy" if z[0]>0 else "Sell",Method="FIFO",Notes=z[3],
                 Exchange=syminfo.get("exchange","UNK"),Quantity=abs(z[0]),Cost_Per_Share=z[1],Name=syminfo.get("name",z[2]))
 
             dt=dt.append(dict(zip(self.COLUMNS,tuple(x))),ignore_index=True)

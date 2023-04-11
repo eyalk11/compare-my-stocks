@@ -266,6 +266,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.attribute_set('limit_to_portfolio', val, reset_ranges=1)
         self.update_stock_list(justorgs=True)
+    def adjust_currency_changed(self, val : PySide6.QtCore.Qt.CheckState):
+        self.graphObj.params.adjust_to_currency = False
+        self.graphObj.params.adjusted_for_base_cur = False
+
+        if val == PySide6.QtCore.Qt.CheckState.Checked:
+            self.graphObj.params.adjust_to_currency = True
+
+        elif val == PySide6.QtCore.Qt.CheckState.PartiallyChecked:
+            self.graphObj.params.adjusted_for_base_cur = True
+
+        self.update_graph(1)
 
     def setup_observers(self):
         def safeconnect(signal, fun):
@@ -285,7 +296,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.findChild(QCheckBox, name="start_hidden").toggled = safeconnect(
             self.window.findChild(QCheckBox, name="start_hidden").toggled, (genobs('starthidden')))
         self.window.findChild(QCheckBox, name="adjust_currency").toggled = safeconnect(
-            self.window.findChild(QCheckBox, name="adjust_currency").toggled, (genobsResetForce('adjust_to_currency')))
+            self.window.findChild(QCheckBox, name="adjust_currency").stateChanged, (self.adjust_currency_changed))
         self.window.home_currency_combo.currentTextChanged = safeconnect(
             self.window.home_currency_combo.currentTextChanged, (genobsResetForce('currency_to_adjust')))
 

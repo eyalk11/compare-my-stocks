@@ -22,6 +22,8 @@ TRACELEVEL=5
 
 import logging
 import os
+def dont_print(): #started from jupyter tools
+    return logging.getLogger().level == logging.CRITICAL
 
 class MyFormatter(logging.Formatter):
     log_format = 'Run %(run_number)s | %(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s'
@@ -89,6 +91,8 @@ class MyFilter(object):
         return logRecord.levelno <= self.__level
 
 def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
+    import matplotlib
+    matplotlib.set_loglevel("INFO")
     def set_format(handler):
         if not ts:
             handler.setFormatter(ImpacketFormatter())
@@ -96,7 +100,12 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
             handler.setFormatter(ImpacketFormatterTimeStamp())
     # We add a StreamHandler and formatter to the root logger
     logging.addLevelName(TRACELEVEL,"TRACE")
+    if debug and not dont_print():
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger('Voila').setLevel(logging.DEBUG)
+
     log=logging.getLogger(mod)
+    log.setLevel(logging.getLogger().level)
     log.handlers.clear()
 
     handler = colorlog.StreamHandler(sys.stdout)
@@ -123,13 +132,10 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
         ch.setLevel(logging.ERROR)
         fh.setFormatter(MyFormatter())
         log.addHandler(ch)
+
     # Found to work. Not the best.
-    if debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-        logging.getLogger('Voila').setLevel(logging.DEBUG)
+
     # init_log()
-    import matplotlib
-    matplotlib.set_loglevel("INFO")
     return log
 
     #logging.getLogger().setLevel(logging.INFO)

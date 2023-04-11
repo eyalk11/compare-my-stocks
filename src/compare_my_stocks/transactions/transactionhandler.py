@@ -24,9 +24,11 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.Use=None
         self.CacheSpan=None
         self.__dict__.update(dataclasses.asdict(getattr(config.TransactionHandlers,self.NAME)))
-        ok,path = resolvefile(self.File)
+        ok,path = resolvefile(self.File,config.Running.USE_ALTERANTIVE_LOCATION)
         if not ok:
             logging.info((f'Cache not found for {self.NAME}'))
+        else:
+            logging.info(f"Cache for {self.NAME}  is {self.File}")
         self.File=path
 
 
@@ -66,7 +68,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if updateanyway:
                 self._manager.symbol_info[symbol][prop] = value
 
-    @simple_exception_handling("try_to_use_cache",return_succ=True)
+    @simple_exception_handling("try_to_use_cache",return_succ=True,debug=True,detailed=False)
     def try_to_use_cache(self):
         v=list(pickle.load(open(self.File, 'rb')))
         if self.save_cache_date():
@@ -87,6 +89,10 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
 
     @simple_exception_handling("save_cache")
     def save_cache(self):
+        if not config.TransactionHandlers.SaveCaches:
+            logging.debug(f"not saving cache because of config {self.NAME}")
+            return
+
         if not self.File:
             return
 

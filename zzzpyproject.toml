@@ -50,3 +50,8 @@ requires = []
 
 [tool.briefcase.app.compare-my-stocks.android]
 requires = []
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "DEBUG"
+log_cli_format = "%(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s"

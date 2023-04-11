@@ -189,7 +189,14 @@ class IBSource(InputSource):
         self.lock = threading.Lock()
 
     def get_current_currency(self, pair):
-        return self.ibrem.get_current_currency(pair)
+        res= self.ibrem.get_current_currency(pair)
+        if res is None:
+            res=self.ibrem.get_current_currency(tuple(pair[::-1]))
+            if res is not None:
+                res=1/res
+        return res
+
+
 
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
@@ -253,10 +260,10 @@ class IBSource(InputSource):
             td = enddate.date()-startdate.date()
             td = td.days + 1
         with self.lock:
-            cont = asdict(contract)
-            if not contract.exchange:
+            cont = asdict(contract) if type(contract) is not dict else contract
+            if not cont['exchange']:
                 logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
-                cont['exchange']= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(contract.primaryExchange,contract.primaryExchange)
+                cont['exchange']= config.Symbols.TRANSLATE_EXCHANGES.get(cont['primaryExchange'], cont['primaryExchange'])
 
             try:
                 bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..

@@ -6,10 +6,6 @@ import time
 from functools import partial
 
 
-#from matplotlib import pyplot as plt
-#import Qt
-import shlex
-
 from common.common import InputSourceType, Types, UniteType, need_add_process
 from common.loghandler import init_log
 from config import config
@@ -76,6 +72,8 @@ def func(x=None,tolog=True):
 
 anotherproc=None
 def main():
+
+    logging.getLogger().setLevel(logging.INFO)
     init_log()
 
     import win32api

@@ -8,6 +8,20 @@ from datetime import datetime,date
 
 import numpy as np
 import pytz
+import psutil
+def checkIfProcessRunning(processName):
+    '''
+    Check if there is any running process that contains the given name processName.
+    '''
+    #Iterate over the all the running process
+    for proc in psutil.process_iter():
+        try:
+            # Check if process name contains the given name string.
+            if processName.lower() in proc.name().lower():
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
 
 def localize_it (x):
     if x is None:
@@ -128,7 +142,7 @@ def neverthrow(f,*args,default=None,**kwargs):
 from Pyro5.errors import format_traceback
 
 
-def simple_exception_handling(err_description=None,return_succ=False,never_throw=False,always_throw=False):
+def simple_exception_handling(err_description=None,return_succ=False,never_throw=False,always_throw=False,debug=False,detailed=True):
     def decorated(func):
         def internal(*args,**kwargs):
             try:
@@ -142,16 +156,18 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
 
             tostop = tostop and bol
 
-            if tostop and not never_throw:
+            if tostop and not never_throw and not return_succ:
                 return func(*args,**kwargs)
             else:
                 try:
                     return func(*args,**kwargs)
                 except Exception as e:
-                    TmpHook.GetExceptionHook().emit(e)
+                    #TmpHook.GetExceptionHook().emit(e)
+
+                    logf=logging.debug if debug else logging.error
                     if err_description:
-                        logging.error((err_description))
-                    print_formatted_traceback()
+                        logf(err_description)
+                    logf(format_traceback_str(detailed=detailed))
                     if always_throw:
                         raise e
                     if return_succ:
@@ -160,9 +176,10 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
     return decorated
 
 
-
+def format_traceback_str(detailed=True):
+    return (''.join([x[:500] for x in format_traceback(detailed=detailed)] ))
 def print_formatted_traceback(detailed=True):
-    logging.error((''.join([x[:500] for x in format_traceback(detailed=detailed)] )))
+    logging.error(format_traceback_str(detailed=detailed))
 
 def addAttrs(attr_names):
   def deco(cls):
@@ -249,6 +266,11 @@ def tzawareness(d1,d2):
         return unlocalize_it(d1)
 
 
+def ifnotnan(t, v, els=lambda x: None):
+    if t is not None:
+        return v(t)
+    else:
+        return els(t)
 
 def ifnn(t, v, els=lambda: None):
     if t is not None:
@@ -292,14 +314,14 @@ def log_conv(*tup):
     return '\t'.join([str(x) for x in tup ])
 
 
-class TmpHook:
-    EXCEPTIONHOOK=MySignal(Exception)
-    MyHook=None
-    @classmethod
-    def GetExceptionHook(cls):
-        if cls.MyHook is None:
-            cls.MyHook=TmpHook()
-        return cls.MyHook.EXCEPTIONHOOK
+# class TmpHook:
+#     EXCEPTIONHOOK=MySignal(Exception)
+#     MyHook=None
+#     @classmethod
+#     def GetExceptionHook(cls):
+#         if cls.MyHook is None:
+#             cls.MyHook=TmpHook()
+#         return cls.MyHook.EXCEPTIONHOOK
 
 
 @to_yaml

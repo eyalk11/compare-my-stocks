@@ -1488,10 +1488,13 @@
                    <item>
                     <widget class="QCheckBox" name="adjust_currency">
                      <property name="toolTip">
-                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Adjust currency of stocks to usd (won't display its real value). &lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If V then adjust to currency selected in current currency. &lt;/p&gt;&lt;p&gt;if it is square then displays everything in base currency (USD usually).&lt;/p&gt;&lt;p&gt;(won't display its real value)&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                      </property>
                      <property name="text">
                       <string>Adjust Currency</string>
+                     </property>
+                     <property name="tristate">
+                      <bool>true</bool>
                      </property>
                     </widget>
                    </item>

@@ -1,6 +1,7 @@
 import dataclasses
 
 from common.common import smap
+#TODO : to fix
 
 def paramawareold(klass):
     orginit=klass.__init__
@@ -48,6 +49,8 @@ def paramaware(klass):
         self._changed_keys = set(state.keys())
 
         for slot, value in state.items():
+            if slot not in self.__dataclass_fields__.keys():
+                raise AttributeError("no attr named "+slot+" in "+str(self.__dataclass_fields__.keys())+" in "+str(self))
             object.__setattr__(self, slot, value)
     def __nsetattr__(self, name, value):
         if hasattr(self,'_changed_keys') and name in self.__dataclass_fields__.keys(): #you cant set here

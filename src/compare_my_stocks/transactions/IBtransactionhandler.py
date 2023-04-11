@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from common.common import UseCache
 from config import config
-from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem
+from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
 from ibflex import client, parser, Trade
 from transactions.transactionhandler import TrasnasctionHandler
 def get_ib_handler(manager):
@@ -51,7 +51,11 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
     def save_cache(self):
+        if not config.TransactionHandlers.SaveCaches:
+            logging.debug(f"not saving cache because of config{self.NAME}")
+            return
         if not self.need_to_save:
+            logging.debug(f"not saving cache {self.NAME}")
             return
         try:
             self._cache_date =datetime.now()
@@ -107,13 +111,14 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
                 date += timedelta(seconds=1)
                 #z.dateTime=z.dateTime
 
-            self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z )
+            self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z, Source=TransactionSource.IB )
 
             self._buysymbols.add(z.symbol)
 
             self.update_sym_property(z.symbol, z.currency)
             self.update_sym_property(z.symbol, z.conid,'conId')
             self.update_sym_property(z.symbol, z.exchange, 'exchange')
+        a=1
 
 
 
