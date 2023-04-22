@@ -73,7 +73,7 @@ def func(x=None,tolog=True):
 anotherproc=None
 def main():
 
-    logging.getLogger().setLevel(logging.INFO)
+    #logging.getLogger().setLevel(logging.INFO)
     init_log()
 
     import win32api

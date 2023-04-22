@@ -30,6 +30,9 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._buysymbols=set()
         self._stockprices = StockPrices(self, self.buysymbols)
 
+    def log_buydict_stats(self):
+        pass
+
 
 
     @property
@@ -47,7 +50,6 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._buydic = {}
         self._buydicforexport={}
         self._buysymbols.clear()
-        handlers= []
         self.combine_transactions()
 
         self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
@@ -81,15 +83,23 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         elif self._stock:
             self._buydic = self._stock.buydic
         logging.info((f" Number of combined transactions {len(self._buydic)}"))
+        #split transaction by source all posibilities
+        bysource = collections.defaultdict(int)
+        for k in self._buydic.values():
+            bysource[k.Source] += 1
+        logging.info((f" Number of combined transactions by source {{ x.name: y for x, y in bysource.items()}}"))
+
+
+
 
         totsum = 0
         totholding = 0
-        for k, v in sorted(lmap(lambda x: (localize_it(x[0]),x[1]) ,self._buydic.items())):
-            if v.Symbol!="TSLA":
-                continue
-            totholding += v[0]
-            totsum += v[0] * v[1]
-            print(v[0] * v[1],v.Qty , v.Cost, k, v.Notes, totsum, totholding)
+        # for k, v in sorted(lmap(lambda x: (localize_it(x[0]),x[1]) ,self._buydic.items())):
+            # if v.Symbol!="TSLA":
+                # continue
+            # totholding += v[0]
+            # totsum += v[0] * v[1]
+            # print(v[0] * v[1],v.Qty , v.Cost, k, v.Notes, totsum, totholding)
 
         b=1
 
@@ -209,6 +219,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         dt : pd.DataFrame
         dt=dt.join(dfIB,on="stock",rsuffix="_IB").join(dfMYSTOCK,on="stock",rsuffix="_MY")
         dt.to_csv(config.File.EXPORTEDPORT+".state.csv")
+
     def update_buydic(self,key,val):
         self._buydic[key]=val
 

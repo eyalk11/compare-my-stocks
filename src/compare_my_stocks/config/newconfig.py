@@ -53,7 +53,7 @@ class MyStocksConf:
 class TransactionHandlersConf:
     TRANSACTIONSOURCE:  TransactionSourceType = TransactionSourceType.Both
     TrackStockList : list = field(default_factory=list)
-    DontAdjustSplitsMyStock : bool=False
+    DontAdjustSplitsMyStock : bool = False
     SaveCaches: bool = True
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)

@@ -3,7 +3,8 @@ from collections import namedtuple
 from datetime import datetime
 from enum import auto,  Enum 
 from typing import Dict
-
+# import ibflex
+from ibflex import Trade
 class TransactionSource(Enum):
     IB=1
     STOCK=2
@@ -29,6 +30,8 @@ class TransactionHandlerInterface(metaclass=ABCMeta):
         ...
 
     def save_cache(self):
+        ...
+    def log_buydict_stats(self):
         ...
 
 

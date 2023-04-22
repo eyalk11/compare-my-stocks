@@ -5,7 +5,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from common.common import InputSourceType, lmap
+from common.common import InputSourceType, lmap, simple_exception_handling
 from config import config
 from engine.symbols import AbstractSymbol
 
@@ -65,7 +65,7 @@ class InputSource(InputSourceInterface):
     def can_handle_dict(self,sym):
         return True
 
-
+    @simple_exception_handling(err_description='error in resolving symbol', never_throw=True)
     def resolve_symbol(self,sym):
         if self.can_handle_dict(sym) : #and (isinstance(sym, AbstractSymbol)  and sym.dic!=None) or type(sym)==dict
             if type(sym)==dict:

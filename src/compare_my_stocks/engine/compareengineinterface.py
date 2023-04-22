@@ -10,7 +10,7 @@ class CompareEngineInterface(SymbolsInterface):
 
 
     @abstractmethod
-    def process(self,  partial_symbol_update=Set,params=None):
+    def process(self,  partial_symbol_update=Set,params=None,force_upd_all_range=False):
         ...
 
     @abstractmethod

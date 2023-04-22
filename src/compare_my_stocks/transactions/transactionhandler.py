@@ -68,7 +68,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if updateanyway:
                 self._manager.symbol_info[symbol][prop] = value
 
-    @simple_exception_handling("try_to_use_cache",return_succ=True,debug=True,detailed=False)
+    @simple_exception_handling("try_to_use_cache",return_succ=0,debug=True,detailed=False)
     def try_to_use_cache(self):
         v=list(pickle.load(open(self.File, 'rb')))
         if self.save_cache_date():
@@ -103,6 +103,9 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             pickle.dump((self.get_vars_for_cache()), open(self.File, 'wb'))
         logging.debug((f'cache saved {self.NAME}'))
 
+    def log_buydict_stats(self):
+        pass
+
     def process_transactions(self):
 
         self._buydic = {}
@@ -111,10 +114,12 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         if  (self.Use is None) or (self.Use and self.Use!=UseCache.DONT):
             if  self.try_to_use_cache():
                 logging.debug((f'using buydict cache for {self.NAME}'))
+                self.log_buydict_stats()
                 return
 
 
         self.populate_buydic()
+        self.log_buydict_stats()
 
 
         self.save_cache()

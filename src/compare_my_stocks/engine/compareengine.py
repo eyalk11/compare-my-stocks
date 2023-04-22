@@ -254,7 +254,7 @@ class CompareEngine(InternalCompareEngine):
     def show_hide(self,val):
         return self._generator.show_hide(val)
 
-    def process(self,*args,**kwargs):
+    def process(self, *args,**kwargs):
         return self._inp.process(*args,**kwargs)
 
     def get_portfolio_stocks(self):

@@ -44,7 +44,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def refresh_task(self, x, params):
         self.window.last_status.setText('refreshing data')
-        self.graphObj.process(set(x), params)
+        self.graphObj.process(set(x), params,force_upd_all_range=True)
         self.update_graph(1, True)
         self.window.last_status.setText('finished refreshing')
 

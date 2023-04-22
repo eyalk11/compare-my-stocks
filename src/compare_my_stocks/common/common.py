@@ -142,7 +142,7 @@ def neverthrow(f,*args,default=None,**kwargs):
 from Pyro5.errors import format_traceback
 
 
-def simple_exception_handling(err_description=None,return_succ=False,never_throw=False,always_throw=False,debug=False,detailed=True):
+def simple_exception_handling(err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True):
     def decorated(func):
         def internal(*args,**kwargs):
             try:
@@ -156,7 +156,7 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
 
             tostop = tostop and bol
 
-            if tostop and not never_throw and not return_succ:
+            if tostop and not never_throw and return_succ is None:
                 return func(*args,**kwargs)
             else:
                 try:
@@ -170,8 +170,7 @@ def simple_exception_handling(err_description=None,return_succ=False,never_throw
                     logf(format_traceback_str(detailed=detailed))
                     if always_throw:
                         raise e
-                    if return_succ:
-                        return 0
+                    return return_succ
         return internal
     return decorated
 

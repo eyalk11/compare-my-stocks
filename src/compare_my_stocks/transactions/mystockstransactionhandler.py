@@ -32,6 +32,18 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
     def __init__(self,manager,):
         super().__init__(manager)
 
+    def log_buydict_stats(self):
+        if len(self._buydic) == 0:
+            logging.info("Buy dictionary is empty.")
+            return
+
+        min_date, max_date = min(self._buydic), max(self._buydic)
+        num_transactions = len(self._buydic)
+
+        logging.info(f"Buy dictionary  for MyStocks contains {num_transactions} transactions.")
+        logging.info(f"Earliest transaction date: {min_date}.")
+        logging.info(f"Latest transaction date: {max_date}.")
+
 
     def save_cache_date(self):
         return 0

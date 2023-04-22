@@ -10,7 +10,7 @@ from functools import partial
 import pandas as pd
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
-from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback
+from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
 from input.inputsource import InputSource
@@ -19,6 +19,7 @@ from ib_insync import IB,util
 import Pyro5.server
 import Pyro5.client
 import Pyro5.api
+from ib import timeoutreg
 WRONG_EXCHANGE = 200
 
 def get_ib_source() :
@@ -182,6 +183,7 @@ class IBSource(InputSource):
         if proxy:
             self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBConnection.IBSRVPORT )
             self.ibrem.__class__._Proxy__check_owner = lambda self: 1
+            self.ibrem._pyroTimeout = 20
         else:
             self.ibrem=IBSourceRem()
 
@@ -241,6 +243,7 @@ class IBSource(InputSource):
         return partial(wrapper,z)
 
 
+    @simple_exception_handling(err_description='error in get_symbol_history',return_succ=(None,[]),never_throw=True)
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
 
         l = self.resolve_symbol(sym)

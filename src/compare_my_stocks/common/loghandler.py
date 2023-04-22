@@ -59,7 +59,7 @@ class ImpacketFormatter(colorlog.ColoredFormatter):
 
   def __init__(self):
 
-      colorlog.ColoredFormatter.__init__(self,'%(log_color)s%(bullet)s %(filename)s | %(message)s',log_colors=log_colors)
+      colorlog.ColoredFormatter.__init__(self,'%(log_color)s%(bullet)s %(filename)s:%(lineno)d | %(message)s',log_colors=log_colors)
 
   def format(self, record):
     if record.levelno == logging.INFO:

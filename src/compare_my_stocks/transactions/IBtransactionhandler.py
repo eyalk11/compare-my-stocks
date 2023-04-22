@@ -23,6 +23,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self._tradescache :dict  = {}
         self._cache_date=None
         self.need_to_save=True
+
     def doquery(self):
         logging.info(("running query in IB  for transaction"))
         if not self.DoQuery or not (self.query_id) or not self.token_id:
@@ -60,59 +61,60 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         try:
             self._cache_date =datetime.now()
             pickle.dump((self._tradescache, self._cache_date), open(self.File, 'wb'))
-            logging.debug(('dumpted'))
+            logging.debug(('IB cache saved'))
         except Exception as e:
             logging.debug((e))
 
 
     def populate_buydic(self):
         n=None
-        lastdate=None
-        lastdateCache = max([d.dateTime for d in self._tradescache.values()]) if len(self._tradescache)>0 else "nocache"
+        last_date=None
+        last_date_cache = max([d.dateTime for d in self._tradescache.values()]) if len(self._tradescache)>0 else None
+        first_date_cache = min([d.dateTime for d in self._tradescache.values()]) if len(self._tradescache)>0 else None
         usecache= ((self._cache_date  and  self._cache_date - datetime.now() < self.CacheSpan) or self.Use == UseCache.FORCEUSE) and (not self.Use == UseCache.DONT)
+
+        if last_date_cache:
+            logging.info(f'{len(self._tradescache)} entries in IB cache. Last trade in cache {last_date_cache} . First trade in cache {first_date_cache} ')
+
         if usecache:
-            logging.info(('using ib cache alone'))
+            logging.info(f'using ib cache. Cache date is {self._cache_date}')
             newres=[]
             self.need_to_save=False
 
         if not usecache or self.TryToQueryAnyway:
             newres= self.doquery()
-            logging.debug(('completed'))
+            logging.debug('completed')
             if newres is None:
-                logging.debug(('no results obtained :('))
+                logging.debug('no results obtained :(')
                 return
 
-
             n=0
+            min_date = datetime.now()
+            max_date = datetime.fromtimestamp(0)
             for x in newres:
                 if x.tradeID not in self._tradescache:
                     self._tradescache[x.tradeID]=x
-                    if lastdate and x.dateTime > lastdate:
-                        lastdate=x.dateTime
-                        n+=1
-        if not lastdate:
-            lastdate=lastdateCache
-        if n:
-            logging.info(f"Last trade date is {lastdate}. Last trade in cache {lastdateCache}. New trades {n}")
-        elif newres:
-            logging.info(f"no new trades in query. Last trade {lastdate}")
-        elif (not ( not usecache or self.TryToQueryAnyway)) and self._tradescache:
-
-            logging.info(f"Didnt query cache. Last trade {lastdate}")
-
-
-
-
+                    if x.dateTime < min_date:
+                        min_date = x.dateTime
+                    if x.dateTime > max_date:
+                        max_date = x.dateTime
+                    n+=1
+            if not last_date:
+                last_date=last_date_cache
+            if n > 0:
+                self.need_to_save=True
+                logging.info(f"New trades {n}. Minimum trade date in this batch is {min_date}. Maximum trade date in this batch is {max_date}.")
+            elif newres:
+                logging.info(f"No new trades in query. Last trade {last_date}.")
+            elif (not ( not usecache or self.TryToQueryAnyway)) and self._tradescache:
+                logging.info(f"Didnt query cache. Last trade {last_date}")
 
         for z in self._tradescache.values():
             date=z.dateTime
             z : Trade
             while date in self._buydic:
                 date += timedelta(seconds=1)
-                #z.dateTime=z.dateTime
-
             self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z, Source=TransactionSource.IB )
-
             self._buysymbols.add(z.symbol)
 
             self.update_sym_property(z.symbol, z.currency)

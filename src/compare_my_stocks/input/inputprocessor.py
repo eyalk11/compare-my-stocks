@@ -90,10 +90,12 @@ class InputProcessor(InputProcessorInterface):
         return self._inputsource
 
     @property
-    def transaction_handler(self):
+    def transaction_handler(self) -> TransactionHandlerManager:
         return self._transaction_handler
 
     def __init__(self, symb, transaction_handler, input_source=None):
+        self._force_upd_all_range = None
+
         self._inputsource: InputSource = input_source
         if self._inputsource is None:
             logging.warn("not using any source")
@@ -335,12 +337,12 @@ class InputProcessor(InputProcessorInterface):
                 _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_splited[sym][1]
                 _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_splited[sym][1]
                 cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+                logging.debug(f"new avg cost {sym} {_cur_avg_cost_bystock[sym]}  cur_hold {_cur_holding_bystock[sym]}")
 
         def update_curholding():
             x: BuyDictItem = cur_action[1]
             stock = x.Symbol
             #if stock is in TrackStockList , write to log state in terms of holding before and after transaction is applied
-
 
 
             if partial_symbols_update and stock not in partial_symbols_update:
@@ -355,8 +357,6 @@ class InputProcessor(InputProcessorInterface):
 
             old_cost_reflected= _cur_avg_cost_bystock_reflected_splits[stock]
 
-
-
             if x.Source == TransactionSource.STOCK and config.TransactionHandlers.DontAdjustSplitsMyStock and stock in _cur_splits_bystock:
                 if cursplit ==0:
                     logging.warn((f'zero split {x} {cursplit}'))
@@ -364,13 +364,13 @@ class InputProcessor(InputProcessorInterface):
                 #    logging.warn((f'not integer split {x} {_cur_splits_bystock[stock]}'))
                 #elif x.Qty!=round(x.Qty):
                 #    logging.warn(("not integer qty" ,x))
-                else:
+                elif cursplit!=1:
                     x=x._replace(Qty=x.Qty / cursplit, Cost=x.Cost * cursplit)
-                    logging.debug(('readjusting transaction mystock' , x, 'by split', cursplit))
+                    logging.warn(log_conv(('readjusting transaction mystock' , x, 'price',_cur_stock_price[stock][0]  ,'by split', cursplit, 'before cost ', x.Cost/cursplit ,  'date:', cur_action[0] )))
+                    if _cur_stock_price[stock][0] and  abs(x.Cost/_cur_stock_price[stock][0] -1)>0.3:
+                        logging.warn("Very different price")
+
                     self.transaction_handler.update_buydic(cur_action[0], val=x)
-
-
-
 
             if x[0]*old_holding >= 0: #we increase our holding.
                 _cur_avg_cost_bystock[stock] = (old_holding * old_cost + x[0] * x[1]) / (
@@ -380,7 +380,7 @@ class InputProcessor(InputProcessorInterface):
 
                 # self._avg_cost_by_stock[stock][cur_action[0]] = nv
             else:
-                if abs(x[0])>abs(old_holding): #we switch to the other side. so we do selling of old_holding, and buying on the other
+                if abs(int(x.Qty))>abs(int(old_holding)): #we switch to the other side. so we do selling of old_holding, and buying on the other
                     _cur_relprofit_bystock[stock] += old_holding * (
                             x[1] - _cur_avg_cost_bystock[stock])
                     _cur_avg_cost_bystock[stock] = (x[1])
@@ -637,8 +637,10 @@ class InputProcessor(InputProcessorInterface):
                 sym_corrected = config.Symbols.TRANSLATEDIC.get(sym, sym)
 
 
-
-            ls = self.get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) if sym in self._hist_by_date else [(fromdate,todate)]
+            if not self._force_upd_all_range and sym in self._hist_by_date:
+                ls = self.get_range_gap(list(self._hist_by_date[str(sym)].keys()),fromdate,todate) #we have data for this symbol
+            else:
+                ls = [(fromdate,todate)]
             okdays=0
             requireddays=0
             try:
@@ -795,7 +797,7 @@ class InputProcessor(InputProcessorInterface):
             self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.Symbols.BASECUR, x))
         return  self._relevant_currencies_rates[x]
 
-    @simple_exception_handling("adjusting for currency", return_succ=True)
+    @simple_exception_handling("adjusting for currency", return_succ=0)
     def adjust_for_currency(self):
         a=1
         relevant_currencies = set([v.get('currency','unk') for v in self.symbol_info.values() if not (v is None)]) - \
@@ -882,7 +884,7 @@ class InputProcessor(InputProcessorInterface):
         for t, dic in self._hist_by_date.items():
             self._usable_symbols.update(set(dic.keys()))
 
-    def process(self, partial_symbol_update=set(),params=None,buy_filter=None):
+    def process(self, partial_symbol_update=set(),params=None,buy_filter=None,force_upd_all_range=False):
 
         logging.debug("process start")
 
@@ -891,6 +893,7 @@ class InputProcessor(InputProcessorInterface):
 
         self.process_params = params
         self._buy_filter=buy_filter
+        self._force_upd_all_range=force_upd_all_range
         #This would return text for each symbol. see comment about resolve_hack in parameters.
         #From this point, symbols are textual!
         ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
