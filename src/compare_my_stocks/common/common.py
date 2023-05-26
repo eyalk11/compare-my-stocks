@@ -141,6 +141,7 @@ def neverthrow(f,*args,default=None,**kwargs):
 
 from Pyro5.errors import format_traceback
 
+default_not_detailed_errors = [ConnectionRefusedError ] 
 
 def simple_exception_handling(err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True):
     def decorated(func):
@@ -167,7 +168,11 @@ def simple_exception_handling(err_description=None,return_succ=None,never_throw=
                     logf=logging.debug if debug else logging.error
                     if err_description:
                         logf(err_description)
-                    logf(format_traceback_str(detailed=detailed))
+                    if e.__class__ not in default_not_detailed_errors and detailed:
+                        logf(format_traceback_str(detailed=detailed))
+                    else:
+                        logf(e) 
+
                     if always_throw:
                         raise e
                     return return_succ

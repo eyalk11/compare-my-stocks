@@ -30,6 +30,12 @@ def get_ib_source() :
 
 #class MyIBSourceProxy(Pyro5.api.Proxy):
 
+def make_sure_connected(func):
+    def wrapper(self,*args,**kwargs):
+        if not self.connected:
+            self.do_connect() 
+        return func(self,*args,**kwargs)
+    return wrapper
 
 class IBSourceRem:
     ConnectedME=None
@@ -71,12 +77,16 @@ class IBSourceRem:
             asyncio.set_event_loop(loop)
         self.ib=IB()
         self.ib.RequestTimeout = 20
+        self.connected=False 
+        self.do_connect()
+
+    def do_connect(self):
         try:
-            self.ib.connect(host,port , clientId=clientId, readonly=readonly)
+            self.ib.connect(self._host,self._port , clientId=self._clientid, readonly=self._readonly)
             IBSourceRem.ConnectedME=self
+            self.connected=True
             logging.debug(('ib connected OK'))
         except Exception as e:
-            import traceback;traceback.print_exc()
             logging.debug(( f"{e} in connecting to ib"))
             raise
 
@@ -105,6 +115,7 @@ class IBSourceRem:
 
 
     @Pyro5.server.expose
+    @make_sure_connected
     def get_current_currency(self, pair):
         logging.debug("get_current_currency {pair}")
         f=pair[0]+pair[1]
@@ -122,6 +133,7 @@ class IBSourceRem:
         return tick
 
     @Pyro5.server.expose
+    @make_sure_connected
     def reqHistoricalData_ext(self, contract, enddate, td):
         logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
         bars= self.reqHistoricalData(Contract.create(**contract),
@@ -133,6 +145,7 @@ class IBSourceRem:
         return ls[::-1][:td]
 
     @Pyro5.server.expose
+    @make_sure_connected
     def get_matching_symbols_int(self, sym,results=10):
         logging.debug(('get_matching_symbols'))
         #ignore results num
@@ -160,6 +173,7 @@ class IBSourceRem:
         return lsa
 
     @Pyro5.server.expose
+    @make_sure_connected
     def get_contract_details_ext(self, contractdic):
         INC=["category","subcategory", "longName","validExchanges","marketName","stockType", "lastTradeTime"]
         c=Contract.create(**contractdic)
@@ -186,8 +200,12 @@ class IBSource(InputSource):
             self.ibrem._pyroTimeout = 20
         else:
             self.ibrem=IBSourceRem()
+        try:
+            self.ibrem.init(host,port,clientId,readonly)
+        except ConnectionRefusedError:
+            logging.error('Source not connected!')
 
-        self.ibrem.init(host,port,clientId,readonly)
+
         self.lock = threading.Lock()
 
     def get_current_currency(self, pair):
@@ -291,6 +309,9 @@ class IBSource(InputSource):
     def can_handle_dict(self, sym):
         if hasattr(sym,"dic"):
             sym=sym.dic
+        if type(sym)==dict and "_dic" in sym:
+            sym=sym['_dic'] #why?
+
         return type(sym)==dict and 'validExchanges' in sym
 
 

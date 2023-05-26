@@ -1,4 +1,5 @@
 import logging
+import threading
 from functools import partial
 
 from PySide6.QtCore import QObject, Signal, QThread, Slot , QRecursiveMutex
@@ -9,15 +10,19 @@ import colorlog
 
 class DoLongProcess(QObject):
     finished = Signal()
+    # def quit_thread(self):
+    #     logging.debug(f'quit thread {self.thread}')
+    #     self.thread.quit()
     def __init__(self,task):
         QObject.__init__(self)
         self._task=task
         self._realtask=None
         self.started=False
         self.thread = QThread()
+        self._lock= threading.Lock()
 
 
-        self.finished.connect(self.thread.quit)
+        #self.finished.connect(self.quit_thread)
 
     @Slot()
     def run(self):
@@ -36,14 +41,6 @@ class DoLongProcess(QObject):
     def is_started(self):
         return self.started
 
-    def startit(self,*params):
-
-        self._realtask= partial(self._task,*params)
-
-
-        self.thread.start()
-        self.moveToThread(self.thread)
-        self.thread.started.connect(self.run)
 
 
 from collections import namedtuple

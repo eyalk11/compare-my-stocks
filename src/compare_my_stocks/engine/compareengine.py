@@ -96,14 +96,16 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 reprocess = 0
         else:
             symbols_needed = set()  # process all...
-
+        adjust_date = False
         if reprocess:
             self._inp.process(symbols_needed)
-            self.adjust_date = True
+            adjust_date = True
 
 
         with self._datagenlock:
             res= self.call_data_generator()
+            if res==2:
+                adjust_date = True
 
 
 
@@ -111,22 +113,23 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             df = self._datagen.df
             type = self._datagen.type
             before_act = self._datagen.df_before_act
-            self.call_graph_generator(df, just_upd,type,before_act )
+            self.call_graph_generator(df, just_upd,type,before_act , adjust_date= adjust_date )
 
     @simple_exception_handling(err_description="Exception in generation")
     def call_data_generator(self,auto_reprocess=True):
-
+        b=0
         for tries in range(2):
             if not self._datagen.verify_conditions():
                 self.statusChanges.emit(f'Graph Invalid! Check parameters')
                 return False
             try:
                 self._datagen.generate_data()
-                return True
+                return 1+b
             except NoDataException:
                 if auto_reprocess:
                     logging.debug("No data first try. reprocessing")
                     self._inp.process(self.required_syms(True, True))
+                    b=1
                     continue
                 else:
                     self.statusChanges.emit(f'No Data For Graph!')
@@ -136,7 +139,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 self.statusChanges.emit(f'Exception in generation: {e}')
                 raise
 
-    def call_graph_generator(self, df, just_upd, type,orig_data):
+    def call_graph_generator(self, df, just_upd, type,orig_data,adjust_date=False):
         def upd(msg,err=False):
             self.statusChanges.emit(msg)
             self._inp.failed_to_get_new_data=None #reset it
@@ -147,7 +150,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
         try:
             self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
-                                             just_upd, type,orig_data)
+                                             just_upd, type,orig_data,adjust_date=adjust_date)
             if self._inp.failed_to_get_new_data:
                 upd(f"Generated Graph with old data  (  Query failed :() ")
             else:

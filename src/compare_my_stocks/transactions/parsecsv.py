@@ -20,8 +20,7 @@ def parse_trade(row):
     if 'FxPnl' in row and 'MtmPnl' in row:
         return Trade(
             tradeID=row['TradeID'],
-            clientAccountID=row.get('ClientAccountID', ''),
-            currencyPrimary=row['CurrencyPrimary'],
+            currency=row['CurrencyPrimary'],
             symbol=row['Symbol'],
             conid=row.get('Conid', ''),
             securityID=row.get('SecurityID', ''),
@@ -31,14 +30,14 @@ def parse_trade(row):
             underlyingSecurityID=row.get('UnderlyingSecurityID', ''),
             underlyingListingExchange=row.get('UnderlyingListingExchange', ''),
             putCall=row['Put/Call'],
-            tradeDate=datetime.strptime(row['TradeDate'], dt_format).date(),
+            tradeDate=datetime.strptime(str(row['TradeDate']), dt_format).date(),
             transactionType=row.get('TransactionType', ''),
             exchange=row.get('Exchange', ''),
             quantity=Decimal(row['Quantity']),
             tradePrice=Decimal(row['TradePrice']),
             tradeMoney=Decimal(row.get('TradeMoney', 0)),
             netCash=Decimal(row.get('NetCash', 0)),
-            costBasis=Decimal(row.get('CostBasis', 0)),
+            cost=Decimal(row.get('CostBasis', 0)), #costbasis
             fifoPnlRealized=Decimal(row.get('FifoPnlRealized', 0)),
             fxPnl=Decimal(row['FxPnl']),
             mtmPnl=Decimal(row['MtmPnl']),
@@ -70,7 +69,10 @@ def return_trades(filepath):
     df = pd.read_csv(filepath)
     trades = []
     for i, row in df.iterrows():
-        trades.append(parse_trade(row))
+        try:
+            trades.append(parse_trade(row))
+        except:
+            print('a')
     return trades
 
 

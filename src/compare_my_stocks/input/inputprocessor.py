@@ -325,19 +325,33 @@ class InputProcessor(InputProcessorInterface):
 
     def process_hist_internal(self, buyoperations, cur_action, partial_symbols_update, splits, maxsplit):
         def calc_splited(sym,last_time, time):
-            if cur_splited[sym] is None and sym in splits:
-                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
-            if not last_time or cur_splited[sym] is None:
+            def upd_spl():
+                cur_split[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+                if cur_split[sym] is not None:
+                    _cur_splited_bystock[sym] *= cur_split[sym][1]
+            #we want to be after last_time and before time but it is ok to go past time
+            if cur_split[sym] is None and sym in splits:
+                upd_spl()
+                if last_time is None:
+                    while cur_split[sym] and cur_split[sym][0] <= time:
+                        upd_spl()
+
+            if not last_time or cur_split[sym] is None:
                 return
-            while cur_splited[sym] and cur_splited[sym][0] < last_time:
-                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
-            if cur_splited[sym] and (cur_splited[sym][0] > last_time)  and cur_splited[sym][0] <= time:
-                logging.debug((f"splited between {sym} {cur_splited[sym]}"))
-                _cur_splits_bystock[sym]*=cur_splited[sym][1]
-                _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_splited[sym][1]
-                _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_splited[sym][1]
-                cur_splited[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
+
+            while cur_split[sym] and cur_split[sym][0] < last_time:
+                upd_spl()
+
+
+
+            while cur_split[sym] and (cur_split[sym][0] > last_time)  and cur_split[sym][0] <= time:
+                logging.debug((f"{sym} splited between {last_time} and {time} updating {cur_split[sym]}"))
+                if not config.TransactionHandlers.ReadjustJustIB:
+                    _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_split[sym][1]
+                    _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_split[sym][1]
+                upd_spl()
                 logging.debug(f"new avg cost {sym} {_cur_avg_cost_bystock[sym]}  cur_hold {_cur_holding_bystock[sym]}")
+            #here we passed time and updated splits.
 
         def update_curholding():
             x: BuyDictItem = cur_action[1]
@@ -349,25 +363,34 @@ class InputProcessor(InputProcessorInterface):
                 return
 
 
-            cursplit = maxsplit[stock] / _cur_splits_bystock[stock]
+            cursplit = maxsplit[stock] / _cur_splited_bystock[stock]
 
             old_cost = _cur_avg_cost_bystock[stock]
             old_holding = _cur_holding_bystock[stock]
             old_holding_reflected = old_holding * cursplit
 
             old_cost_reflected= _cur_avg_cost_bystock_reflected_splits[stock]
+            if (x.Source == TransactionSource.IB or x.Source == TransactionSource.CACHEDIBINSTOCK) and config.TransactionHandlers.ReadjustJustIB:
+                if cursplit not in [0,1]:
+                    orgcost = x.Cost
+                    x = x._replace(Qty=x.Qty * cursplit, Cost=x.Cost / cursplit) #lets not update buy dic
 
-            if x.Source == TransactionSource.STOCK and config.TransactionHandlers.DontAdjustSplitsMyStock and stock in _cur_splits_bystock:
+                    logging.warn(log_conv(('readjusting transaction IB', x, 'price', _cur_stock_price[stock][0],
+                                       'by split', cursplit, 'before cost ', orgcost, 'date:', cur_action[0])))
+
+            elif x.Source == TransactionSource.STOCK and config.TransactionHandlers.DontAdjustSplitsMyStock and stock in _cur_splited_bystock:
                 if cursplit ==0:
                     logging.warn((f'zero split {x} {cursplit}'))
-                #if x.Qty==round(x.Qty) and  int(round(x.Qty)) and int(round(x.Qty)) % int(roind(_cur_splits_bystock[stock][1])  != 0:
-                #    logging.warn((f'not integer split {x} {_cur_splits_bystock[stock]}'))
+                #if x.Qty==round(x.Qty) and  int(round(x.Qty)) and int(round(x.Qty)) % int(roind(_cur_splited_bystock[stock][1])  != 0:
+                #    logging.warn((f'not integer split {x} {_cur_splited_bystock[stock]}'))
                 #elif x.Qty!=round(x.Qty):
                 #    logging.warn(("not integer qty" ,x))
-                elif cursplit!=1:
+                elif cursplit!=1 and stock not in config.TransactionHandlers.DontReadjust:
+                    orgcost=x.Cost
                     x=x._replace(Qty=x.Qty / cursplit, Cost=x.Cost * cursplit)
-                    logging.warn(log_conv(('readjusting transaction mystock' , x, 'price',_cur_stock_price[stock][0]  ,'by split', cursplit, 'before cost ', x.Cost/cursplit ,  'date:', cur_action[0] )))
-                    if _cur_stock_price[stock][0] and  abs(x.Cost/_cur_stock_price[stock][0] -1)>0.3:
+                    logging.warn(log_conv(('readjusting transaction mystock' , x, 'price',_cur_stock_price[stock][0]  ,'by split', cursplit, 'before cost ', orgcost ,  'date:', cur_action[0] )))
+                    refnum= orgcost if config.Input.PRICES_ARE_ADJUSTED_TO_TODAY else x.Cost
+                    if _cur_stock_price[stock][0] and  abs(refnum/_cur_stock_price[stock][0] -1)>0.3:
                         logging.warn("Very different price")
 
                     self.transaction_handler.update_buydic(cur_action[0], val=x)
@@ -389,6 +412,8 @@ class InputProcessor(InputProcessorInterface):
                 else:
                     _cur_relprofit_bystock[stock] += old_holding * (
                             x[1] - _cur_avg_cost_bystock[stock])
+                    if int(x.Qty)== int(old_holding):
+                        _cur_avg_cost_bystock[stock] = 0
                     #_cur_relprofit_bystock[stock] += (-1) * ( x[0] * (
                     #            x[1]  - _cur_avg_cost_bystock[stock]))
 
@@ -397,13 +422,15 @@ class InputProcessor(InputProcessorInterface):
                 # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
 
             _cur_holding_bystock[stock] += x[0]
+            _cur_accumative_holding_bystock[stock] += abs(x[0])
+
             _last_action_time[stock]=cur_action[0]
             if _cur_holding_bystock[stock] < 0:
                 logging.warn((log_conv(' sell below zero', stock, cur_action[0])))
                 if 0:
                     self._transaction_handler.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
             if stock in config.TransactionHandlers.TrackStockList:
-                logging.debug('after applying action ' + str(x))
+                logging.debug('after applying action ' + str(x) +" time is "+ str(t))
                 logging.debug('current holding of stock %s is %f' % (stock, _cur_holding_bystock[stock])) 
                 logging.debug('current avg cost of stock %s is %f' % (stock, _cur_avg_cost_bystock[stock]))
                 logging.debug('current splits of stock %s is %f' % (stock, cursplit))
@@ -416,7 +443,7 @@ class InputProcessor(InputProcessorInterface):
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
-        _cur_splits_bystock = defaultdict(lambda:1)
+        _cur_splited_bystock = defaultdict(lambda:1)
         _cur_avg_cost_bystock = defaultdict(lambda: 0)
         _cur_avg_cost_bystock_reflected_splits = defaultdict(lambda: 0) #adjust the splits to today
         _cur_holding_bystock = defaultdict(lambda: 0)
@@ -424,8 +451,9 @@ class InputProcessor(InputProcessorInterface):
         _cur_unrelprofit_bystock = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         _last_action_time = defaultdict(lambda: None)
-        cur_splited = defaultdict(lambda: None)
+        cur_split = defaultdict(lambda: None)
         _last_action = defaultdict(lambda: None)
+        _cur_accumative_holding_bystock = defaultdict(lambda: 0) #just used to calculate the total holding involved
         if len(self._simp_hist_by_date)==0 and (not partial_symbols_update):
             logging.warn(("WARNING: No History at all!"))
             return
@@ -490,7 +518,7 @@ class InputProcessor(InputProcessorInterface):
                     self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
                     self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
                     self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
-                    self._split_by_stock[sym][tim] = _cur_splits_bystock[sym]
+                    self._split_by_stock[sym][tim] = _cur_splited_bystock[sym]
                 if mini:
                     continue
                 symopt = self._usable_symbols.intersection(
@@ -511,7 +539,7 @@ class InputProcessor(InputProcessorInterface):
                     self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
 
                     if config.Input.AdjustUnrelProfitToReflectSplits:
-                        cursplit = maxsplit[sym] / _cur_splits_bystock[sym]
+                        cursplit = maxsplit[sym] / _cur_splited_bystock[sym]
                         _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock_reflected_splits[sym]) * _cur_holding_bystock[sym]*cursplit
                     else:
                         _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock[sym]) * _cur_holding_bystock[sym]
@@ -526,12 +554,13 @@ class InputProcessor(InputProcessorInterface):
                     _last_action[sym] = cur_action
                 self._fset.add(tim)
             if not partial_symbols_update:
-                self.fast_conv_to_df(
+                self.update_current_status(
                     {"Holding" : _cur_holding_bystock,
                      "Unrelprofit": _cur_unrelprofit_bystock,
-                     "Relprofit":  _cur_relprofit_bystock
+                     "Relprofit":  _cur_relprofit_bystock,
+                     "AccumulatedHolding": _cur_accumative_holding_bystock
                 })
-                self._cur_splits=_cur_splits_bystock
+                self._cur_splits=_cur_splited_bystock
         finally:
             pass#self.process_params.transactions_todate=to_date
             #self.process_params.transactions_fromdate=from_date
@@ -540,7 +569,7 @@ class InputProcessor(InputProcessorInterface):
 
         
     
-    def fast_conv_to_df(self, dicdics):
+    def update_current_status(self, dicdics):
         def get_DF(dic,name):
             df=pd.DataFrame.from_dict(dict(dic).items())
             if len(df)==0:
@@ -655,7 +684,7 @@ class InputProcessor(InputProcessorInterface):
             successful_once=True
             if requireddays/okdays<0.5:
                 logging.debug((f'mostly problematic {sym}'))
-            return successful_once
+        return successful_once
 
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
@@ -673,7 +702,10 @@ class InputProcessor(InputProcessorInterface):
             raise SymbolError("bad symbol")
         else:
             logging.debug(f"got history for {sym}")
-        if not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
+        if l is None:
+            logging.warn("no info for %s , using default " % sym)
+            currency =  'unk'
+        elif not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
             currency = self.resolve_currency(sym, l, hist)
             self.symbol_info[sym].update( {'currency': currency})
         else:

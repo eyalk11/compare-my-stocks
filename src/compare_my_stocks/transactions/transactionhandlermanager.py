@@ -87,7 +87,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         bysource = collections.defaultdict(int)
         for k in self._buydic.values():
             bysource[k.Source] += 1
-        logging.info((f" Number of combined transactions by source {{ x.name: y for x, y in bysource.items()}}"))
+        logging.info((f" Number of combined transactions by source { { x.name: y for x, y in bysource.items()} }"))
 
 
 
@@ -116,18 +116,31 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def combine(self):
 #include all old IB:
 #replace all new IB
-        def update_dic(mindate, secondinst, dic, real):
+        def update_dic(mindate, secondinst, dic, real,num_of_duplicates):
             tmpcalc={}
             datesymfirst = get_datesym(mindate)
             mindate = {x: min([y[0] for y in datesymfirst[x]]) for x in datesymfirst}
             maxdate = {x: max([y[0] for y in datesymfirst[x]]) for x in datesymfirst}
+            maxmaxdate = max([maxdate[x] for x in maxdate])
+            #update new variable of mindate when dic[s] updated
+            mindate_updated = None
+            maxdate_updated = None
+            num_of_updates=0 
+            
             for s, v in secondinst.items():
+                if CombineStrategy.PREFERSTOCKS == config.TransactionHandlers.COMBINESTRATEGY:
+                    if config.TransactionHandlers.JustFromTheEndOfMyStock:
+                        if s.date() < maxmaxdate:
+                            num_of_duplicates+=1 
+                            continue
 
                 if (mindate.get(v.Symbol) and s.date() >= mindate[v.Symbol] and s.date() <= maxdate[v.Symbol]):
                     if v.Symbol not in config.TransactionHandlers.BOTHSYMBOLS and config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERIB:
+                        num_of_duplicates +=1
                         log.debug(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
                         continue
                 if v.Symbol in config.TransactionHandlers.IGNORECONF and s > config.TransactionHandlers.IGNORECONF[v.Symbol]:
+                    num_of_duplicates +=1 
                     log.debug(("ignoring trans: %s %s because of conf  %s" % (s, v,"real" if real else "simul" )))
                     continue
                 if 'IB:' in v.Notes and CombineStrategy.PREFERSTOCKS and real:
@@ -139,13 +152,21 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                     if abs((l[0] - s.date()).days) < config.TransactionHandlers.COMBINEDATEDIFF and abs(float(l[1]) - paid) < (
                             (l[1] + paid) / 2 * config.TransactionHandlers.COMBINEAMOUNTPERC / 100):
                         logging.debug(("ignoring trans: %s %s because of\n %s %s %s" % (s, v, l[0], l[2:],"real" if real else "simul" )))
+                        num_of_duplicates +=1 
                         break
                 else:
                     if v.Symbol=="TSLA":
                         tmpcalc[s]=v
+                    
+                    num_of_updates +=1
 
                     dic[s] = v
+                    if mindate_updated==None or s< mindate_updated:
+                        mindate_updated=s
+                    if maxdate_updated==None or s> maxdate_updated:
+                        maxdate_updated=s
 
+            logging.info( "Changes in combine num_of_updates %s num_of_duplicates %s mindate %s maxdate %s " % (num_of_updates,num_of_duplicates,mindate_updated,maxdate_updated ))
             a=1
 
 
@@ -165,6 +186,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         secondcopy= OrderedDict(sorted(second.items()))
         mindate=min(list(secondcopy.keys()))
         self._buydic={}
+        num_of_duplicates=0
 
         if config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERSTOCKS:
             ls =list(filter( lambda va: "IB:" in va[1].Notes , firstcopy.items()))
@@ -172,6 +194,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             for (s,v) in list(ls):
                 for secs, secv in list(secondcopy.items()):
                     if v.Qty == secv.Qty and v.Cost == secv.Cost:
+                        num_of_duplicates+=1
                         firstcopy.pop(s)
                         secondcopy.pop(secs)
                         self._buydic[s]=v
@@ -192,8 +215,8 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         #     if abs(perc-1)>config.TransactionHandlers.MAXPERCDIFFIBSTOCKWARN:
         #         logging.debug((f"warning: {s} is suspicous IB: {  get_vars(datesymfirst,mindate) } STOCK: { get_vars(datesymfirst,mindate)} date: {mindate} "))
 
-        update_dic(firstcopy,secondcopy, self._buydic,True)
-        update_dic(first,second, self._buydicforexport,False)
+        update_dic(firstcopy,secondcopy, self._buydic,True,num_of_duplicates )
+        update_dic(first,second, self._buydicforexport,False, num_of_duplicates)
 
 
 

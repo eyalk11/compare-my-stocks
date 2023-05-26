@@ -263,22 +263,26 @@ def test_fix_transactions(inp):
     tmpinp.load_cache(False)
     inp : InputProcessor
     inp.process_transactions()
-    from ibflex import Trade
     ibc : IBTransactionHandler =inp.transaction_handler._ib
-    ntrades=return_trades()
+    ntrades=return_trades(r'C:\temp\IBtradesx.csv')
     ss=set([ (t.quantity,t.tradePrice,t.tradeDate,t.fxRateToBase) for t in  ibc._tradescache.values()])
     wss = set([(t.quantity, t.tradePrice) for t in ibc._tradescache.values()])
+    n=0
     for t in ntrades:
-
+        if t.tradeID in ibc._tradescache:
+            logging.info('already there')
+            continue
         if (t.quantity,t.tradePrice,t.tradeDate,t.fxRateToBase) not in ss:
-            print(t)
+            logging.info(t)
             if (t.quantity, t.tradePrice) in wss:
-                print("strangge")
-
+                logging.info("strangge")
+                continue
 
             ibc._tradescache[t.tradeID]=t
+            n+=1
         else:
-            print (f'found {t}')
+            logging.info(f'found {t}')
+    logging.info(f'added {n} trades')
     a=1
     ibc.need_to_save=True
     ibc.save_cache()

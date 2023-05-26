@@ -51,9 +51,12 @@ class MyStocksConf:
 @paramaware
 @dataclass()
 class TransactionHandlersConf:
+    JustFromTheEndOfMyStock : bool = False
     TRANSACTIONSOURCE:  TransactionSourceType = TransactionSourceType.Both
     TrackStockList : list = field(default_factory=list)
+    ReadjustJustIB : bool = False
     DontAdjustSplitsMyStock : bool = False
+    DontReadjust : list = field(default_factory=list)
     SaveCaches: bool = True
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
@@ -181,6 +184,7 @@ class FileConf:
 @paramaware
 @dataclass
 class InputConf:
+    PRICES_ARE_ADJUSTED_TO_TODAY:bool = True
     AdjustUnrelProfitToReflectSplits: bool = True
     MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
     INPUTSOURCE: InputSourceType = InputSourceType.IB

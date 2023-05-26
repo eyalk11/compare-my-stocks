@@ -95,7 +95,7 @@ class GraphGenerator:
         self._linesandfig = []
         self.last_stock_list = set()
         self.cur_shown_stock = set()
-        self.adjust_date = True
+        self.first_time = True
         self.generation_mutex = QRecursiveMutex()
         self.generation = 0
         self.anotation_list = []
@@ -140,7 +140,7 @@ class GraphGenerator:
             st += ' compared with ' + self.params.compare_with
         return st
 
-    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data):
+    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data,adjust_date=False):
         additional_options = config.UI.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         logging.log(TRACELEVEL, ('generation locked'))
@@ -204,12 +204,13 @@ class GraphGenerator:
             if just_upd:
 
                 self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
-                if self.adjust_date:
+                if adjust_date or self.first_time:
+                    self.first_time = False
                     mind = matplotlib.dates.date2num(min(dt.index))
                     maxd = matplotlib.dates.date2num(max(dt.index))
                     if mind < maxd:
                         self._axes.set_xlim([mind, maxd])
-                    self.adjust_date = False
+
                     # plt.draw()
             elif self.params.show_graph:
                 logging.debug(('strange'))
