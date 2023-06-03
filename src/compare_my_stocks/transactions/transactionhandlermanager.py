@@ -46,6 +46,15 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     @property
     def params(self):
         return self._inp._eng.params #should be process_params but it is readonly(copied) . And we want to change portfolio.
+
+    def get_data_for_graph(self,columns,from_date=None,to_date=None):
+        plot_data = collections.defaultdict(list)
+        for date, item in self._buydic.items():
+            if item.Symbol in columns:
+                if date>=from_date and date<=to_date:
+                    plot_data[item.Symbol].append((date, item.Cost, item.Qty,item.Source,item.AdjustedPrice))
+        return dict(plot_data)
+
     def process_transactions(self): #from all sources
         self._buydic = {}
         self._buydicforexport={}

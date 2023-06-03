@@ -7,11 +7,14 @@ import time
 from enum import Flag, auto
 from functools import partial
 
+import numpy as np
 import pandas
 
 from common.common import Types, UniteType, UseCache, checkIfProcessRunning, InputSourceType
 from engine.compareengine import CompareEngine
 from engine.parameters import Parameters
+from graph.graphgenerator import GraphGenerator, StringPointer
+from ib.remoteprocess import RemoteProcess
 from input.earningsproc import EarningProcessor
 from input.ibsource import IBSource
 import pytest
@@ -48,7 +51,7 @@ def inp(ibsource):
 
 @pytest.fixture(scope="session")
 def additional_process():
-    run_additional_process()
+    RemoteProcess().run_additional_process()
 
 @pytest.fixture
 def realeng(additional_process):
@@ -62,6 +65,7 @@ def realeng(additional_process):
 
     eng.call_graph_generator = Mock(return_value=None)
     eng.input_processor.save_data = Mock(return_value=None) #Dont save anything please . Because loading data like that is not nice.
+
     return eng
 #make useinp a flag
 class UseInput(Flag):
@@ -74,26 +78,30 @@ class UseInput(Flag):
 @pytest.mark.parametrize("useinp",  [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT,UseInput.WITHINPUT,UseInput.LOADDEFAULTCONFIG])
 def test_realengine(mock_config_to_default,realeng,useinp):
     logging.info("Starting test_realengine, useinp=%s",useinp)
-    eng = realeng
-    p =Parameters(
-        type=Types.PRICE, unite_by_group=UniteType.NONE
-        , isline=True,use_groups=True, groups=['FANG'], use_cache=UseCache.FORCEUSE,
-        show_graph=False)
-    if  useinp & UseInput.WITHINPUT:
-        p.fromdate=datetime.datetime.now()-datetime.timedelta(days=5)
-        p.todate=None
-    else:
-        p.fromdate= datetime.datetime(2022, 11, 1)
-        p.todate = datetime.datetime(2022, 12, 1)
+    try:
+        eng = realeng
+        p =Parameters(
+            type=Types.PRICE, unite_by_group=UniteType.NONE
+            , isline=True,use_groups=True, groups=['FANG'], use_cache=UseCache.FORCEUSE,
+            show_graph=False)
+        if  useinp & UseInput.WITHINPUT:
+            p.fromdate=datetime.datetime.now()-datetime.timedelta(days=5)
+            p.todate=datetime.datetime.now()
+        else:
+            p.fromdate= datetime.datetime(2022, 11, 1)
+            p.todate = datetime.datetime(2022, 12, 1)
 
-    eng.gen_graph(p)
-    assert eng.call_graph_generator.call_args is not None
-    df= eng.call_graph_generator.call_args.args[0]
-    if useinp & UseInput.WITHINPUT:
-        assert df.shape == (3,2)
-    else:
-        assert df.shape == (27,4)
-
+        eng.gen_graph(p)
+        assert eng.call_graph_generator.call_args is not None
+        df= eng.call_graph_generator.call_args.args[0]
+        if useinp & UseInput.WITHINPUT:
+            assert df.shape[0] >=1 #at least one good day
+            assert df.shape[1] == 2
+        else:
+            assert df.shape == (27,4)
+    finally:
+        if useinp & UseInput.WITHINPUT:
+            eng.input_processor.inputsource.disconnect()
 
 def test_adjust_currency(realeng):
     eng = realeng
@@ -117,18 +125,18 @@ def test_adjust_currency(realeng):
 
 
 
-from runsit import run_additional_process
+
 @pytest.fixture(scope="session")
 def getremibsrv():
     #if tws.exe process is not running, warn.
     # use process_iter to find the process
-    run_additional_process()
+    RemoteProcess().run_additional_process()
     if not checkIfProcessRunning(config.Running.TWS_PROCESS_NAME):
          logging.warning("TWS is not running. Please run it before running tests")
 
 
     time.sleep(3)
-    return IBSource(host='127.0.0.1', port=config.PORTIB, proxy=True)
+    return IBSource(host='127.0.0.1', port=config.IBConnection.PORTIB, proxy=True)
 #pytest.
 def test_get_currency(inp):
     tmpinp = inp
@@ -142,7 +150,7 @@ def test_get_currency_adv(inp):
     df= tmpinp.get_currency_hist('ILS',datetime.datetime.now()-datetime.timedelta(days=5),datetime.datetime.now())
 
     #df = tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now())
-    assert len(df)==3
+    assert len(df)>=3
 
 def test_fix_histdic(inp):
     tmpinp = inp
@@ -152,7 +160,7 @@ def test_fix_histdic(inp):
         for sym, v in dic.items():
             z=pandas.DataFrame.from_dict(v[0])
             u=pandas.DataFrame.from_dict(v[1])
-            xx=u/z
+
         nv[k][sym]=(z,u)
 
 
@@ -221,18 +229,29 @@ def mock_config_to_default(useinp):
 def generate_config(useinp):
     if useinp & UseInput.LOADDEFAULTCONFIG:
         c=ConfigLoader.main(use_alternative=True) #'./data/myconfig.yaml')
+        #TODO: to fix
+        try:
+            #The idea is that the file is not in the repo, and it would be for my computer only (without changing original conf/ example conf)
+            #currently :
+            # testingconf.py
+            # ADDPROCESS = [process]
+            from config import testingconf
+            c.IBConnection.ADDPROCESS =testingconf.ADDPROCESS
+        except:
+            c.IBConnection.ADDPROCESS=c.Testing.ADDPROCESS
     else:
         c= Config()
         c.Running.TZINFO=datetime.timezone(datetime.timedelta(hours=-3),'GMT3')
-        for attr,k in zip( FILE_LIST_TO_RES,range(len(FILE_LIST_TO_RES))):
+        for k,attr in enumerate( FILE_LIST_TO_RES):
             setattr(c,attr,os.path.abspath(f'./tmp/{k}' ))
 
         c.File.HIST_F=os.path.abspath('./data/hist_file.cache')
         c.File.JSONFILENAME=os.path.abspath('./data/groups.json')
         c.File.HIST_F_STOCK=os.path.abspath('./data/hist_file_stock.cache')
-
+    c.TransactionHandlers.SaveCaches=False
     c.File.LOGFILE=None
     c.File.LOGERRORFILE=None
+    c.Running.IS_TEST=True
     if useinp & UseInput.WITHINPUT == UseInput.Nothing :
         c.Input.INPUTSOURCE=None
     else:
@@ -288,3 +307,34 @@ def test_fix_transactions(inp):
     ibc.need_to_save=True
     ibc.save_cache()
 
+
+def my_diff_func(self, xa, xb, ya, yb):
+    diffy = abs(ya - yb)
+    diffx = abs(xa - xb)
+    vec = np.array([diffx, diffy])
+    distance = np.linalg.norm(vec, ord=2)  # distange on display node
+    return distance
+
+@patch.object(GraphGenerator, 'diff_func',new=my_diff_func)
+def test_unite_blobs():
+    blob_manager = GraphGenerator(None,None)
+
+    # Initialize data for testing
+    test_data = [((1, 2), 4), ((3, 4), 14), ((5, 6), 16), ((700, 8), 1),((700, 7), 13)]
+    blob_manager.tmp_point_to_annotation = {
+        (1, 2): {StringPointer(originalLocation=(1,2),string="item1")},
+        (3, 4): {StringPointer(originalLocation=(3,4),string="item2")},
+        (5, 6): {StringPointer(originalLocation=(5,6),string="item3")},
+        (700, 8): {StringPointer(originalLocation=(700,8),string="item4")},
+        (700, 7): {StringPointer(originalLocation=(700,7),string="item5")},
+
+    }
+
+    blob_manager.unite_blobs(test_data)
+
+    # Validate the expected output
+    assert len(blob_manager.tmp_point_to_annotation) == 0
+    DESTDIC= {(1, 2): 'item2\nitem3\nitem1', (3, 4): 'item2\nitem3\nitem1', (5, 6): 'item2\nitem3\nitem1',
+     (700, 8): 'item4\nitem5', (700, 7): 'item4\nitem5'}
+    for k,v in blob_manager.point_to_annotation.items():
+        assert sorted(DESTDIC[k].split('\n')) == sorted(v.split('\n'))

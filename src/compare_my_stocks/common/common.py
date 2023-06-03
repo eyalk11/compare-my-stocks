@@ -4,11 +4,22 @@ import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime,date
-
-
+from functools import wraps
+import time
 import numpy as np
 import pytz
 import psutil
+def timeit(func):
+    @wraps(func)
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        logging.debug(f'Function {func.__name__} Took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
+
 def checkIfProcessRunning(processName):
     '''
     Check if there is any running process that contains the given name processName.
@@ -139,16 +150,18 @@ def neverthrow(f,*args,default=None,**kwargs):
         return default
 
 
-from Pyro5.errors import format_traceback
+from Pyro5.errors import format_traceback, get_pyro_traceback
 
-default_not_detailed_errors = [ConnectionRefusedError ] 
+default_not_detailed_errors = [ConnectionRefusedError,TimeoutError ]
 
-def simple_exception_handling(err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True):
+def simple_exception_handling(err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[]):
     def decorated(func):
         def internal(*args,**kwargs):
             try:
                 from config import config
                 bol=config.Running.STOP_EXCEPTION_IN_DEBUG
+                if config.Running.IS_TEST:
+                    bol = True
             except:
                 bol=False
                 #logging.debug("error loading config in simple exception handling. Probably fine.")
@@ -163,15 +176,26 @@ def simple_exception_handling(err_description=None,return_succ=None,never_throw=
                 try:
                     return func(*args,**kwargs)
                 except Exception as e:
+
                     #TmpHook.GetExceptionHook().emit(e)
+                    if e.__class__ in err_to_ignore:
+                        raise e
 
                     logf=logging.debug if debug else logging.error
+                    tmpst=format_traceback_str(detailed=True)
+
+                    strng="# if you see this in your traceback, you should probably inspect the remote traceback as well"
+                    if strng in tmpst:
+                        logf(("".join(get_pyro_traceback())))
+
                     if err_description:
                         logf(err_description)
-                    if e.__class__ not in default_not_detailed_errors and detailed:
+                    if config.Running.IS_TEST:
+                        logf(format_traceback_str(detailed=detailed)) #just in case
+                    elif e.__class__ not in default_not_detailed_errors and detailed:
                         logf(format_traceback_str(detailed=detailed))
                     else:
-                        logf(e) 
+                        logf(str(e))
 
                     if always_throw:
                         raise e

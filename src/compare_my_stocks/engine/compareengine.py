@@ -142,6 +142,9 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 raise
 
     def call_graph_generator(self, df, just_upd, type,orig_data,adjust_date=False):
+        if df.empty:
+            self.statusChanges.emit(f'No Data For Graph!')
+            return
         def upd(msg,err=False):
             self.statusChanges.emit(msg)
             self._inp.failed_to_get_new_data=None #reset it
@@ -150,9 +153,19 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             else:
                 logging.info(msg)
 
+        plot_data = {}
+        if ((Types.PRECENTAGE | Types.DIFF | Types.COMPARE)  & type) == 0 and self.params.unite_by_group & (UniteType.SUM | UniteType.AVG)==0:
+            try:
+                plot_data= self._tr.get_data_for_graph(list(df.columns),df.index[0],df.index[-1])
+            except:
+                logging.error("failed to get transaction data for graph")
+
+
+
+
         try:
             self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
-                                             just_upd, type,orig_data,adjust_date=adjust_date)
+                                             just_upd, type,orig_data,adjust_date=adjust_date,plot_data=plot_data)
             if self._inp.failed_to_get_new_data:
                 upd(f"Generated Graph with old data  (  Query failed :() ")
             else:

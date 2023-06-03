@@ -44,7 +44,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def refresh_task(self, x, params):
         self.window.last_status.setText('refreshing data')
-        self.graphObj.process(set(x), params,force_upd_all_range=True)
+        self.graphObj.process(set(x), params, force_upd_all_range=True)
         self.update_graph(1, True)
         self.window.last_status.setText('finished refreshing')
 
@@ -78,17 +78,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.placeholder = QGroupBox()
 
     def til_today(self):
-        tim = datetime.now()  
+        tim = datetime.now()
         self.window.enddate.setDateTime(tim)
         self.graphObj.params.todate = tim
         self.update_graph(1)
 
     @simple_exception_handling("visible to selected")
-    def vis_to_selected(self,*args):
-        cols=set(self.graphObj.visible_columns)
+    def vis_to_selected(self, *args):
+        cols = set(self.graphObj.visible_columns)
         if not self.window.use_groups.isChecked():
-            sel :QListWidget  =  self.window.orgstocks
-            torem=[ t for x in range(sel.count()) if (t:=sel.item(x)).text() not in cols]
+            sel: QListWidget = self.window.orgstocks
+            torem = [t for x in range(sel.count()) if (t := sel.item(x)).text() not in cols]
             for t in torem:
                 sel.takeItem(sel.row(t))
 
@@ -248,7 +248,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.groups_changed()
 
     def sort_groups(self):
-        self.window.groups : QListWidget
+        self.window.groups: QListWidget
         self.window.groups.sortItems(order=PySide6.QtCore.Qt.SortOrder.AscendingOrder)
 
     def edit_groups(self):
@@ -272,7 +272,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.attribute_set('limit_to_portfolio', val, reset_ranges=1)
         self.update_stock_list(justorgs=True)
-    def adjust_currency_changed(self, val : PySide6.QtCore.Qt.CheckState):
+
+    def adjust_currency_changed(self, val: PySide6.QtCore.Qt.CheckState):
         self.graphObj.params.adjust_to_currency = False
         self.graphObj.params.adjusted_for_base_cur = False
 
@@ -296,6 +297,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
         self.window.min_crit.valueChanged = safeconnect(self.window.min_crit.valueChanged, (genobs('valuerange')))
         self.window.max_num.valueChanged = safeconnect(self.window.max_num.valueChanged, (genobs('numrange')))
+        self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled = safeconnect(
+            self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled,
+            (genobs('show_transactions_graph')))
         self.window.findChild(QCheckBox, name="limit_to_port").toggled.connect(self.limit_port_changed)
         self.window.findChild(QCheckBox, name="usereferncestock").toggled = safeconnect(
             self.window.findChild(QCheckBox, name="usereferncestock").toggled, (genobsResetForce('use_ext')))
@@ -306,7 +310,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.home_currency_combo.currentTextChanged = safeconnect(
             self.window.home_currency_combo.currentTextChanged, (genobsResetForce('currency_to_adjust')))
         self.window.findChild(QPushButton, name="til_todayBtn").pressed.connect(self.til_today)
-        self.window.findChild(QPushButton,name="vis_to_selectedBtn").pressed.connect(self.vis_to_selected)
+        self.window.findChild(QPushButton, name="vis_to_selectedBtn").pressed.connect(self.vis_to_selected)
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="sortGroupsBtn").pressed.connect(self.sort_groups)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
@@ -436,7 +440,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
                 # self.window.currencygroup.show()
             if tosize:
-                #self.window.frame_9.setMaximumSize(400, 900)
+                # self.window.frame_9.setMaximumSize(400, 900)
                 x.resize(x.maximumSize())
             else:
                 self.window.frame_9.setMaximumSize(400, 400)
@@ -459,7 +463,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.adjust_group.show()
             self.window.main_group.show()
             self.window.note_group.show()
-            #self.window.resize()
+            # self.window.resize()
         elif mode == DisplayModes.NOJUPYTER:
             self.window.buttom_frame.show()
             self.window.adjust_group.show()
@@ -475,4 +479,3 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.current_mode = mode
         timer = QTimer()
         timer.singleShot(10, update_sizes)
-

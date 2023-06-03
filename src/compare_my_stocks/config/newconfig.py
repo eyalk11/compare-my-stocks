@@ -98,11 +98,19 @@ class UIConf:
     MINCOLFORCOLUMS: int = 20
     DEF_FIG_SIZE: tuple = (13.2 * 0.5, 6 * 0.5)
     SIMPLEMODE: int = 0
+    CIRCLE_SIZE_PERCENTAGE: float = 0.05
+    CIRCLE_SIZE :int = 5*72
+
+@paramaware
+@dataclass
+class TestingConf:
+    ADDPROCESS: Optional[Union[str, List]] = field(default_factory=lambda: ["python", "ibsrv.py"])
 
 
 @paramaware
 @dataclass
 class RunningConf:
+    IS_TEST: bool = False
     STOP_EXCEPTION_IN_DEBUG: bool = True
     VERIFY_SAVING: VerifySave = VerifySave.Ask
     DEBUG: int = 1
@@ -161,6 +169,7 @@ class FileConf:
     DATAFILEPTR: str = 'DATA_FILE'
     GRAPHFN: str = 'graphs.json'
     EXPORTEDPORT: str = "exported.csv"
+    IBSRVREADY: str = "ibsrv_ready.txt"
 
 @paramaware
 @dataclass
@@ -185,7 +194,7 @@ class VoilaConf:
 @paramaware
 @dataclass
 class Config:
-
+    Testing: TestingConf = field(default_factory=TestingConf)
     Running: RunningConf = field(default_factory=RunningConf)
     Earnings: EarningsConf = field(default_factory=EarningsConf)
     DefaultParams: DefaultParamsConf = field(default_factory=DefaultParamsConf)
@@ -307,6 +316,7 @@ class ConfigLoader():
             cls.config = cls.load_config(config_file)
         except:
             logging.error(f"Failed loading config file {config_file}. aborting")
+            import traceback;logging.error(traceback.format_exc())
             sys.exit(-1)
         if use_alternative is not None:
             cls.config.Running.USE_ALTERANTIVE_LOCATION=use_alternative
@@ -390,6 +400,7 @@ class ConfigLoader():
         yaml.register_class(DefaultParamsConf)
         yaml.register_class(SymbolsConf)
         yaml.register_class(InputConf)
+        yaml.register_class(TestingConf)
         return yaml
 
 

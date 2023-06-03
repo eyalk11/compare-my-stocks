@@ -10,7 +10,7 @@ class TransactionSource(Enum):
     STOCK=2
     CACHEDIBINSTOCK=3
     
-BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract Source",defaults=[None]*5)
+BuyDictItem=namedtuple("BuyDictItem","Qty Cost Symbol Notes IBContract Source AdjustedPrice",defaults=[None]*5)
 BuyDictType=Dict[datetime,BuyDictItem]
 
 class TransactionHandlerInterface(metaclass=ABCMeta):

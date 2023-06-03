@@ -3,6 +3,7 @@ import asyncio
 import datetime
 import math
 import multiprocessing
+import random
 import threading
 from dataclasses import asdict
 from functools import partial
@@ -36,9 +37,19 @@ def get_ib_source() :
 def make_sure_connected(func):
     def wrapper(self,*args,**kwargs):
         if not self.connected:
-            self.do_connect() 
+            if self.ib is None:
+                self.init()
+            if self.ib is not None:
+                self.do_connect()
         return func(self,*args,**kwargs)
     return wrapper
+class IBSourceRemGenerator:
+    @Pyro5.server.expose
+    def generate(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True):
+
+        ibrem= IBSourceRem(host,port,clientId,readonly)
+        self._pyroDaemon.register(ibrem)
+        return ibrem
 
 class IBSourceRem:
     ConnectedME=None
@@ -46,29 +57,49 @@ class IBSourceRem:
     #     if self.IB:
     #         self.on_disconnect()
     Retries=0
+    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True):
+        if clientId is None:
+            clientId=random.randrange(1, 900)
+        self._connected = False
+        self._host=host
+        self._port=port
+        self._clientid=clientId
+        self._readonly=readonly
+        self.ib=None
+
     @classmethod
     def on_disconnect(cls):
         logging.debug(('disconnected'))
         if cls.Retries>config.IBConnection.MAXIBCONNECTIONRETRIES:
             logging.error("too many retries")
             return
+        IBSourceRem.ConnectedME: IBSourceRem
         if IBSourceRem.ConnectedME:
-            IBSourceRem.ConnectedME.ib.disconnect()
-            IBSourceRem.ConnectedME : IBSourceRem
+            if IBSourceRem.ConnectedME.ib is not None:
+                IBSourceRem.ConnectedME.ib.disconnect()
+                IBSourceRem.ConnectedME.connected=False
+
             try:
-                IBSourceRem.ConnectedME.init(IBSourceRem.ConnectedME._host,IBSourceRem.ConnectedME._port,IBSourceRem.ConnectedME._clientid,IBSourceRem.ConnectedME._readonly)
+                IBSourceRem.ConnectedME.init()
             except:
                 logging.error("error re-connecting")
                 print_formatted_traceback()
 
-
+    @Pyro5.server.expose
+    @property
+    def connected(self):
+        return self._connected
+    @connected.setter
+    def connected(self,value):
+        self._connected=value
+        if value:
+            IBSourceRem.ConnectedME=self
+        else:
+            IBSourceRem.ConnectedME=None
 
     @Pyro5.server.expose
-    def init(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=1,readonly=True):
-        self._host=host
-        self._port=port
-        self._clientid=clientId
-        self._readonly=readonly
+    def init(self):
+
         logging.debug(('init'))
 
         #util.useQt('PySide6')
@@ -80,7 +111,7 @@ class IBSourceRem:
             asyncio.set_event_loop(loop)
         self.ib=IB()
         self.ib.RequestTimeout = 20
-        self.connected=False 
+
         self.do_connect()
 
     def do_connect(self):
@@ -158,6 +189,7 @@ class IBSourceRem:
             logging.debug(f'req matching failed {sym}')
             return []
         logging.debug((ls))
+
         lsa=[]
         count=0
         for c in ls:
@@ -170,6 +202,9 @@ class IBSourceRem:
             dic['derivativeSecTypes'] = c.derivativeSecTypes
             #dic['exchange']= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(c.contract.primaryExchange,c.contract.primaryExchange)
             dic['contractdic']=asdict(c.contract)
+            if c.contract.secType in ['BOND',"FUT","CMDTY","WAR"]:
+                continue
+
             lsa+=[dic]
             if count == results:
                 break
@@ -195,22 +230,28 @@ class IBSourceRem:
                 yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
 
 class IBSource(InputSource):
-    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=1,readonly=True,proxy=True):
+    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True,proxy=True):
         super().__init__()
         if proxy:
-            self.ibrem=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBConnection.IBSRVPORT )
+            self._ibremgenerator=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBConnection.IBSRVPORT )
+            self._ibremgenerator._pyroTimeout = 20
+
+            self.ibrem=self._ibremgenerator.generate( host, port, clientId, readonly)
             self.ibrem.__class__._Proxy__check_owner = lambda self: 1
-            self.ibrem._pyroTimeout = 20
         else:
-            self.ibrem=IBSourceRem()
+            self.ibrem=IBSourceRem(host,port,clientId,readonly)
         try:
-            self.ibrem.init(host,port,clientId,readonly)
+            self.ibrem.init()
         except ConnectionRefusedError:
             logging.error('Source not connected!')
+        except TimeoutError:
+            logging.warn('Got timeout on initialization, will try again.')
 
 
         self.lock = threading.Lock()
-
+    def disconnect(self):
+        self.ibrem._pyroRelease()
+        self.ibrem.connected=False
     def get_current_currency(self, pair):
         res= self.ibrem.get_current_currency(pair)
         if res is None:
@@ -232,7 +273,9 @@ class IBSource(InputSource):
                 traceback.print_exc()
         with self.lock:
             ls=self.ibrem.get_matching_symbols_int(sym,results)
+
             contracts = list(map(tmp, ls))
+
             for x in contracts:
                 det=list(self.ibrem.get_contract_details_ext(x['contractdic']))
                 if len(det)>1 :
@@ -260,7 +303,18 @@ class IBSource(InputSource):
                 x= fun(*args,**kw)
                 logging.log(TRACELEVEL, "after iblock")
                 return x
-        z=getattr(self.ibrem,item)
+        if 'ipython' in item:
+            raise AttributeError(item)
+        if 'getattr' in item:
+            raise AttributeError(item)
+        if 'ibrem' in item:
+            raise Exception('asdasdasd')
+            #raise AttributeError(item)
+        logging.debug(("getatt",item))
+        if hasattr(self.ibrem,item):
+            z=getattr(self.ibrem,item)
+        else:
+            raise AttributeError(item)
         return partial(wrapper,z)
 
 

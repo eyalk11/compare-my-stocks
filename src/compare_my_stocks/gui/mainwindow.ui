@@ -285,7 +285,7 @@
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
-                       <height>78</height>
+                       <height>76</height>
                       </size>
                      </property>
                      <property name="orientation">
@@ -1098,197 +1098,211 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_6">
-                 <item row="0" column="0">
-                  <widget class="QCheckBox" name="start_hidden">
-                   <property name="enabled">
-                    <bool>true</bool>
-                   </property>
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="toolTip">
-                    <string>Start where all graph lines are hidden </string>
-                   </property>
-                   <property name="text">
-                    <string>Start Hidden</string>
-                   </property>
-                   <property name="tristate">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QCheckBox" name="unite_ADDPROT">
-                   <property name="enabled">
-                    <bool>true</bool>
-                   </property>
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Add Portofolio to graph</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="2">
-                  <widget class="QCheckBox" name="auto_update">
-                   <property name="toolTip">
-                    <string>Update in real time. No need to turn it off.</string>
-                   </property>
-                   <property name="text">
-                    <string>Auto Update</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QCheckBox" name="filter_zeros">
-                   <property name="text">
-                    <string>Filter zero values </string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                   <property name="tristate">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1" rowspan="2" colspan="2">
-                  <widget class="QGroupBox" name="groupBox_7">
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>90</height>
-                    </size>
-                   </property>
-                   <property name="title">
-                    <string/>
-                   </property>
-                   <layout class="QGridLayout" name="gridLayout_10">
-                    <item row="2" column="1">
-                     <widget class="QPushButton" name="exportport">
-                      <property name="toolTip">
-                       <string>Export Portfolio which is a combination of IB transactions and manually entered transactions</string>
-                      </property>
-                      <property name="text">
-                       <string>Export Portofolio</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="2">
-                     <widget class="QPushButton" name="refresh_stock">
-                      <property name="toolTip">
-                       <string>Refresh data in the range in the graph. Queries the input source (IB) for data.</string>
-                      </property>
-                      <property name="text">
-                       <string>Refresh Stocks</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="1">
-                     <widget class="QPushButton" name="update_btn">
-                      <property name="toolTip">
-                       <string>Redraw the graph. Sometimes usefull in case of glitches.</string>
-                      </property>
-                      <property name="text">
-                       <string>Update Graph</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="2" column="2">
-                     <widget class="QPushButton" name="vis_to_selectedBtn">
-                      <property name="toolTip">
-                       <string>Visible stocks in graph become the selected stock in list. Only if use groups is off.</string>
-                      </property>
-                      <property name="text">
-                       <string>Visible to selected</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="0" column="3">
-                     <widget class="QPushButton" name="til_todayBtn">
-                      <property name="toolTip">
-                       <string>Set end date to today</string>
-                      </property>
-                      <property name="text">
-                       <string> Until Now</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item row="2" column="3">
-                     <widget class="QPushButton" name="pushButton_3">
-                      <property name="enabled">
-                       <bool>false</bool>
-                      </property>
-                      <property name="text">
-                       <string>PushButton</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QCheckBox" name="unite_ADDTOTAL">
-                   <property name="enabled">
-                    <bool>true</bool>
-                   </property>
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>0</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>16777215</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>Add Total to Graph</string>
-                   </property>
-                   <property name="checked">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
+                <layout class="QHBoxLayout" name="horizontalLayout_3">
+                 <item>
+                  <layout class="QGridLayout" name="gridLayout_6">
+                   <item row="2" column="0">
+                    <widget class="QCheckBox" name="unite_ADDTOTAL">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Add Total to Graph</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="3">
+                    <widget class="QCheckBox" name="auto_update">
+                     <property name="toolTip">
+                      <string>Update in real time. No need to turn it off.</string>
+                     </property>
+                     <property name="text">
+                      <string>Auto Update</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="1">
+                    <widget class="QCheckBox" name="unite_ADDPROT">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Add Portofolio to graph</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="0">
+                    <widget class="QCheckBox" name="filter_zeros">
+                     <property name="text">
+                      <string>Filter zero values </string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                     <property name="tristate">
+                      <bool>false</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="0" column="0">
+                    <widget class="QCheckBox" name="start_hidden">
+                     <property name="enabled">
+                      <bool>true</bool>
+                     </property>
+                     <property name="sizePolicy">
+                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                       <horstretch>0</horstretch>
+                       <verstretch>0</verstretch>
+                      </sizepolicy>
+                     </property>
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>30</height>
+                      </size>
+                     </property>
+                     <property name="toolTip">
+                      <string>Start where all graph lines are hidden </string>
+                     </property>
+                     <property name="text">
+                      <string>Start Hidden</string>
+                     </property>
+                     <property name="tristate">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item row="1" column="1" rowspan="2" colspan="3">
+                    <widget class="QGroupBox" name="groupBox_7">
+                     <property name="maximumSize">
+                      <size>
+                       <width>16777215</width>
+                       <height>90</height>
+                      </size>
+                     </property>
+                     <property name="title">
+                      <string/>
+                     </property>
+                     <layout class="QGridLayout" name="gridLayout_10">
+                      <item row="2" column="1">
+                       <widget class="QPushButton" name="exportport">
+                        <property name="toolTip">
+                         <string>Export Portfolio which is a combination of IB transactions and manually entered transactions</string>
+                        </property>
+                        <property name="text">
+                         <string>Export Portofolio</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="2">
+                       <widget class="QPushButton" name="refresh_stock">
+                        <property name="toolTip">
+                         <string>Refresh data in the range in the graph. Queries the input source (IB) for data.</string>
+                        </property>
+                        <property name="text">
+                         <string>Refresh Stocks</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="1">
+                       <widget class="QPushButton" name="update_btn">
+                        <property name="toolTip">
+                         <string>Redraw the graph. Sometimes usefull in case of glitches.</string>
+                        </property>
+                        <property name="text">
+                         <string>Update Graph</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="2">
+                       <widget class="QPushButton" name="vis_to_selectedBtn">
+                        <property name="toolTip">
+                         <string>Visible stocks in graph become the selected stock in list. Only if use groups is off.</string>
+                        </property>
+                        <property name="text">
+                         <string>Visible to selected</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="0" column="3">
+                       <widget class="QPushButton" name="til_todayBtn">
+                        <property name="toolTip">
+                         <string>Set end date to today</string>
+                        </property>
+                        <property name="text">
+                         <string> Until Now</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item row="2" column="3">
+                       <widget class="QPushButton" name="pushButton_3">
+                        <property name="enabled">
+                         <bool>false</bool>
+                        </property>
+                        <property name="text">
+                         <string>PushButton</string>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item row="0" column="2">
+                    <widget class="QCheckBox" name="checkBox_showtrans">
+                     <property name="text">
+                      <string>Show Transactions</string>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
                </widget>

@@ -52,6 +52,8 @@ class Parameters:
     limit_by : LimitType = LimitType.RANGE
     limit_to_portfolio : bool =False
     resolve_hack: dict = field(default_factory=dict)
+    show_transactions_graph : bool = True
+
     #Resolve hack is meant to provide custom symbol data to the input processor
     #most of the code originally written to work with strings. So, here we input the entire info the dic and treat the symbol as dic.
     #Also useful in restoration.
@@ -105,6 +107,9 @@ class Parameters:
 
     @todate.setter
     def todate(self, value):
+        if not self.transactions_todate:
+            self.transactions_todate = value
+
         value = tzawareness(value, self.transactions_todate)
         self._todate=value
         if (value is None) or (not self.transactions_todate) or  (self.transactions_todate and value > self.transactions_todate):

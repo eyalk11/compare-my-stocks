@@ -132,6 +132,7 @@ class InputSource(InputSourceInterface):
             ls= list(ss)
 
         ls = filter(lambda x: not(x is None or 'symbol' not in x), ls)
+
         exactmatches= list(filter(lambda x: x['symbol'].upper()==sym.upper(),ls))
         if len(exactmatches)>0:
             ls=exactmatches

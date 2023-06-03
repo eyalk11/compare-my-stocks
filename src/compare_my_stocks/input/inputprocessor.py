@@ -21,7 +21,7 @@ from PySide6.QtCore import QRecursiveMutex
 from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan
+    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningscommon import localize_me
@@ -326,21 +326,33 @@ class InputProcessor(InputProcessorInterface):
     def process_hist_internal(self, buyoperations, cur_action, partial_symbols_update, splits, maxsplit):
         def calc_splited(sym,last_time, time):
             def upd_spl():
+                try:
+                    next_one = next(iter(splits[sym]))
+                    if next_one > time:
+                        return False
+                except StopIteration:
+                    cur_split[sym] = None
+                    return False
+
                 cur_split[sym] = splits[sym].popitem(False) if len(splits[sym]) != 0 else None
                 if cur_split[sym] is not None:
                     _cur_splited_bystock[sym] *= cur_split[sym][1]
-            #we want to be after last_time and before time but it is ok to go past time
+                    return True
+                return False
+            #we want to be after last_time and before time but it is NOT! ok to go past time
             if cur_split[sym] is None and sym in splits:
                 upd_spl()
                 if last_time is None:
-                    while cur_split[sym] and cur_split[sym][0] <= time:
-                        upd_spl()
+                    while cur_split[sym]:
+                        if not upd_spl():
+                            break
 
             if not last_time or cur_split[sym] is None:
                 return
 
             while cur_split[sym] and cur_split[sym][0] < last_time:
-                upd_spl()
+                if not upd_spl():
+                    break
 
 
 
@@ -349,7 +361,8 @@ class InputProcessor(InputProcessorInterface):
                 if not config.TransactionHandlers.ReadjustJustIB:
                     _cur_holding_bystock[sym] = _cur_holding_bystock[sym] * cur_split[sym][1]
                     _cur_avg_cost_bystock[sym] = _cur_avg_cost_bystock[sym] / cur_split[sym][1]
-                upd_spl()
+                if not upd_spl():
+                    break
                 logging.debug(f"new avg cost {sym} {_cur_avg_cost_bystock[sym]}  cur_hold {_cur_holding_bystock[sym]}")
             #here we passed time and updated splits.
 
@@ -394,6 +407,9 @@ class InputProcessor(InputProcessorInterface):
                         logging.warn("Very different price")
 
                     self.transaction_handler.update_buydic(cur_action[0], val=x)
+            if (cursplit !=1 ):
+                self.transaction_handler.update_buydic(cur_action[0], val=x._replace(AdjustedPrice = x.Cost / cursplit ))
+
 
             if x[0]*old_holding >= 0: #we increase our holding.
                 _cur_avg_cost_bystock[stock] = (old_holding * old_cost + x[0] * x[1]) / (
@@ -866,8 +882,13 @@ class InputProcessor(InputProcessorInterface):
             t.columns=pd.MultiIndex.from_product([[s], list(t.columns)], names=['Name', 'Symbols'])
             return t
 
+        relevant=set(lmap(lambda x: x[1], self._reg_panel.columns)).intersection(set(dic.keys()))
+        #list(dic.keys())
 
-        multiIndex = pd.MultiIndex.from_product([SymbolsInterface.TOADJUST, list(dic.keys())], names=['Name', 'Symbols'])
+        multiIndex = pd.MultiIndex.from_product([SymbolsInterface.TOADJUST,relevant ], names=['Name', 'Symbols'])
+        if len(multiIndex)==0:
+            logging.debug('no symbols to adjust')
+            return False
         df = pd.DataFrame(index=self._reg_panel.index, columns=multiIndex)
         for x in SymbolsInterface.TOADJUST:
             for k, v in dic.items():
@@ -879,9 +900,8 @@ class InputProcessor(InputProcessorInterface):
                 nn[x] = self._reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
 
         df1 = self._reg_panel[multiIndex]
-        uu = df1.mul(df)
         cols_to_multiply = df1.columns.intersection(df.columns)
-        nn[multiIndex] = df1.drop(cols_to_multiply, axis=1).join(df1[cols_to_multiply].mul(df), how='outer')
+        nn[cols_to_multiply] = df1[cols_to_multiply].mul(df[cols_to_multiply])
 
        # nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
         #nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)

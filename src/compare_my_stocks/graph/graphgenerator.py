@@ -1,12 +1,27 @@
+import dataclasses
 import logging
 import logging
 import math
 import time
+from collections import defaultdict, namedtuple
 from contextlib import suppress
 from datetime import timedelta
-from functools import partial
+from functools import partial, lru_cache
+import random
 
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import matplotlib
+import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.collections import PathCollection
+from matplotlib.legend_handler import HandlerPathCollection
+
+try:
+
+    from common.dolongprocess import DoLongProcessSlots, TaskParams
+except:
+    pass #testing
 
 from common.loghandler import TRACELEVEL
 from engine.compareengineinterface import CompareEngineInterface
@@ -20,20 +35,38 @@ import numpy
 from config import config
 
 USEQT = config.UI.USEQT
-from common.common import Types, simple_exception_handling
-
+from common.common import Types, simple_exception_handling, lmap, selfifnn, ifnn, timeit
 
 # plt.rcParams["figure.autolayout"] = False
+get_val = lambda n: f"({round(n, 2)})" if n is not None else ''
+round_til_2 = lambda n: f"{round(n, 2)}" if n is not None else ''
 
+def mscatter(x,y,ax=None, m=None, **kw):
+    import matplotlib.markers as mmarkers
+    if not ax: ax=plt.gca()
+    sc = ax.scatter(x,y,**kw)
+    if (m is not None) and (len(m)==len(x)):
+        paths = []
+        for marker in m:
+            if isinstance(marker, mmarkers.MarkerStyle):
+                marker_obj = marker
+            else:
+                marker_obj = mmarkers.MarkerStyle(marker)
+            path = marker_obj.get_path().transformed(
+                        marker_obj.get_transform())
+            paths.append(path)
+        sc.set_paths(paths)
 
-@simple_exception_handling(err_description="simple err",never_throw=True)
+    return sc
+
+@simple_exception_handling(err_description="simple err", never_throw=True)
 def show_annotation(sel, cls=None, ax=None, generation=None):
     cls.generation_mutex.lock()
     logging.log(TRACELEVEL, ('show locked'))
     try:
 
         if cls.generation != generation:
-            logging.log(TRACELEVEL, ('ignoring diff generation'))
+            logging.debug(('ignoring diff generation'))
             with suppress(ValueError):
                 sel.annotation.remove()
             for artist in sel.extras:
@@ -41,49 +74,58 @@ def show_annotation(sel, cls=None, ax=None, generation=None):
                     artist.remove()
 
             return
+        if type(sel.artist) == matplotlib.collections.PathCollection:
+            generic=False
 
-        xi = sel.target[0]
-        vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
-        sel.extras.append(vertical_line)
-        date = matplotlib.dates.num2date(xi)
-        names = [k._label for k in ax.legend_.legendHandles]
-        if cls.typ & (Types.PRECENTAGE | Types.DIFF):
-            ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
-            vals_orig=[numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
+            annotation_str = cls.point_to_annotation.get(tuple(sel.target))
+            if annotation_str is None:
+                generic=True
+
         else:
-            vals_orig = [None] * len(names)
+            generic = True
 
-        get_val = lambda n: f"({round(n, 2)})" if n is not None else ''
-        val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
+        if generic:
+            xi = sel.target[0]
+            vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
+            sel.extras.append(vertical_line)
+            date = matplotlib.dates.num2date(xi)
+            names = [k._label for k in ax.legend_.legendHandles]
+            if cls.typ & (Types.PRECENTAGE | Types.DIFF):
+                ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
+                vals_orig = [numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
+            else:
+                vals_orig = [None] * len(names)
 
-        stls = [(f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}', targ)
-                for n, (v1, vis, targ),val_orig in
-                zip(names, val,vals_orig) if vis and not math.isnan(v1)]
+            val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
 
-        annotation_str = '\n'.join(
-         [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%'))) for s,targ in stls ])
+            stls = [(f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}', targ)
+                    for n, (v1, vis, targ), val_orig in
+                    zip(names, val, vals_orig) if vis and not math.isnan(v1)]
 
+            annotation_str = '\n'.join(
+                [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%'))) for s, targ in stls])
 
-        annotation_str += '\n' + str(date.strftime('%Y-%m-%d'))
-
+            annotation_str += '\n' + str(date.strftime('%Y-%m-%d'))
+        sel.annotation.set_horizontalalignment('left')
+        sel.annotation.set_multialignment('left')
         sel.annotation.set_text(annotation_str)
+
         cls.anotation_list += [sel]
 
     finally:
         logging.log(TRACELEVEL, ('show unlock'))
         cls.generation_mutex.unlock()
     # cls._annotation+=ann
-
-
+StringPointer=namedtuple('StringPointer', ['originalLocation', 'string'])
 class GraphGenerator:
     B = (1, 0.5)
 
     def get_visible_cols(self):
-        ax=self._axes
-        vis=[l.get_visible() for l in ax.lines]
+        ax = self._axes
+        vis = [l.get_visible() for l in ax.lines]
         names = [k._label for k in ax.legend_.legendHandles]
-        l=filter(lambda x: x[1] ,zip(names, vis))
-        return list(map(lambda x:x[0],l))
+        l = filter(lambda x: x[1], zip(names, vis))
+        return list(map(lambda x: x[0], l))
 
     @property
     def params(self):
@@ -99,6 +141,11 @@ class GraphGenerator:
         self.generation_mutex = QRecursiveMutex()
         self.generation = 0
         self.anotation_list = []
+        self.point_to_annotation = {}
+        self.lines_dict= {}
+        self.symbols_to_blobs = defaultdict(list)
+        if eng is not None: #for testing
+            self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
 
     def get_title(self):
         type = self.params.type
@@ -140,7 +187,220 @@ class GraphGenerator:
             st += ' compared with ' + self.params.compare_with
         return st
 
-    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data,adjust_date=False):
+    def extract_data(self,plot_data,special=False):
+        @lru_cache(maxsize=1)
+        def getfigheigt():
+            t = self.ax.transAxes.transform([(0, 0), (1, 1)])
+            t = self.ax.get_figure().get_dpi() / (t[1, 1] - t[0, 1]) / 72
+            _, fig_height = self.ax.figure.get_size_inches()
+            return fig_height
+        #allcolors = gencolors(len(plot_data))
+        total = np.array([])
+        fig_height=getfigheigt()
+        for symbol, symbol_data in plot_data.items():
+            mpl_dates, cost, qtys, sources, adjustedpr = zip(*symbol_data)
+            total= np.append(total, np.abs(np.array(qtys) * np.array(cost)))
+
+            typical = np.average(total)
+            if max(total) > 5 * typical:
+                typical = max(total) / 2
+
+        for symbol, symbol_data in plot_data.items():
+            mpl_dates, cost, qtys, sources, adjustedpr = zip(*symbol_data)
+            if len(cost) == 0:
+                continue
+
+            if special:
+                ll=self.lines_dict.get(symbol)
+                if ll is None:
+                    logging.error('no line for %s', symbol)
+                    continue
+                xs = np.array(lmap(matplotlib.dates.date2num,mpl_dates),dtype='float64')
+                yval=numpy.interp(xs, ll._x, ll._y)
+            else:
+                yval = [selfifnn(d, c) for c, d in zip(cost, adjustedpr)]
+
+
+            total = np.abs(np.array(qtys) * np.array(cost))
+
+            # Create a scatter plot
+
+            sizes = ((np.array(total) / typical) * (fig_height * 72)  * config.UI.CIRCLE_SIZE_PERCENTAGE)**2  # 5% of y-range
+            #sizes= np.fmax(sizes,np.array([typical/3 * (fig_height * 72)  * config.UI.CIRCLE_SIZE_PERCENTAGE ] * len(sizes)))
+
+            #
+            # r = next(allcolors)
+            # red = [1, 0.1, 0.1]
+            # reddier = np.convolve(*lmap(np.array, [red, r]), mode='same')
+            # if np.max(reddier) > 1:
+            #     reddier = reddier / np.max(reddier)
+            #colors = [(reddier if (q < 0) else r) for q in qtys]
+            m= ['s' if (q < 0) else 'o' for q in qtys]
+            #see https://stackoverflow.com/questions/14827650/pyplot-scatter-plot-marker-size
+            #want to make same trasactions same size.
+            sizes = [(s*3.14/4)  if (q < 0) else s for q,s in zip(qtys,sizes)]
+            yield m,sizes, mpl_dates, yval, symbol,cost, adjustedpr, qtys, sources
+    @timeit
+    def plot_transaction_info(self, ax, plot_data,special=False):
+
+        # def gencolors(num):
+        #     phi = np.linspace(0, 2 * np.pi, 60)
+        #     rgb_cycle = (np.stack((np.cos(phi),  # Three sinusoids,
+        #                            np.cos(phi + 2 * np.pi / 3),  # 120° phase shifted,
+        #                            np.cos(phi - 2 * np.pi / 3)
+        #                            )).T  # Shape = (60,3)
+        #                  + 1) * 0.5
+        #     for k in range(0,len(rgb_cycle), len(rgb_cycle)//num):
+        #         yield rgb_cycle[k]
+
+        # def random_color():
+        #     red = [1, 0, 0]
+        #     white = [1, 1, 1]
+        #     while True:
+        #         color = [random.random(), random.random(), random.random()]  # Generate a random color
+        #         color = lmap(lambda x: x * 0.8 + 0.1, color)
+        #         if sum([(a - b) ** 2 for a, b in
+        #                 zip(color, white)]) < 0.2:
+        #             continue  # Check if the color is close to white
+        #
+        #         if sum([(a - b) ** 2 for a, b in
+        #                 zip(color, red)]) > 0.2:  # Check if the color is different enough from red
+        #             return color
+
+
+
+        allxy= list()
+
+        try:
+            self._unit_blob_task.mutex.lock()
+
+            self.tmp_point_to_annotation = defaultdict(set)
+
+            for m,sizes, mpl_dates, yval, symbol,cost, adjustedpr, qtys, sources in self.extract_data(plot_data,special=special):
+                mscatter(mpl_dates, yval, s=sizes, m=m , alpha=0.5,label=symbol,ax=ax)
+
+
+                for i, (t, y, a, q, s,curyval,ss) in enumerate(zip(mpl_dates, cost, adjustedpr, qtys, sources,yval,sizes)):
+                    str_with_adj = lambda x, adj: f" {round_til_2(x)} (adj. {round_til_2(adj)} )" if adj else round_til_2(x)
+                    curloc = (matplotlib.dates.date2num(t), curyval)
+                    while curloc in self.tmp_point_to_annotation:
+                        logging.debug("duplicate point %s %s", t, curyval)
+                        curloc=(curloc[0]+ 0.0001, curloc[1])
+                    allxy.append( ( curloc ,ss ))
+
+
+
+                    st= StringPointer(string='%s Date: %s \nCost: %s\nQty: %s\n Source %s\n' % (
+                        r' $\bf{ %s }$' % symbol,
+                        t.strftime(
+                            '%d/%m/%Y %H:%M'),
+                        str_with_adj(y, a),
+                        str_with_adj(q, ifnn(a, lambda: q * (y / a))),
+                        s),originalLocation=curloc)
+
+                    self.tmp_point_to_annotation[curloc].add(st)
+
+        finally:
+            self._unit_blob_task.mutex.unlock()
+
+
+
+
+        self._unit_blob_task.command.emit(TaskParams(params=(allxy,)))
+
+
+    def unite_blobs(self,allxy):
+        allxy.sort(key=lambda x: x[1])
+
+        # Check for overlap and adjust
+        for i in range(0, len(allxy)):
+            for j in range(i + 1, len(allxy)):
+                source , s = allxy[i]
+                destination, d = allxy[j]
+                distance = self.diff_func( source[0],destination[0], source[1], destination[1])
+
+                if (math.sqrt(s) / 2 + math.sqrt(d) / 2) > distance / 72:
+
+                    if len(self.tmp_point_to_annotation[destination]) == 0 and len(self.tmp_point_to_annotation[source]) != 0 :
+                        logging.debug(("really strange",i,j))
+                        self.tmp_point_to_annotation[destination].update(self.tmp_point_to_annotation[source])
+
+                    elif len(self.tmp_point_to_annotation[source])!=0:
+                        self.tmp_point_to_annotation[destination].update(self.tmp_point_to_annotation[source])
+                        self.tmp_point_to_annotation[source] = set()
+                        logging.debug( (f"{source} to {destination}",i,j))
+                        break
+        self.point_to_annotation={}
+        for k, ls in self.tmp_point_to_annotation.items():
+            newstring='\n'.join([it.string for it in ls ])
+            for it in ls:
+                self.point_to_annotation[it.originalLocation]=newstring #let all transfered locations point to the same string
+            self.point_to_annotation[k]=newstring
+
+
+        self.tmp_point_to_annotation= defaultdict(set)
+
+    def diff_func(self, xa, xb, ya, yb):
+        diffy = abs(ya - yb)
+        diffx = abs(xa - xb)
+        origin = self.ax.figure.dpi_scale_trans.transform((0, 0))
+        vec = self.ax.figure.dpi_scale_trans.transform((diffx, diffy))
+        vec = np.array(vec) - np.array(origin)
+        distance = np.linalg.norm(vec, ord=2)  # distange on display node
+        return distance
+    def order_labels(self,ar):
+        handles, labels = ar.get_legend_handles_labels()
+        ar : Axes
+        lines = []
+        line_labels = []
+        collections = []
+        collection_labels = []
+
+        # separate handles into Line2D and PathCollection
+        for h, l in zip(handles, labels):
+            if isinstance(h, matplotlib.lines.Line2D):
+                lines.append(h)
+                line_labels.append(l)
+            elif isinstance(h, matplotlib.collections.PathCollection):
+                #h.set_sizes([config.UI.CIRCLE_SIZE])
+                collections.append(h)
+                collection_labels.append(l)
+
+        # clear handles and labels
+        handles = []
+        labels = []
+
+        # match Line2D and PathCollection with the same label
+        for line_label in line_labels:
+            line_index = line_labels.index(line_label)
+            if line_label in collection_labels:
+                collection_index = collection_labels.index(line_label)
+
+                handles.append((lines[line_index],collections[collection_index]))
+                labels.append(line_label)
+                #handles.append()
+                #labels.append("")  # empty label for collections
+            else:
+                handles.append(lines[line_index])
+                labels.append(line_label)
+
+        return handles, labels
+
+    @simple_exception_handling("Error while generating graph",err_to_ignore=[TypeError],always_throw=True)
+    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data, adjust_date=False,
+                         plot_data=None):
+        def update_prop(handle, orig):
+            marker_size = 36
+            handle : PathCollection
+            handle.update_from(orig)
+            handle.set_sizes([marker_size])
+            import matplotlib.markers as mmarkers
+            marker_obj= mmarkers.MarkerStyle('o')
+            path = marker_obj.get_path().transformed(
+                marker_obj.get_transform())
+            handle.set_paths([path])
+
+
         additional_options = config.UI.ADDITIONALOPTIONS
         self.generation_mutex.lock()
         logging.log(TRACELEVEL, ('generation locked'))
@@ -150,14 +410,14 @@ class GraphGenerator:
 
         # plt.sca(self._axes)
         try:
+            self.remove_all_anotations()
+            self.point_to_annotation = {}
             if not just_upd:
                 self.cur_shown_stock = set()
                 logging.log(TRACELEVEL, ('not  justupdate'))
-                self.remove_all_anotations()
-            if just_upd:
-                logging.log(TRACELEVEL, ('calledreomve!'))
 
-                self.remove_all_anotations()
+            if just_upd:
+                # logging.debug (('calledreomve!'))
                 ar = self._axes
                 dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
 
@@ -172,6 +432,7 @@ class GraphGenerator:
                     dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
                     if USEQT:
                         self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
+
             if ar is None:
                 return
             FACy = 1.2
@@ -182,24 +443,12 @@ class GraphGenerator:
 
             ar.set_title(self.get_title())
 
-            # Put a legend to the right of the current aris
-            if len(cols) >= config.UI.MINCOLFORCOLUMS:
 
-                ar.legend(loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MINCOLFORCOLUMS,
-                          handleheight=2.4, labelspacing=0.05)
-            else:
-                ar.legend(loc='center left', bbox_to_anchor=self.B, handleheight=2.4, labelspacing=0.05)
-            if isline:
-                self.handle_line(ar, starthidden, just_upd)
 
             mfig.autofmt_xdate()
 
-            ax = ar
-            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
-
-            self.cursor = mplcursors.cursor(mfig, hover=True)
-            self.generation += 1
-            self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar, generation=self.generation))
+            self.ax = ar
+            self.ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
             if just_upd:
 
@@ -213,9 +462,38 @@ class GraphGenerator:
 
                     # plt.draw()
             elif self.params.show_graph:
-                logging.debug(('strange'))
+                logging.debug('strange')
                 pass  # plt.show()
+            if plot_data and self.params.show_transactions_graph:
+                #special if not a price graph
+                self.plot_transaction_info(ar, plot_data, special= (not ((Types.PRICE & type) == Types.PRICE or type==Types.ABS)))
             # self.remove_all_anotations()
+            self.cursor = mplcursors.cursor(mfig, hover=True)
+            self.generation += 1
+            self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar, generation=self.generation))
+
+            handles, labels = self.order_labels(ar)
+            self.handles_labels = { l: h for h, l in zip(handles, labels)}
+            # Put a legend to the right of the current aris
+            if len(cols) >= config.UI.MINCOLFORCOLUMS:
+
+                lgnd=ar.legend(handles,labels, loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MINCOLFORCOLUMS,
+                          handleheight=2.4, labelspacing=0.05 , handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
+            else:
+                lgnd=ar.legend(handles,labels, loc='center left', bbox_to_anchor=self.B, handleheight=2.4, labelspacing=0.05 , handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
+            self.blobs_legends = {l._label: l for l in ar.get_legend_handles_labels()[0] if
+                             isinstance(l, matplotlib.collections.PathCollection)}
+
+            self.lines_dict= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.lines.Line2D)}
+            self.lgnd= lgnd
+
+
+
+            if isline:
+                self.handle_line(ar, starthidden, just_upd)
+
+
+
         finally:
             logging.log(TRACELEVEL, ('generation unlocked'))
             self.generation_mutex.unlock()
@@ -234,6 +512,8 @@ class GraphGenerator:
 
         for child in self._axes.get_children():
             if isinstance(child, matplotlib.lines.Line2D):
+                child.remove()
+            if isinstance(child, matplotlib.collections.PathCollection):
                 child.remove()
 
         if getattr(self, 'cursor', None):
@@ -269,10 +549,14 @@ class GraphGenerator:
             if hide:
                 legline.set_alpha(0.2)  # hide
                 origline.set_visible(0)
+                if legline._label in self.blobs_legends:
+                    self.blobs_legends[legline._label].set_alpha(0.2)
             else:
                 self.cur_shown_stock.add(legline._label)  # maybe there
                 legline.set_alpha(1)  # hide
                 origline.set_visible(1)
+                if legline._label in self.blobs_legends:
+                    self.blobs_legends[legline._label].set_alpha(0.5)
         self.last_stock_list = nlst
         return (lined, fig)
 
@@ -311,11 +595,18 @@ class GraphGenerator:
         b = False
         ar = self._axes
         fig = ar.legend_.figure
+        blobs= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.collections.PathCollection)}
+
         for origline, legline in zip(ar.lines, ar.legend_.get_lines()):
             if legline == event.artist:
                 # origline = lined[legline]
                 vis = not origline.get_visible()
                 origline.set_visible(vis)
+                if legline._label in blobs:
+                    blobs[legline._label].set_visible(vis)
+                    #self.handles_labels[legline._label][1].set_visible(vis)
+                    # if legline._label in self.blobs_legends:
+                    #     self.blobs_legends[legline._label].set_alpha(0.2 if vis else 0.5)
 
                 # Change the alpha on the line in the legend so we can see what lines
                 # have been toggled
@@ -339,6 +630,10 @@ class GraphGenerator:
         ar = self._axes
         leg = ar.legend_
         fig = leg.figure
+        for l in ar.get_children():
+            if isinstance(l, matplotlib.collections.PathCollection):
+                l.set_visible(toshow)
+
         for origline, legline in zip(ar.lines, leg.get_lines()):
             if not toshow:
                 legline.set_alpha(0.2)
