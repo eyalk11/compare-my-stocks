@@ -1,6 +1,9 @@
 import asyncio
+import logging
 
 import Pyro5.server
+
+__builtins__.IBSRV=True # A hack to make the system know it is IBSRV (for logging).
 
 from config import config
 from ib.timeoutreg import thingy_class_to_dict, thingy_dict_to_class
@@ -30,4 +33,6 @@ daemon = MyDeamon(host="localhost",port=config.IBConnection.IBSRVPORT)          
 uri = daemon.register(IBSourceRem,objectId="aaa")   # register the greeting maker as a Pyro object
 
 print("Ready. Object uri =", uri)      # print the uri so we can use it in the client later
+
+logging.info("IBSRV Started")
 daemon.requestLoop()                   # start the event loop of the server to wait for calls

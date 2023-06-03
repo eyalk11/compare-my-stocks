@@ -100,8 +100,10 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         if reprocess:
             self._inp.process(symbols_needed)
             adjust_date = True
-
-
+        if hasattr(self.params,'adjust_date'):
+            adjust_date = adjust_date or  self.params.adjust_date
+        else:
+            self.params.adjust_date=0
         with self._datagenlock:
             res= self.call_data_generator()
             if res==2:

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave, TransactionSourceType
 import pytz
 import logging
-from common.loghandler import init_log,dont_print
+from common.loghandler import init_log, dont_print, init_log_default
 import os
 import sys
 from typing import Optional
@@ -72,29 +72,6 @@ class TransactionHandlersConf:
     COMBINEAMOUNTPERC : int  = 10
 
 
-# TRANSACTION_HANDLERS = {
-#     "StockPrices": StockPrices(
-#         Use=UseCache.USEIFAVALIABLE,
-#         CacheSpan=datetime.timedelta(days=40),
-#         File=r'stocksplit.cache',
-#         IgnoreSymbols=set([]),
-#     ),
-#     "IB": IB(
-#         File=r'ibtrans.cache',
-#         CacheSpan=datetime.timedelta(hours=5),
-#         Use=UseCache.USEIFAVALIABLE,
-#         TryToQueryAnyway=False,
-#         DoQuery=True,
-#         FlexToken='YOURTOKEN',
-#         FlexQuery='QUERYNU',
-#     ),
-#     "MyStocks": MyStocks(
-#         File=r'buydicnk.cache',
-#         SrcFile="example_mystock.csv",
-#         PortofolioName="My Portfolio",
-#         Use=UseCache.USEIFAVALIABLE,
-#     ),
-# }
 @dataclass
 class RapidKeyConf:
     X_RapidAPI_Host: Optional[str] = None
@@ -129,13 +106,17 @@ class RunningConf:
     STOP_EXCEPTION_IN_DEBUG: bool = True
     VERIFY_SAVING: VerifySave = VerifySave.Ask
     DEBUG: int = 1
+    START_IBSRV_IN_CONSOLE : bool =False
     CHECKRELOADINTERVAL: Optional[int] = 30 #reload modules
     LASTGRAPHNAME: str = "Last"
     LOADLASTATBEGIN: bool = True
+    IB_LOGFILE: Optional[str] = "iblog.txt"
     LOGFILE: Optional[str] = "log.txt"
     LOGERRORFILE: Optional[str] = "error.log"
     USE_ALTERANTIVE_LOCATION: Optional[bool] = None #to load data from original location
     TWS_PROCESS_NAME : Optional[str] = "tws.exe"
+    SLEEP_FOR_IBSRV_TO_START: int = 5
+    IB_LOGERRORFILE: Optional[str] = "ibsrv_error.log"
 @paramaware
 @dataclass
 class EarningsConf:
@@ -335,11 +316,11 @@ class ConfigLoader():
         if not 'SILENT' in __builtins__ and not  any('testit' in x for x in sys.argv):
             logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
 
-        for x in ['LOGFILE', 'LOGERRORFILE']:
+        for x in ['LOGFILE', 'LOGERRORFILE' ,'IB_LOGFILE','IB_LOGERRORFILE']:
             cls.resolve_it(cls.config.Running, x,use_alternative)
         if not cls.logging_initialized:
             try:
-                init_log(logfile=cls.config.Running.LOGFILE, logerrorfile=cls.config.Running.LOGERRORFILE,debug=cls.config.Running.DEBUG if not dont_print() else False)
+                init_log_default(cls.config)
                 cls.logging_initialized=True
             except:
                 logging.error("initialize logging failed!")

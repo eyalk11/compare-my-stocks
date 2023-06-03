@@ -6,7 +6,7 @@ import math
 from datetime import datetime
 from typing import Tuple
 from collections import OrderedDict
-
+from common.common import selfifnn 
 import numpy as np
 import pandas as pd
 import pytz
@@ -77,17 +77,17 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                 self._buydic=self._stock.buydic if len(self._stock.buydic) else self._ib.buydic
             else:
                 self.combine()
+                logging.info((f" Number of combined transactions {len(self._buydic)}"))
+                bysource = collections.defaultdict(int)
+                for k in self._buydic.values():
+                    bysource[selfifnn(k.Source,'UNK') ] += 1
 
+                logging.info((f" Number of combined transactions by source { { x.name: y for x, y in bysource.items()} }"))
         elif self._ib:
             self._buydic = self._ib.buydic
         elif self._stock:
             self._buydic = self._stock.buydic
-        logging.info((f" Number of combined transactions {len(self._buydic)}"))
         #split transaction by source all posibilities
-        bysource = collections.defaultdict(int)
-        for k in self._buydic.values():
-            bysource[k.Source] += 1
-        logging.info((f" Number of combined transactions by source { { x.name: y for x, y in bysource.items()} }"))
 
 
 
@@ -101,7 +101,6 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             # totsum += v[0] * v[1]
             # print(v[0] * v[1],v.Qty , v.Cost, k, v.Notes, totsum, totholding)
 
-        b=1
 
     def try_fix_dic(self,cur_action : Tuple[datetime,BuyDictItem],last_action :  Tuple[datetime,BuyDictItem],curhold):
         if last_action is None:

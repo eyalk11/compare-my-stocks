@@ -8,7 +8,7 @@ import numpy
 
 from common.paramaware import paramawareold
 from config import config
-from common.common import Types, UseCache, UniteType, LimitType, dictnfilt
+from common.common import Types, UseCache, UniteType, LimitType, dictnfilt,tzawareness 
 from engine.symbols import AbstractSymbol
 
 
@@ -96,6 +96,7 @@ class Parameters:
             self.ext=ext
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass
+        self.adjust_date=0
 
 
     @property
@@ -104,12 +105,13 @@ class Parameters:
 
     @todate.setter
     def todate(self, value):
+        value = tzawareness(value, self.transactions_todate)
         self._todate=value
         if (value is None) or (not self.transactions_todate) or  (self.transactions_todate and value > self.transactions_todate):
             self.transactions_todate = value
 
-        if self._baseclass:
-            self._baseclass.adjust_date=1
+
+        self.adjust_date=1
         pass
 
     @property
@@ -124,8 +126,7 @@ class Parameters:
         self._fromdate = value
         if (not self.transactions_fromdate) or  (self.transactions_fromdate and value < self.transactions_fromdate):
             self.transactions_fromdate = value
-        if self._baseclass:
-            self._baseclass.adjust_date = 1
+        self.adjust_date = 1
         pass
 
 class ParameterError(Exception):

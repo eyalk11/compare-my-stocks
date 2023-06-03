@@ -77,6 +77,12 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.current_mode = DisplayModes.FULL
         self.placeholder = QGroupBox()
 
+    def til_today(self):
+        tim = datetime.now()  
+        self.window.enddate.setDateTime(tim)
+        self.graphObj.params.todate = tim
+        self.update_graph(1)
+
     @simple_exception_handling("visible to selected")
     def vis_to_selected(self,*args):
         cols=set(self.graphObj.visible_columns)
@@ -299,7 +305,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             self.window.findChild(QCheckBox, name="adjust_currency").stateChanged, (self.adjust_currency_changed))
         self.window.home_currency_combo.currentTextChanged = safeconnect(
             self.window.home_currency_combo.currentTextChanged, (genobsResetForce('currency_to_adjust')))
-
+        self.window.findChild(QPushButton, name="til_todayBtn").pressed.connect(self.til_today)
         self.window.findChild(QPushButton,name="vis_to_selectedBtn").pressed.connect(self.vis_to_selected)
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="sortGroupsBtn").pressed.connect(self.sort_groups)

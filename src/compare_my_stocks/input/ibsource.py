@@ -21,10 +21,13 @@ import Pyro5.client
 import Pyro5.api
 from ib import timeoutreg
 WRONG_EXCHANGE = 200
+from ib.remoteprocess import RemoteProcess
 
 def get_ib_source() :
     #ibsource = IBSource()
     proxy= True if config.IBConnection.ADDPROCESS else False
+    if proxy:
+        RemoteProcess().wait_for_read()
     ibsource= IBSource(proxy=proxy)
     return ibsource
 

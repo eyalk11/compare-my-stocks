@@ -122,10 +122,11 @@ from runsit import run_additional_process
 def getremibsrv():
     #if tws.exe process is not running, warn.
     # use process_iter to find the process
+    run_additional_process()
     if not checkIfProcessRunning(config.Running.TWS_PROCESS_NAME):
          logging.warning("TWS is not running. Please run it before running tests")
 
-    run_additional_process()
+
     time.sleep(3)
     return IBSource(host='127.0.0.1', port=config.PORTIB, proxy=True)
 #pytest.

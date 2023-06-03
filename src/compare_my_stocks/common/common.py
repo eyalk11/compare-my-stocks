@@ -275,6 +275,11 @@ def ifnotnan(t, v, els=lambda x: None):
         return v(t)
     else:
         return els(t)
+def selfifnn(t,el):
+    if t is not None:
+        return t
+    else:
+        return el
 
 def ifnn(t, v, els=lambda: None):
     if t is not None:

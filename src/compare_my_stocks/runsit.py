@@ -1,14 +1,13 @@
 import logging
-import os
-import subprocess
 import sys
 import time
 from functools import partial
 
 
-from common.common import InputSourceType, Types, UniteType, need_add_process
+from common.common import Types, UniteType, need_add_process
 from common.loghandler import init_log
 from config import config
+from ib.remoteprocess import RemoteProcess
 
 USEWX, USEWEB, USEQT, SIMPLEMODE = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SIMPLEMODE
 # if USEQT:
@@ -62,15 +61,15 @@ def kill_proc_tree(pid, including_parent=True):
 def func(x=None,tolog=True):
     if tolog:
         logging.info(("killed"))
-    if anotherproc:
+    if proc.proc:
         try:
-            kill_proc_tree(anotherproc.pid)
+            kill_proc_tree(proc.proc.pid)
         except:
             pass
     kill_proc_tree(os.getpid())
     #del anotherproc
 
-anotherproc=None
+proc=RemoteProcess()
 def main():
 
     #logging.getLogger().setLevel(logging.INFO)
@@ -82,7 +81,7 @@ def main():
     #import signal
     #signal.signal(signal.SIGTERM,
     if config.IBConnection.ADDPROCESS and need_add_process(config):
-        run_additional_process()
+        proc.run_additional_process()
 
     pd_ignore_warning()
 
@@ -140,20 +139,3 @@ def main():
         while (1):
             time.sleep(1)
 
-
-def run_additional_process():
-    global anotherproc
-    if type(config.IBConnection.ADDPROCESS)==str:
-        rpath= os.path.abspath(config.IBConnection.ADDPROCESS)
-        if not os.path.exists(rpath):
-            logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
-            return
-        else:
-            logging.info(f"IBSRV path reosolved to {rpath}")
-        v = ["start" ,"/wait" ,rpath]
-    else:
-        v = ["start" ,"/wait" ]+config.IBConnection.ADDPROCESS
-    logging.debug("Running " + str(v))
-    anotherproc = subprocess.Popen(v,shell=True)
-    # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
-    time.sleep(1)
