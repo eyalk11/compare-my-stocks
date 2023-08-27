@@ -79,11 +79,11 @@ class IBSourceRem:
                 IBSourceRem.ConnectedME.ib.disconnect()
                 IBSourceRem.ConnectedME.connected=False
 
-            try:
-                IBSourceRem.ConnectedME.init()
-            except:
-                logging.error("error re-connecting")
-                print_formatted_traceback()
+                try:
+                    IBSourceRem.ConnectedME.init()
+                except:
+                    logging.error("error re-connecting")
+                    print_formatted_traceback()
 
     @Pyro5.server.expose
     @property
@@ -246,6 +246,10 @@ class IBSource(InputSource):
             logging.error('Source not connected!')
         except TimeoutError:
             logging.warn('Got timeout on initialization, will try again.')
+        except Exception as e:
+            logging.error("init failed unknown error. Will keep trying.")
+            print_formatted_traceback(True)
+
 
 
         self.lock = threading.Lock()

@@ -35,7 +35,7 @@ uri = daemon.register(IBSourceRemGenerator,objectId="aaa")   # register the gree
 
 
 print("Ready. Object uri =", uri)      # print the uri so we can use it in the client later
-
+logging.debug("writing ",config.File.IBSRVREADY)
 try:
     open(config.File.IBSRVREADY,'wt').write('ready')
 except:

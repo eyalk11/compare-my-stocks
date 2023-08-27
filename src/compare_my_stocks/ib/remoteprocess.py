@@ -72,20 +72,21 @@ class RemoteProcess:
                 return
             else:
                 logging.info(f"IBSRV path reosolved to {rpath}")
-            if config.Running.START_IBSRV_IN_CONSOLE:
-                v = ["start" ,"/wait" ,rpath]
-            else:
-                v=[rpath]
-
+            v=[rpath]
         else:
-            v = ["start" ,"/wait" ]+config.IBConnection.ADDPROCESS
-            if config.Running.START_IBSRV_IN_CONSOLE:
-                cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
-            else:
-                v= ["cmd","/c"," ".join(v).replace("/wait","/B /wait")]
-                # We create here a new process using start , because apperently, IBSRV has errors even !!! if it is started as a normal process.
-                # the cmd /c is because it fails to find executable named start.
-                cls.proc = cls.launch_without_console(v)
+            v=  config.IBConnection.ADDPROCESS
+
+        v = ["start", "/wait"] + v
+        if config.Running.START_IBSRV_IN_CONSOLE:
+            logging.debug("STARTCONS " + str(v))
+            cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
+        else:
+
+            v= ["cmd","/c"," ".join(v).replace("/wait","/B /wait")]
+            logging.debug("STARTNOTCONSOLE " + str(v))
+            # We create here a new process using start , because apperently, IBSRV has errors even !!! if it is started as a normal process.
+            # the cmd /c is because it fails to find executable named start.
+            cls.proc = cls.launch_without_console(v)
 
         logging.debug("Running " + str(v))
          

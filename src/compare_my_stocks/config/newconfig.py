@@ -16,8 +16,10 @@ import sys
 from typing import Optional
 from common.common import log_conv
 from common.paramaware import paramaware
+
+RESOLVE_FILES = ['LOGFILE', 'LOGERRORFILE', 'IB_LOGFILE', 'IB_LOGERRORFILE']
 FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
-                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT']
+                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT','IBSRVREADY']
 
 @paramaware
 @dataclass
@@ -326,7 +328,7 @@ class ConfigLoader():
         if not 'SILENT' in __builtins__ and not  any('testit' in x for x in sys.argv):
             logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
 
-        for x in ['LOGFILE', 'LOGERRORFILE' ,'IB_LOGFILE','IB_LOGERRORFILE']:
+        for x in RESOLVE_FILES:
             cls.resolve_it(cls.config.Running, x,use_alternative)
         if not cls.logging_initialized:
             try:

@@ -4,6 +4,7 @@ import datetime
 import logging
 import os.path
 import time
+from copy import copy
 from enum import Flag, auto
 from functools import partial
 
@@ -45,6 +46,8 @@ def inp(ibsource):
     tr=TransactionHandlerManager(None)
     tmpinp = InputProcessor(eng, tr,input_source)
     tr._inp=tmpinp
+    tmpinp.process_params= copy(eng.params)
+    tmpinp.process_params.use_cache=UseCache.FORCEUSE
     return tmpinp
 
 
@@ -260,6 +263,11 @@ def generate_config(useinp):
 
     return c
 
+@patch.object(config.config.File, 'HIST_F',new='./data/hist_file.cache')
+def test_org_histdic(inp):
+    tmpinp = inp
+    tmpinp.load_cache(False)
+    assert 1==1
 
 
 
