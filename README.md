@@ -155,23 +155,16 @@ Remark: Really recommended steps, but will work basically without it
 
 ## Configuring Interactive Brokers
  
- 1. Run Trader Workstation and sign in (could be readonly). 
+ 1. Run Trader Workstation and sign in (could be readonly).
+   
  2.  API -> Settings -> Enable ActiveX And Socket Clients
- 
- (You can also check "Read-Only API")
- 
- 3. Edit config files in ~/.compare_my_stocks: 
- 
-   3.1. Set 
-   ```
-   INPUTSOURCE=InputSourceType.IB
-   ```
-   3.2 set PORTIB to "Socket port" 
- 
-   3.3 set REGULAR_ACCOUNT and REGULAR_USERNAME to the IB details (Account starts with U)
+ 3.  Make sure PortIB matches the port in there.
+ (   [Here with pictures](https://github.com/eyalk11/compare-my-stocks/wiki/Configurations#configurations-in-trader-workstation) )
+
+
  
  ## Running Instructions
- 1. Run Trader Workstation and sign in (could be readonly). 
+ 1. Run Trader Workstation and sign in (could be readonly). It could be also done after running the app. 
  2. (For developers) python -m compare_my_stocks 
  2. (For users) run compare-my-stocks.exe
 
