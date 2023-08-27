@@ -127,6 +127,7 @@ class RunningConf:
     TWS_PROCESS_NAME : Optional[str] = "tws.exe"
     SLEEP_FOR_IBSRV_TO_START: int = 5
     IB_LOGERRORFILE: Optional[str] = "ibsrv_error.log"
+    DISPLAY_CONSOLE : bool =False
 @paramaware
 @dataclass
 class EarningsConf:
@@ -209,6 +210,7 @@ class Config:
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
     SEEKINGALPHAHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
+
 
 CONFIGFILENAME = 'myconfig.yaml'
 

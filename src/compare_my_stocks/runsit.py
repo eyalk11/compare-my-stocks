@@ -4,7 +4,7 @@ import time
 from functools import partial
 
 
-from common.common import Types, UniteType, need_add_process
+from common.common import Types, UniteType, need_add_process, simple_exception_handling
 from common.loghandler import init_log
 from config import config
 from ib.remoteprocess import RemoteProcess
@@ -70,14 +70,33 @@ def func(x=None,tolog=True):
     #del anotherproc
 
 proc=RemoteProcess()
+
+@simple_exception_handling(err_description="hide_if_needed")
+def hide_if_needed():
+    if (not config.Running.DISPLAY_CONSOLE) and (not (os.environ.get('PYCHARM_HOSTED') == '1')):
+        import win32gui, win32con
+
+        the_program_to_hide = win32gui.GetForegroundWindow()
+        wndw_title = win32gui.GetWindowText(the_program_to_hide);
+        if "compare-my-stocks.exe" in wndw_title:
+            win32gui.ShowWindow(the_program_to_hide, win32con.SW_HIDE)
+            logging.info('Hidding window')
+        else:
+            logging.info("Not hiding window because of title: " + wndw_title)
+    else:
+        logging.debug("Not hiding")
 def main():
 
     #logging.getLogger().setLevel(logging.INFO)
     init_log()
+    hide_if_needed()
 
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)
     logging.info("Started")
+
+
+
     #import signal
     #signal.signal(signal.SIGTERM,
     if config.IBConnection.ADDPROCESS and need_add_process(config):

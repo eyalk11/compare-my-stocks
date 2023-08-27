@@ -1,0 +1,4 @@
+
+Id,Symbol,Name,Display Symbol,Exchange,Portfolio,Currency,Last Traded Price,Shares Owned,Cost Per Share,Commission,Transaction Date,Transaction Time,Purchase Exchange Rate,Type,Accounting,Accounting Execution Ids,Notes        
+"1","GOOGL","Alphabet Inc.",,"NMS","My Portfolio","USD","97.52","100","142","0.000000000000","2021-10-27 GMT+0300","03:00:00",,"Buy",,,"MYSTOCK:"
+"2","GOOGL","Alphabet Inc.",,"NMS","My Portfolio","USD","97.52","50","114","0.000000000000","2022-07-28 GMT+0300","23:31:00",,"Sell",,,"MYSTOCK:"
