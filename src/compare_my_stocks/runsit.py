@@ -85,11 +85,15 @@ def hide_if_needed():
             logging.info("Not hiding window because of title: " + wndw_title)
     else:
         logging.debug("Not hiding")
-def main():
+def main(console=False,ibconsole=False,debug=False):
 
     #logging.getLogger().setLevel(logging.INFO)
     init_log()
-    hide_if_needed()
+    if not console:
+        hide_if_needed()
+
+    config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
+    config.Running.DEBUG = config.Running.DEBUG  or debug
 
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)

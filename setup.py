@@ -41,7 +41,6 @@ setup(
     {
         "full": [
 "json_editor @ git+https://github.com/eyalk11/json-editor.git#egg=json_editor-1.0.0",
-"investpy @ git+https://github.com/eyalk11/investpy.git#egg=investpy-1.0.7a",
 "nbmanager @ git+https://github.com/jupyter/nbmanager.git",
     ]+requirements
     }

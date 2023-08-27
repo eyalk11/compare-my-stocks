@@ -128,6 +128,7 @@ class RunningConf:
     SLEEP_FOR_IBSRV_TO_START: int = 5
     IB_LOGERRORFILE: Optional[str] = "ibsrv_error.log"
     DISPLAY_CONSOLE : bool =False
+    TITLE: str = "Compare My Stocks"
 @paramaware
 @dataclass
 class EarningsConf:

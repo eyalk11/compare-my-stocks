@@ -1,15 +1,15 @@
 import logging
-# This Python file uses the following encoding: utf-8
-import os
+import os  # This Python file uses the following encoding: utf-8
 from pathlib import Path
 import sys
 
 import PySide6
 from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QFile, Qt, QTimer
+from PySide6.QtCore import QFile, QTimer, Qt
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
+from PySide6 import QtGui
 
 from common.autoreloader import ModuleReloader
 from qtvoila import QtVoila
@@ -28,7 +28,6 @@ except Exception as e :
 
 from superqt import QLabeledDoubleRangeSlider
 
-#from noconflict import classmaker
 from six import with_metaclass
 
 class MainWindow(QMainWindow, FormInitializer):
@@ -64,6 +63,8 @@ class MainWindow(QMainWindow, FormInitializer):
         loader.registerCustomWidget(QtVoila)
         loader.registerCustomWidget(Section)
         path = os.fspath(Path(__file__).resolve().parent / "mainwindow.ui")
+        iconpath = os.fspath(Path(__file__).resolve().parent / "icon.ico")
+
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
 
@@ -71,6 +72,15 @@ class MainWindow(QMainWindow, FormInitializer):
         self.window.closeEvent= self.closeEvent
         ui_file.close()
         self.setCentralWidget(self.window)
+
+        self.setWindowIcon(QtGui.QIcon(iconpath))
+        self.setWindowTitle(config.Running.TITLE)
+        if os.name == 'nt':
+            # This is needed to display the app icon on the taskbar on Windows 7
+            import ctypes
+            myappid = 'MyOrganization.MyGui.1.0.0' # arbitrary string
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
         self.after_load()
 
 

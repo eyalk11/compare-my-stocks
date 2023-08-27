@@ -1,0 +1,1 @@
+powershell.exe -ExecutionPolicy Unrestricted .\internal.ps1

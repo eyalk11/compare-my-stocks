@@ -20,7 +20,23 @@ from compare_my_stocks import main
 import subprocess
 
 
-main()
+if __name__ == "__main__":
+    import argparse
+
+    # Create the parser
+    parser = argparse.ArgumentParser()
+    # Add the console switch
+    parser.add_argument('--console', action='store_true', help='Enable console')
+    # Add the ibconsole switch
+    parser.add_argument('--ibconsole', action='store_true', help='Enable ibconsole')
+    parser.add_argument('--debug', action='store_true', help='Enable debug')
+    # Parse the command-line arguments
+    args = parser.parse_args()
+
+
+
+main(args.console,args.ibconsole,args.debug)
+
 
 
 
