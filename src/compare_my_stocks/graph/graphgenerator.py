@@ -144,6 +144,7 @@ class GraphGenerator:
         self.point_to_annotation = {}
         self.lines_dict= {}
         self.symbols_to_blobs = defaultdict(list)
+
         if eng is not None: #for testing
             self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
 
@@ -416,22 +417,14 @@ class GraphGenerator:
                 self.cur_shown_stock = set()
                 logging.log(TRACELEVEL, ('not  justupdate'))
 
-            if just_upd:
+
                 # logging.debug (('calledreomve!'))
-                ar = self._axes
-                dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
+            ar = self._axes
+            dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
 
-
-            else:
-
-                if not isline:
-                    ar = dt.plot.area(stacked=False)
-                else:
-                    # mplfinance.plot(dt, figsize=(16, 10), type='candle')
-                    ar = self._axes
-                    dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
-                    if USEQT:
-                        self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
+            if just_upd or self.first_time:
+                if USEQT:
+                    self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
 
             if ar is None:
                 return
@@ -454,7 +447,6 @@ class GraphGenerator:
 
                 self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
                 if adjust_date or self.first_time:
-                    self.first_time = False
                     mind = matplotlib.dates.date2num(min(dt.index))
                     maxd = matplotlib.dates.date2num(max(dt.index))
                     if mind < maxd:
@@ -495,6 +487,7 @@ class GraphGenerator:
 
 
         finally:
+            self.first_time = False
             logging.log(TRACELEVEL, ('generation unlocked'))
             self.generation_mutex.unlock()
 

@@ -114,10 +114,16 @@ class Window(QDialog):
     def edited(self):
         sym=self.symbolName.text()
         try:
+            for i in range(2):
+                results,_,_=self._inpsource.get_best_matches(sym.strip(), strict=False)
+                if len(results) == 0:
+                    self._inpsource.get_best_matches.cache_remove_if(lambda f, r, i: r[0] == []) #remove empty results
+                else:
+                    break
+            else:
+                self.choices.setModel(None)
 
-            results,_,_=self._inpsource.get_best_matches(sym, strict=False)
-            if len(results) == 0:
-                return
+
         except:
             print_formatted_traceback()
             return

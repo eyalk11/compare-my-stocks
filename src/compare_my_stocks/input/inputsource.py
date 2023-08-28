@@ -8,6 +8,7 @@ import pandas as pd
 from common.common import InputSourceType, lmap, simple_exception_handling
 from config import config
 from engine.symbols import AbstractSymbol
+from memoization import cached
 
 
 class InputSourceInterface(metaclass=ABCMeta):
@@ -95,7 +96,7 @@ class InputSource(InputSourceInterface):
             logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
-    @lru_cache(maxsize=2000)
+    @cached(max_size=2000,thread_safe=True)
     def get_best_matches(self, sym, results=10, strict=True):
         def fix_valid_exchanges(l):
             def upd(v):
