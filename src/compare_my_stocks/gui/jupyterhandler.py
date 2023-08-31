@@ -166,8 +166,10 @@ class JupyterHandler(FormInterface):
     def launch_notebook(self,filename=None):
         if filename==None:
             filename=config.File.DEFAULTNOTEBOOK
-        from nbmanager import api
-        pids = {x['pid']:x for x in api.list_running_servers()}
+
+        from notebook.notebookapp import list_running_servers
+        pids = {x['pid']:x for x in list_running_servers()}
+
         processes = list(filter(lambda p: p.pid in pids.keys(), psutil.process_iter()))
         dirname=os.path.dirname(filename)
         z=[ pids[p.pid]['url'] for p in processes if 'python' in p.name() and pids[p.pid]['notebook_dir']==dirname]

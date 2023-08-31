@@ -35,14 +35,11 @@ setup(
     license='GNU Affero General Public License v3.0 ',
     author='Eyal Karni',
     author_email='eyalk5@gmail.com',
-    description='A system for visualizing interesting stocks/etf/crypto using matplotlib and QT. Synchronizes transaction data from MyStocksProtoflio.  ',
+    description='A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib.',
     install_requires=minimal_reqs,
     extra_require=
     {
-        "full": [
-"json_editor @ git+https://github.com/eyalk11/json-editor.git#egg=json_editor-1.0.0",
-"nbmanager @ git+https://github.com/jupyter/nbmanager.git",
-    ]+requirements
+        "full": requirements
     }
         ,
     package_dir={'': 'src'},
