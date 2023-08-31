@@ -9,7 +9,7 @@ from collections import defaultdict
 # from datetime import datetime
 import datetime
 from copy import copy
-from functools import lru_cache, reduce
+from functools import lru_cache, reduce, partial
 
 import matplotlib
 import numpy
@@ -21,7 +21,8 @@ from PySide6.QtCore import QRecursiveMutex
 from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    simple_exception_handling, localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap
+    localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap
+from common.simpleexceptioncontext import simple_exception_handling
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningscommon import localize_me
@@ -178,12 +179,14 @@ class InputProcessor(InputProcessorInterface):
 
     @lru_cache
     def get_currency_hist(self, currency, fromdate, enddate):
-        fromdate=conv_date(fromdate,premissive=False)
-        enddate=conv_date(enddate)
+        fromdate=localize_it(conv_date(fromdate,premissive=False))
+        enddate=localize_it(conv_date(enddate))
         pair = ( currency,config.Symbols.BASECUR)
         def get_good_keys():
             zz = self.currency_hist[currency].isna().any(axis=1)
-            return list(self.currency_hist[currency].index[~zz])
+
+            zz= list(self.currency_hist[currency].index[~zz])
+            return lmap(partial(tzawareness, d2=fromdate),zz)
 
         # if isinstance(self.currency_hist,dict):
         #     self.currency_hist=None
@@ -625,7 +628,9 @@ class InputProcessor(InputProcessorInterface):
         if (todate-fromdate).days<TOLLERENCE*5:
             TOLLERENCE=0
         #yields the gaps in data between dates ..
-        dates=sorted(list(map(conv_date,dates)))
+        dates= sorted(lmap(conv_date,dates))
+        #dates = sorted(lmap(partial( tzawareness,d2=fromdate) , dates ))
+
         if len(dates)<2 or dates[-1]<=fromdate:
             yield  fromdate,todate
         reachedfrom=False

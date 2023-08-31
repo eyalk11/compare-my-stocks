@@ -2,7 +2,8 @@ import logging
 import threading
 
 from config import config
-from common.common import NoDataException, MySignal, simple_exception_handling, Types, UniteType, InputSourceType
+from common.common import NoDataException, MySignal, Types, UniteType, InputSourceType
+from common.simpleexceptioncontext import simple_exception_handling
 from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolshandler import SymbolsHandler
 from input.ibsource import get_ib_source

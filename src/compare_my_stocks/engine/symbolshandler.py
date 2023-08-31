@@ -1,7 +1,8 @@
 import json
 import logging
 
-from common.common import simple_exception_handling, Types, UniteType, print_formatted_traceback
+from common.common import Types, UniteType, print_formatted_traceback
+from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.parameters import Parameters
 

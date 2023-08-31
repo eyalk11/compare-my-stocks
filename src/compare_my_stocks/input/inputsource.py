@@ -5,7 +5,8 @@ from functools import lru_cache
 
 import pandas as pd
 
-from common.common import InputSourceType, lmap, simple_exception_handling
+from common.common import InputSourceType, lmap
+from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.symbols import AbstractSymbol
 from memoization import cached

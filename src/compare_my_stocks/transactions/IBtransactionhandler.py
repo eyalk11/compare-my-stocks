@@ -4,6 +4,7 @@ import pickle
 from datetime import datetime, timedelta
 
 from common.common import UseCache
+from common.simpleexceptioncontext import SimpleExceptionContext
 from config import config
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
 from ibflex import client, parser, Trade
@@ -28,15 +29,14 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         logging.info(("running query in IB  for transaction"))
         if not self.DoQuery or not (self.query_id) or not self.token_id:
             return
-        try:
+        response = None
+        with SimpleExceptionContext("IB query failed",never_throw=True):
             response = client.download(self.token_id, self.query_id)
-        except:
-            logging.debug(('err in querying flex'))
-            import traceback;traceback.print_exc()
-            return
-
-        p = parser.parse(response)
-        return  p.FlexStatements[0].Trades
+        if not response:
+            return None
+        with SimpleExceptionContext("IB parse failed",never_throw=True):
+            p = parser.parse(response)
+            return  p.FlexStatements[0].Trades
 
     def try_to_use_cache(self):
         try:

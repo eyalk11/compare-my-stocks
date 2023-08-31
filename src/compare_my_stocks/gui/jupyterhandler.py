@@ -7,7 +7,7 @@ from enum import Enum, auto, IntEnum
 import psutil
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QFrame
 
-from common.common import simple_exception_handling
+from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
 from qtvoila import QtVoila

@@ -364,7 +364,7 @@ class ConfigLoader():
     def load_config(cls,config_file):
         yaml= cls.get_yaml()
 
-        from common.common import simple_exception_handling
+        from common.simpleexceptioncontext import simple_exception_handling
         #make the following a method with decorator
 
         @simple_exception_handling(err_description="excpetion in loading config",always_throw=True)

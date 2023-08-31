@@ -4,7 +4,8 @@ import time
 from functools import partial
 
 
-from common.common import Types, UniteType, need_add_process, simple_exception_handling
+from common.common import Types, UniteType, need_add_process
+from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import init_log
 from config import config
 from ib.remoteprocess import RemoteProcess

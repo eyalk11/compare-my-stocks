@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from common.common import simple_exception_handling, CombineStrategy, localize_it, TransactionSourceType, lmap
+from common.common import CombineStrategy, localize_it, TransactionSourceType, lmap
+from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.symbolsinterface import SymbolsInterface
 from transactions.IBtransactionhandler import get_ib_handler

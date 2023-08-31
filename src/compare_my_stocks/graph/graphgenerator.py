@@ -35,7 +35,8 @@ import numpy
 from config import config
 
 USEQT = config.UI.USEQT
-from common.common import Types, simple_exception_handling, lmap, selfifnn, ifnn, timeit
+from common.common import Types, lmap, selfifnn, ifnn, timeit
+from common.simpleexceptioncontext import simple_exception_handling
 
 # plt.rcParams["figure.autolayout"] = False
 get_val = lambda n: f"({round(n, 2)})" if n is not None else ''

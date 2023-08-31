@@ -7,7 +7,8 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from common.common import LimitType, UniteType, Types, index_of, simple_exception_handling
+from common.common import LimitType, UniteType, Types, index_of
+from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from gui.forminitializerinterface import FormInitializerInterface
 from gui.formobserver import FormObserver

@@ -11,7 +11,8 @@ from functools import partial
 import pandas as pd
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 
-from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, simple_exception_handling
+from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback
+from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
 from input.inputsource import InputSource

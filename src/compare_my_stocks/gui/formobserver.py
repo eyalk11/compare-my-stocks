@@ -12,7 +12,8 @@ from PySide6.QtWidgets import QCheckBox, QListWidget, QPushButton, QDateEdit, QG
 from superqt.sliders._labeled import EdgeLabelMode
 import pytz
 
-from common.common import UniteType, Types, LimitType, SafeSignal, simple_exception_handling
+from common.common import UniteType, Types, LimitType, SafeSignal
+from common.simpleexceptioncontext import simple_exception_handling
 from common.dolongprocess import DoLongProcessSlots, TaskParams
 from config import config
 from engine.compareengineinterface import CompareEngineInterface
