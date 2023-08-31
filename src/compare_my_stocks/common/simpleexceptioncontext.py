@@ -84,6 +84,7 @@ def simple_exception_handling(err_description=None,return_succ=None,never_throw=
             with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore):
                 ret= func(*args,**kwargs)
                 no_exception = True
+
             if not no_exception and return_succ:
                 return return_succ
             return ret

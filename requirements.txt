@@ -27,3 +27,4 @@ memoization~=0.4.0
 notebook
 json-editor-pyside6~=1.0.2
 qt-collapsible-section-pyside6~=0.1.0
+qtvoila~=2.1.0
