@@ -6,7 +6,7 @@ log_cli_format = "%(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelna
 
 [tool.poetry]
 name = "compare-my-stocks"
-version = "1.0.5"
+version = "1.0.6"
 description = "A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib."
 authors = ["eyalk5"]
 readme = "README.md"
@@ -25,7 +25,7 @@ numpy = ">=1.22.0,<1.23.0"
 "ruamel.yaml" = "^0.17.31"
 
 dacite = "^1.8.1"
-python = ">=3.9,<3.11"
+python = ">=3.9,<=3.11"
 
 requests = {version=">=2.28.0", optional= true}
 pyside6 = {version=">=6.2.0,<6.3.0", optional= true}
@@ -53,12 +53,13 @@ json-editor-pyside6 = {version="^1.0.3", optional= true}
 qt-collapsible-section-pyside6 = {version="^0.1.0", optional= true}
 jupyter-server = { version="^2.7.3", optional= true} # needed really by notebook. just to simply finding.
 
+
 voila = {version="*", optional= true}
 
 [tool.poetry.extras]
 full = [ 'flask','requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml']
 mini = ['colorlog','django','numpy','ruamel.yaml']
-jupyter = ['colorlog','django','numpy','ruamel.yaml','voila','ipykernel']
+jupyter = ['colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila']
 
 [build-system]
 requires = ["poetry-core"]

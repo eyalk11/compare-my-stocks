@@ -194,7 +194,7 @@ class VoilaConf:
     DONT_RUN_NOTEBOOK: bool = False
     VOILA_PYTHON_PROCESS_PATH: Optional[str] = None
     AUTO_RESOVLE_VOILA_PYTHON: bool = True
-    MAX_VOILA_WAIT: int = 7
+    MAX_VOILA_WAIT: int = 9
 
 @paramaware
 @dataclass

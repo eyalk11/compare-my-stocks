@@ -1,5 +1,5 @@
 #define MyAppName "Compare My Stocks"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "eyalk11"
 #define MyAppURL "https://github.com/eyalk11/compare-my-stocks"
 #define MyAppExeName "compare-my-stocks.exe"
@@ -36,19 +36,21 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "dist\combined2\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\combined2\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "dist\combined2\data\*"; DestDir: "{code:GetDir|0}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\combined2\data\*"; DestDir: "{code:GetDir|0}"; Flags: ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist uninsneveruninstall
 ;Source: "dist\combined\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ;Source: "install\*"; DestDir: "{app}\install"; Flags: ignoreversion recursesubdirs createallsubdirs
 ;Source: "data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 [Types]
-Name: "full"; Description: "Full installation. Installs compare-my-stocks and python+voila  "
+Name: "full"; Description: "Full installation. Installs compare-my-stocks and python+voila. \
+ "
 Name: "minimal"; Description: "Just compare-my-stocks"
 
 
 [Components]
-Name: "program"; Description: "Program Files"; Types: full minimal; Flags: fixed
-Name: "voila"; Description: "Voila"; Types: full; 
+Name: "program"; Description: "Program's Files"; Types: full minimal; Flags: fixed
+Name: "voila"; Description: "Voila and python for displaying notebooks. \
+Notice that voila requires python 3.9.6 (so it will be installed by default if there is no python, or ask for confirmation if there is. "; Types: full; 
 
 
 [Tasks]

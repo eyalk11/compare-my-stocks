@@ -2,7 +2,7 @@ import logging
 import os  # This Python file uses the following encoding: utf-8
 from pathlib import Path
 import sys
-
+from PySide6 import QtCore
 import PySide6
 from PySide6.QtWidgets import QMainWindow
 from PySide6.QtCore import QFile, QTimer, Qt
@@ -56,6 +56,8 @@ class MainWindow(QMainWindow, FormInitializer):
         self._graphObj = value
 
     def load_ui(self):
+        # Handle high resolution displays:
+
         loader = QUiLoader()
         loader.registerCustomWidget(QDateRangeSlider)
         loader.registerCustomWidget(QLabeledRangeSlider)

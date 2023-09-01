@@ -171,7 +171,7 @@ Remark: Really recommended steps, but will work basically without it
  ## Running Instructions
  1. Run Trader Workstation and sign in (could be readonly). It could be also done after running the app. 
  2. (For developers) python -m compare_my_stocks 
- 2. (For users) run compare-my-stocks.exe
+ 2. (For users) run compare-my-stocks.exe (shortcut)
 
 
 ## Legal Words
@@ -204,4 +204,13 @@ Please consult the corresponding site's license before using this software, and 
 
 ### Remarks 
 
+* This app designed to run on 1920x1080 with 100% scaling. Other settings might be problematic (esp. lower resolution).
+
+* Not tested on OS other than windows. 
+
+* If face problems run with --console to see what is happening 
+
+* If you are developer and don't like the console, run with --noconsole.
+
+* This app / setup creates the folder `~/.compare_my_stocks` and use it to store logs and data. It has algorithm for resolving the different paths. It also read env variable `COMPARE_STOCK_PATH` .
 

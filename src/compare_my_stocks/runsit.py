@@ -72,12 +72,32 @@ class MainClass:
         self.kill_proc_tree(os.getpid())
 
     @simple_exception_handling(err_description="hide_if_needed")
-    def hide_if_needed(self):
-        if (not self.config.Running.DISPLAY_CONSOLE) and (not (os.environ.get('PYCHARM_HOSTED') == '1')):
+    def hide_if_needed(self,force):
+        if not (os.name == 'nt'):
+            logging.info("Not hiding window because it is not windows (not implemented)")
+            return
+        def check_conditions():
+            if (not self.config.Running.DISPLAY_CONSOLE) and (not (os.environ.get('PYCHARM_HOSTED') == '1')):
+                if 'python' in os.path.basename(sys.executable):
+                    logging.info("Not hiding window because it is python")
+                    return False
+                import psutil
+
+                # Get the parent process
+                parent =psutil.Process().parent().name()
+
+                if ('explorer.exe' != parent.lower()):
+                    logging.info("Not hiding window because parent is {}".format(parent))
+                    return False
+                return True
+            else:
+                return False
+
+        if force or check_conditions():
             import win32gui, win32con
             the_program_to_hide = win32gui.GetForegroundWindow()
             wndw_title = win32gui.GetWindowText(the_program_to_hide)
-            if "compare-my-stocks.exe" in wndw_title:
+            if "compare" in wndw_title.lower(): #we don't want cmd etc.
                 win32gui.ShowWindow(the_program_to_hide, win32con.SW_HIDE)
                 logging.info('Hiding window')
             else:
@@ -86,7 +106,7 @@ class MainClass:
             logging.debug("Not hiding")
 
 
-    def main(self, console=False, ibconsole=False, debug=False):
+    def main(self, console=False, ibconsole=False, debug=False,noconsole=False):
         # First we do logging to see what is going on
         #Then init_log to have basic formatting
         # Then we import config. SILENT should be false.
@@ -112,7 +132,7 @@ class MainClass:
 
 
         if not console:
-            self.hide_if_needed()
+            self.hide_if_needed(noconsole)
 
 
         import win32api
@@ -141,10 +161,9 @@ class MainClass:
         if self.USEQT:
             from .gui.mainwindow import MainWindow
             from PySide6.QtWidgets import QApplication
-
-
-
-            
+            from PySide6 import QtCore
+            QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+            QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
             app = QApplication([])
             app.aboutToQuit.connect(self.func)
             # from ib_insync import util

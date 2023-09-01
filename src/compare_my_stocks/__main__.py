@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # Add the console switch
     parser.add_argument('--console', action='store_true', help='Enable console')
+    parser.add_argument('--noconsole', action='store_true', help='Disable console anyway')
     # Add the ibconsole switch
     parser.add_argument('--ibconsole', action='store_true', help='Enable ibconsole')
     parser.add_argument('--debug', action='store_true', help='Enable debug')
@@ -43,4 +44,4 @@ if __name__ == "__main__":
     if args.ibsrv: 
         from compare_my_stocks import ibsrv
     else:
-        MainClass().main(args.console,args.ibconsole,args.debug)
+        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole)
