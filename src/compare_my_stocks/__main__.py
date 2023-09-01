@@ -35,8 +35,9 @@ if __name__ == "__main__":
 
 
 
-main(args.console,args.ibconsole,args.debug)
-
+    main(args.console,args.ibconsole,args.debug)
+else:
+    main(False,False,False)
 
 
 

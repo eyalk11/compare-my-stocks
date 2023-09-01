@@ -88,13 +88,15 @@ def hide_if_needed():
         logging.debug("Not hiding")
 def main(console=False,ibconsole=False,debug=False):
 
-    #logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.INFO if not debug else logging.DEBUG)
+
+    config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
+    config.Running.DEBUG = config.Running.DEBUG or debug
+
     init_log()
     if not console:
         hide_if_needed()
 
-    config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
-    config.Running.DEBUG = config.Running.DEBUG  or debug
 
     import win32api
     win32api.SetConsoleCtrlHandler(func, True)

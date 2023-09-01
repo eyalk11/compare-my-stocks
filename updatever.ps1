@@ -25,26 +25,26 @@ $content = Get-Content -Path $file
 
 # Loop through each line in the content
 for ($i = 0; $i -lt $content.Length; $i++) {
-    $src= 'version = ".*"'
+    $src= '^version = ".*"'
     $dst = 'version = "{0}"' -f $ver
     $content[$i] = $content[$i] -replace $src, $dst
     # Check if the line contains "filevers=(" and "prodvers=("
     $src= 'filevers=\(\d+, \d+, \d+, \d+\)'
 # Replace the line with the arbitrary version
-    $dst = 'filevers=({0},{1},{2},0),' -f ($ver -split '\.') 
+    $dst = 'filevers=({0},{1},{2},0)' -f ($ver -split '\.') 
     $content[$i] = $content[$i] -replace $src, $dst
 
     $src= 'prodvers=\(\d+, \d+, \d+, \d+\)'
 # Replace the line with the arbitrary version
-    $dst = 'prodvers=({0},{1},{2},0),' -f ($ver -split '\.') 
+    $dst = 'prodvers=({0}, {1}, {2}, 0)' -f ($ver -split '\.') 
     $content[$i] = $content[$i] -replace $src, $dst
 
-    $src= "StringStruct\('ProductVersion', '\d+\.\d+\.\d+\.\d+'\)"
+    $src= "StringStruct\('ProductVersion', '\d+\.\d+\.\d+\'\)"
 # Replace the line with the arbitrary version
     $dst = "StringStruct('ProductVersion', '$ver')"
     $content[$i] = $content[$i] -replace $src, $dst
 
-    $src= "StringStruct\('FileVersion', '\d+\.\d+\.\d+\.\d+'\)"
+    $src= "StringStruct\('FileVersion', '\d+\.\d+\.\d+\'\)"
 # Replace the line with the arbitrary version
     $dst = "StringStruct('FileVersion', '$ver')"
     $content[$i] = $content[$i] -replace $src, $dst

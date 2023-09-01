@@ -23,7 +23,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='compare-my-stocks',
-    version = "1.0.1",
+version = "1.0.3",
     packages=find_packages(where="src"),
     data_files=[
         ( "compare_my_stocks/data" , data_files),
