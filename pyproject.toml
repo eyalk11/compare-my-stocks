@@ -6,7 +6,7 @@ log_cli_format = "%(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelna
 
 [tool.poetry]
 name = "compare-my-stocks"
-version = "1.0.3"
+version = "1.0.5"
 description = "A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib."
 authors = ["eyalk5"]
 readme = "README.md"
@@ -14,7 +14,9 @@ packages = [{include = "compare_my_stocks", from = "src"}]
 include = [  "src/compare_my_stocks/data",
 "src/compare_my_stocks/gui/mainwindow.ui",
 "src/compare_my_stocks/common/impacketLICENSE"]
-
+exclude = [
+    "tests/not_this_dir"
+]
 
 [tool.poetry.dependencies]
 colorlog = ">=6.7.0,<6.8.0"

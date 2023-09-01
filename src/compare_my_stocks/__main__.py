@@ -12,11 +12,17 @@ if 'ipykernel_launcher' in sys.argv:
 
 #cheating...
 try:
+    __builtins__['SILENT']=False
+except:
+    pass
+#cheating...
+try:
     __builtins__.SILENT=False
 except:
     pass
 
-from compare_my_stocks import main
+
+from compare_my_stocks import MainClass
 import subprocess
 
 
@@ -30,14 +36,11 @@ if __name__ == "__main__":
     # Add the ibconsole switch
     parser.add_argument('--ibconsole', action='store_true', help='Enable ibconsole')
     parser.add_argument('--debug', action='store_true', help='Enable debug')
+    parser.add_argument('--ibsrv', action='store_true', help='Use ibsrv instead')
     # Parse the command-line arguments
     args = parser.parse_args()
 
-
-
-    main(args.console,args.ibconsole,args.debug)
-else:
-    main(False,False,False)
-
-
-
+    if args.ibsrv: 
+        from compare_my_stocks import ibsrv
+    else:
+        MainClass().main(args.console,args.ibconsole,args.debug)

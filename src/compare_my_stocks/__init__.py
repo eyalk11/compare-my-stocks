@@ -12,7 +12,8 @@ sys.path.insert(0,
 # from . import ib
 # from . import config
 from . import jupyter
-from .runsit import main,USEWX, USEWEB, USEQT, SIMPLEMODE
+from .runsit import MainClass
 #from config import config
 import logging
 #import common
+

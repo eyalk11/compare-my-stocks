@@ -21,7 +21,8 @@ from ib_insync import IB,util
 import Pyro5.server
 import Pyro5.client
 import Pyro5.api
-from ib import timeoutreg
+from ib import timeoutreg #register timeout error. don't remove!
+
 WRONG_EXCHANGE = 200
 from ib.remoteprocess import RemoteProcess
 
@@ -244,9 +245,9 @@ class IBSource(InputSource):
         try:
             self.ibrem.init()
         except ConnectionRefusedError:
-            logging.error('Source not connected!')
+            logging.error('TWS not connected!')
         except TimeoutError:
-            logging.warn('Got timeout on initialization, will try again.')
+            logging.warn('Got timeout on initialization (TWS), will try again.')
         except Exception as e:
             logging.error("init failed unknown error. Will keep trying.")
             print_formatted_traceback(True)

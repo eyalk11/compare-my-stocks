@@ -7,6 +7,7 @@ from Pyro5.errors import format_traceback
 
 default_not_detailed_errors = [ConnectionRefusedError,TimeoutError ]
 
+#don't import config here
 
 def format_traceback_str(*args,detailed=True):
     return (''.join([x[:500] for x in format_traceback(*args,detailed=detailed)] ))

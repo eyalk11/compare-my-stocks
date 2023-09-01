@@ -24,16 +24,20 @@ class RemoteProcess:
 
         logging.info("Waiting for IBSourceRem to be ready")
         if not cls.no_ready_file:
-            while 1:
+            for k in range (config.Running.SLEEP_FOR_IBSRV_TO_START*10*3):
                 time.sleep(0.1)
                 try:
                     if open(config.File.IBSRVREADY, 'rt').read() == 'ready':
                         break
                 except:
                     pass
+            else:
+                logging.warn("IBSourceRem might not be ready")
+                return
 
         else:
             time.sleep(config.Running.SLEEP_FOR_IBSRV_TO_START)
+
         logging.info("IBSourceRem is ready")
         #     return
         #
@@ -69,7 +73,7 @@ class RemoteProcess:
             rpath= os.path.abspath(config.IBConnection.ADDPROCESS)
             if not os.path.exists(rpath):
                 logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
-                return
+                return False
             else:
                 logging.info(f"IBSRV path reosolved to {rpath}")
             v=[rpath]
@@ -89,6 +93,7 @@ class RemoteProcess:
             cls.proc = cls.launch_without_console(v)
 
         logging.debug("Running " + str(v))
+        return True
          
 
         # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])

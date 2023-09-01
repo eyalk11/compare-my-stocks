@@ -31,7 +31,7 @@ for ($i = 0; $i -lt $content.Length; $i++) {
     # Check if the line contains "filevers=(" and "prodvers=("
     $src= 'filevers=\(\d+, \d+, \d+, \d+\)'
 # Replace the line with the arbitrary version
-    $dst = 'filevers=({0},{1},{2},0)' -f ($ver -split '\.') 
+    $dst = 'filevers=({0}, {1}, {2}, 0)' -f ($ver -split '\.') 
     $content[$i] = $content[$i] -replace $src, $dst
 
     $src= 'prodvers=\(\d+, \d+, \d+, \d+\)'

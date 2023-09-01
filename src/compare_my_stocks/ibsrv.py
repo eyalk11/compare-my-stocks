@@ -3,7 +3,11 @@ import logging
 
 import Pyro5.server
 
-__builtins__.IBSRV=True # A hack to make the system know it is IBSRV (for logging).
+try:
+    __builtins__['IBSRV']=True # A hack to make the system know it is IBSRV (for logging).
+except:
+    __builtins__.IBSRV = True
+
 
 from config import config
 from ib.timeoutreg import thingy_class_to_dict, thingy_dict_to_class

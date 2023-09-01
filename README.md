@@ -22,6 +22,9 @@ For instance:
 
 (The difference in the change percentage-wise since 04/01/2021 between ESYJY and the nasdaq is ~48% at this point at time, signficantly lower than the airlines as a group. This is example of an advanced usage.)
 
+This app is basically BYOK. Currently, it uses solely Interactive Brokers for market data (though it is not hard to add another data input source). 
+So unfortunately, **the app is much less usable for users who don't have Interactive Brokers account** (they can still see the sample data and check it). 
+
 ##  Features 
 ⚕️	Planned
 ✅ Working 
@@ -131,14 +134,13 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 ### For Developers 
 
- 1. pip install --no-binary  :all: git+https://github.com/eyalk11/compare-my-stocks.git (or pip install -r requirments.txt)
- 2. Install [Qt6](https://www.qt.io/download) If you want to edit ui file in designer
-
-* Depends on json_editor - https://github.com/eyalk11/json-editor 
+ 1. pip install compare-my-stocks[full] 
+ 2. consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)
+ 3. You may want to copy data folder to your workspace.
 
 ### For Users
 
- 1. Extract compare-my-stocks.zip from the releases
+ Use setup 
 
 ### For both 
 Remark: Really recommended steps, but will work basically without it

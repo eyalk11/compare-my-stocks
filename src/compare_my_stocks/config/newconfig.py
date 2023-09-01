@@ -89,6 +89,7 @@ class IBConnectionConf:
     MAXIBCONNECTIONRETRIES: int = 3
     REGULAR_ACCOUNT: Optional[str] = None
     REGULAR_USERNAME: Optional[str] =None
+    USE_PYTHON_IF_NOT_RESOLVE: bool = True
 @paramaware
 @dataclass
 class UIConf:
