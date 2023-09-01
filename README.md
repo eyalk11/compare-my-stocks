@@ -5,6 +5,11 @@
 Visualize the performance of stocks in your portfolio or that  you are interested in.
 There is maximal control over charts, and a variaty of comparision options. 
 
+This app is basically BYOK. Currently, it uses solely Interactive Brokers for market data. 
+
+So unfortunately, **the app is much less usable for users who don't have Interactive Brokers account** (they can still see the sample data and check it). 
+Though, I might add BYOK source in the future.
+
 You can divide the stocks into sectors, and compare the performance of different sector! 
 
 For instance: 
@@ -22,8 +27,6 @@ For instance:
 
 (The difference in the change percentage-wise since 04/01/2021 between ESYJY and the nasdaq is ~48% at this point at time, signficantly lower than the airlines as a group. This is example of an advanced usage.)
 
-This app is basically BYOK. Currently, it uses solely Interactive Brokers for market data (though it is not hard to add another data input source). 
-So unfortunately, **the app is much less usable for users who don't have Interactive Brokers account** (they can still see the sample data and check it). 
 
 ##  Features 
 ⚕️	Planned
@@ -136,23 +139,23 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
  1. pip install compare-my-stocks[full] 
  2. consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)
- 3. You may want to copy data folder to your workspace.
+ 3. better to copy  `site-packages\compare_my_stocks\data` to `~/.compare_my_stocks` 
+(Notice that it displays a console with running log) 
 
 ### For Users
 
- Use setup 
+ 1. Use setup
+ 2. If something goes wrong, you can view console with `compare_my_stocks.exe --console`.  Recommended. There is also log file. 
 
 ### For both 
 Remark: Really recommended steps, but will work basically without it
 
- 3. Look at myconfig.py and set it as you wish .
+ 3. Inspect at `data/myconfig.yaml` and set it as you wish ( or `~/.compare_my_stocks/myconfig.yaml` ).
 
     Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
- 4. Follow the steps for configuring IB 
+ 
+ 4. Follow the next steps for configuring IB 
 
-### Remarks 
-* **Not fully tested, and prerelease. Some features may not work correctly.** 
-* *This program is quite complex and requires non-trivial configuration to work with it properly. I haven't got the time to make it completely user-friendly, so I'd say it requires some developer's mentality as things stand now.*
 
 
 ## Configuring Interactive Brokers
@@ -188,11 +191,17 @@ Please consult the corresponding site's license before using this software, and 
 5. Investpy is not supported currently. So you have to have an account in interactive brokers to be able to work properly with it.
 
 ## Final words
+
+* **Not fully tested, and prerelease. Some features may not work correctly (but most are just fine):) **
+   
 * This is being developed in QT with matplotlib amd pandas. I tried to use advanced features of pandas and numpy for fast calculation(sometimes).
 
 * I belive this software provides many useful features that are usually paid for. This despite developing this in a short period, on my spare time. I would very much apperiate community contribution. And welcome you to contribute, send bugs and discuss (will open gitter when appropriate). 
 
-* The controls should be self explantory... Try it. 
+* The controls should be self explantory... Try it. Some things requres some developer mentality.. 
  
 * Feel free to contact me at eyalk5@gmail.com.
+
+### Remarks 
+
 
