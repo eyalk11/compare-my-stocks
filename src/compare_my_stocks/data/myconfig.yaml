@@ -49,6 +49,8 @@ Running: !RunningConf
   LOGFILE: log.txt
   STOP_EXCEPTION_IN_DEBUG: true
   VERIFY_SAVING: !VerifySave Ask
+  TRY_TO_SCALE_DISPLAY: true
+  
 SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: 'seeking-alpha.p.rapidapi.com', X_RapidAPI_Key: null}
 StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: 'stock-prices2.p.rapidapi.com', X_RapidAPI_Key: null}
 Symbols: !SymbolsConf

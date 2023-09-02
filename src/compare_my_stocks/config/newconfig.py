@@ -130,6 +130,7 @@ class RunningConf:
     IB_LOGERRORFILE: Optional[str] = "ibsrv_error.log"
     DISPLAY_CONSOLE : bool =False
     TITLE: str = "Compare My Stocks"
+    TRY_TO_SCALE_DISPLAY : bool = True
 @paramaware
 @dataclass
 class EarningsConf:

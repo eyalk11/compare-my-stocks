@@ -150,9 +150,10 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 ### For both 
 Remark: Really recommended steps, but will work basically without it
 
- 3. Inspect at `data/myconfig.yaml` and set it as you wish ( or `~/.compare_my_stocks/myconfig.yaml` ).
+ 3. Inspect  `data/myconfig.yaml` and set it as you wish ( or `~/.compare_my_stocks/myconfig.yaml` ).
 
     Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
+    (The app comes with an example) 
  
  4. Follow the next steps for configuring IB 
 
@@ -173,6 +174,19 @@ Remark: Really recommended steps, but will work basically without it
  2. (For developers) python -m compare_my_stocks 
  2. (For users) run compare-my-stocks.exe (shortcut)
 
+## Remarks 
+
+* This app designed to run on 1920x1080.  lower resolution is generally problematic. If looks very  bad , set `TRY_TO_SCALE_DISPLAY` in config to False.
+
+* Not tested on OS other than windows. 
+
+* If face problems run with --console to see what is happening 
+
+* If you are developer and don't like the console, run with --noconsole.
+
+* This app / setup creates the folder `~/.compare_my_stocks` and use it to store logs and data. It has algorithm for resolving the different paths. It also read env variable `COMPARE_STOCK_PATH` .
+
+* If you see "Generated Graph :)" and no graph, try to rescale app. There is some bug there.
 
 ## Legal Words
 
@@ -201,16 +215,4 @@ Please consult the corresponding site's license before using this software, and 
 * The controls should be self explantory... Try it. Some things requres some developer mentality.. 
  
 * Feel free to contact me at eyalk5@gmail.com.
-
-### Remarks 
-
-* This app designed to run on 1920x1080 with 100% scaling. Other settings might be problematic (esp. lower resolution).
-
-* Not tested on OS other than windows. 
-
-* If face problems run with --console to see what is happening 
-
-* If you are developer and don't like the console, run with --noconsole.
-
-* This app / setup creates the folder `~/.compare_my_stocks` and use it to store logs and data. It has algorithm for resolving the different paths. It also read env variable `COMPARE_STOCK_PATH` .
 

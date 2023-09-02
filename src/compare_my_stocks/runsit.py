@@ -3,6 +3,9 @@ import sys
 import time
 from functools import partial
 
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QSplashScreen
+
 
 #nothing here uses config. important
 
@@ -105,6 +108,18 @@ class MainClass:
         else:
             logging.debug("Not hiding")
 
+    def get_scale_factor(self):
+        import ctypes
+        #scaleFactor = ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100
+        #g1= 1/scaleFactor
+
+        user32 = ctypes.windll.user32
+        screensize = user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+        if abs( screensize[0] /screensize[1] - 1920/1080)>0.01:
+            logging.warning("Screen resolution is not 1920x1080. This may cause problems. Adapting width.")
+
+
+        return round(min(screensize[0]/1920,screensize[1]/1080),2)
 
     def main(self, console=False, ibconsole=False, debug=False,noconsole=False):
         # First we do logging to see what is going on
@@ -162,9 +177,18 @@ class MainClass:
             from .gui.mainwindow import MainWindow
             from PySide6.QtWidgets import QApplication
             from PySide6 import QtCore
+
+            import os
+            if config.Running.TRY_TO_SCALE_DISPLAY:
+                os.environ['QT_SCALE_FACTOR']='%s' % self.get_scale_factor()
+                logging.debug("QT_SCALE_FACTOR is %s" % os.environ['QT_SCALE_FACTOR'])
+
             QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-            QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
             app = QApplication([])
+            pixmap = QPixmap("gui/splash.png")
+            splash = QSplashScreen(pixmap)
+            splash.show()
+            app.processEvents()
             app.aboutToQuit.connect(self.func)
             # from ib_insync import util
             # util.useQt()
