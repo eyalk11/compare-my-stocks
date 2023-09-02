@@ -13,6 +13,7 @@ from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolsinterface import SymbolsInterface
 from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
+from common.common import lmap 
 
 
 class DataGenerator(DataGeneratorInterface):
@@ -53,7 +54,7 @@ class DataGenerator(DataGeneratorInterface):
         fromdateNum = matplotlib.dates.date2num(self.params.fromdate) if self.params.fromdate else 0
         todateNum = matplotlib.dates.date2num(self.params.todate) if self.params.todate else float('inf')
 
-        df, self.used_unitetype = self.get_df_by_type(type, self.params.unite_by_group)
+        df, self.used_unitetype , self.additional_dfs = self.get_df_by_type(type, self.params.unite_by_group)
         self.orig_df = df
         self.used_type = type
         # self.to_use_ext = use_ext and self.params.use_ext
@@ -116,11 +117,13 @@ class DataGenerator(DataGeneratorInterface):
         self.tmp_colswithoutext = set(colswithoutext).intersection(df.columns)
         self.after_filter_data = fulldf.copy()
 
+        #make d be the same columns and index as df 
+        if self.additional_dfs:
+            self.additional_dfs_fixed = lmap(lambda d:  d.reindex(index=df.index, columns=df.columns), self.additional_dfs) 
 
         return arr, df, self.used_type, fulldf
 
-    def get_df_by_type(self, div, unitetyp):
-
+    def get_panel(self, unitetyp):
         unitetypeff = unitetyp
         if self.params.adjust_to_currency and self.params.currency_to_adjust:
             if self.params.currency_to_adjust != config.Symbols.BASECUR:
@@ -132,8 +135,20 @@ class DataGenerator(DataGeneratorInterface):
             df = self._eng.input_processor.adjusted_panel
         else:
             df = self._eng.input_processor.reg_panel
+        return df, unitetypeff
 
 
+
+    def get_df_by_type(self, div, unitetyp):
+
+        df, unitetypeff = self.get_panel(unitetyp)
+
+
+
+        if div & (Types.PROFIT | Types.RELPROFIT | Types.TOTPROFIT | Types.VALUE):
+            additionaldfs = [ df['holding_by_stock'], df['alldates'] ]
+        else:
+            additionaldfs = None
 
         if div & Types.PROFIT:
             df = df['unrel_profit']
@@ -167,7 +182,8 @@ class DataGenerator(DataGeneratorInterface):
                 unitetypeff = unitetypeff & ~UniteType.ADDPROT
         if df.isnull().all(axis=None):
             raise NoDataException()
-        return df.copy(), unitetypeff
+
+        return df.copy(), unitetypeff , additionaldfs
 
     def unite_groups(self, df):
         def filt(x, df):

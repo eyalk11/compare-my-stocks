@@ -116,14 +116,14 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             df = self._datagen.df
             type = self._datagen.type
             before_act = self._datagen.df_before_act
-            self.call_graph_generator(df, just_upd,type,before_act , adjust_date= adjust_date )
+            self.call_graph_generator(df, just_upd,type,before_act , adjust_date= adjust_date , additional_df=self._datagen.additional_dfs_fixed) 
 
     @simple_exception_handling(err_description="Exception in generation")
     def call_data_generator(self,auto_reprocess=True):
         b=0
         for tries in range(2):
             if not self._datagen.verify_conditions():
-                self.statusChanges.emit(f'Graph Invalid! Check parameters')
+                self.statusChanges.emit('Graph Invalid! Check parameters')
                 return False
             try:
                 self._datagen.generate_data()
@@ -135,14 +135,14 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                     b=1
                     continue
                 else:
-                    self.statusChanges.emit(f'No Data For Graph!')
+                    self.statusChanges.emit('No Data For Graph!')
                     logging.debug(('no data'))
                     return False
             except Exception as e:
                 self.statusChanges.emit(f'Exception in generation: {e}')
                 raise
 
-    def call_graph_generator(self, df, just_upd, type,orig_data,adjust_date=False):
+    def call_graph_generator(self, df, just_upd, type,orig_data,adjust_date=False,additional_df=None):
         if df.empty:
             self.statusChanges.emit(f'No Data For Graph!')
             return
@@ -166,7 +166,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
         try:
             self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
-                                             just_upd, type,orig_data,adjust_date=adjust_date,plot_data=plot_data)
+                                             just_upd, type,orig_data,adjust_date=adjust_date,plot_data=plot_data,additional_df=additional_df)
             if self._inp.failed_to_get_new_data:
                 upd(f"Generated Graph with old data  (  Query failed :() ")
             else:

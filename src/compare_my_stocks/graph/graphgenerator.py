@@ -94,17 +94,30 @@ def show_annotation(sel, cls=None, ax=None, generation=None):
             if cls.typ & (Types.PRECENTAGE | Types.DIFF):
                 ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
                 vals_orig = [numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
+
+                
             else:
                 vals_orig = [None] * len(names)
+                
 
             val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
+            basic_str= lambda n,v1,val_orig   :     (f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}')
+            hold_str = lambda hold,price: f'holding: {round_til_2(hold)} price: {round_til_2(price)}'
 
-            stls = [(f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}', targ)
-                    for n, (v1, vis, targ), val_orig in
-                    zip(names, val, vals_orig) if vis and not math.isnan(v1)]
+            if cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT):
+                ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
+                holding_orig = [numpy.interp(xi, ls, cls.additional_df[0][n]) for n in names]
+                price_orig = [numpy.interp(xi, ls, cls.additional_df[1][n]) for n in names]
+                stls = [ ( basic_str(n,v1,val_orig) , hold_str(hold,price) ,targ)
+                        for n, (v1, vis, targ), val_orig,hold,price in
+                        zip(names, val, vals_orig, holding_orig,price_orig) if vis and not math.isnan(v1)]
+            else:                 
+                stls = [ (basic_str(n,v1,val_orig) ,'',targ)
+                        for n, (v1, vis, targ), val_orig in
+                        zip(names, val, vals_orig) if vis and not math.isnan(v1)]
 
             annotation_str = '\n'.join(
-                [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%'))) for s, targ in stls])
+                [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%')+ ( '\n'+additional if additional else '') )) for s,additional, targ in stls])
 
             annotation_str += '\n' + str(date.strftime('%Y-%m-%d'))
         sel.annotation.set_horizontalalignment('left')
@@ -390,7 +403,7 @@ class GraphGenerator:
 
     @simple_exception_handling("Error while generating graph",err_to_ignore=[TypeError],always_throw=True)
     def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data, adjust_date=False,
-                         plot_data=None):
+                         plot_data=None,additional_df=None):
         def update_prop(handle, orig):
             marker_size = 36
             handle : PathCollection
@@ -408,6 +421,7 @@ class GraphGenerator:
         logging.log(TRACELEVEL, ('generation locked'))
 
         self.orig_data = orig_data
+        self.additional_df = additional_df
         self.typ = type
 
         # plt.sca(self._axes)

@@ -171,8 +171,8 @@ Remark: Really recommended steps, but will work basically without it
  
  ## Running Instructions
  1. Run Trader Workstation and sign in (could be readonly). It could be also done after running the app. 
- 2. (For developers) python -m compare_my_stocks 
- 2. (For users) run compare-my-stocks.exe (shortcut)
+ 2. (For developers) `python -m compare_my_stocks` 
+ 2. (For users) run `compare-my-stocks.exe` (shortcut)
 
 ## Remarks 
 
@@ -180,13 +180,13 @@ Remark: Really recommended steps, but will work basically without it
 
 * Not tested on OS other than windows. 
 
-* If face problems run with --console to see what is happening 
+* If face problems run with `--console` to see what is happening 
 
-* If you are developer and don't like the console, run with --noconsole.
+* If you are developer and don't like the console, run with `--noconsole`.
 
 * This app / setup creates the folder `~/.compare_my_stocks` and use it to store logs and data. It has algorithm for resolving the different paths. It also read env variable `COMPARE_STOCK_PATH` .
 
-* If you see "Generated Graph :)" and no graph, try to rescale app. There is some bug there.
+* If you see `Generated Graph :)` and no graph, try to rescale app. There is some bug there.
 
 ## Legal Words
 

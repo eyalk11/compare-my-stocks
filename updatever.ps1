@@ -25,18 +25,22 @@ $content = Get-Content -Path $file
 
 # Loop through each line in the content
 for ($i = 0; $i -lt $content.Length; $i++) {
+    $src = "#define MyAppVersion "".*"""
+    $dst = "#define MyAppVersion ""$ver"""
+    $content[$i] = $content[$i] -replace $src, $dst
+
     $src= '^version = ".*"'
     $dst = 'version = "{0}"' -f $ver
     $content[$i] = $content[$i] -replace $src, $dst
     # Check if the line contains "filevers=(" and "prodvers=("
     $src= 'filevers=\(\d+, \d+, \d+, \d+\)'
 # Replace the line with the arbitrary version
-    $dst = 'filevers=({0}, {1}, {2}, 0)' -f ($ver -split '\.') 
+    $dst = 'filevers=({0}, {1}, {2}, 0)' -f ($ver -split '\.')
     $content[$i] = $content[$i] -replace $src, $dst
 
     $src= 'prodvers=\(\d+, \d+, \d+, \d+\)'
 # Replace the line with the arbitrary version
-    $dst = 'prodvers=({0}, {1}, {2}, 0)' -f ($ver -split '\.') 
+    $dst = 'prodvers=({0}, {1}, {2}, 0)' -f ($ver -split '\.')
     $content[$i] = $content[$i] -replace $src, $dst
 
     $src= "StringStruct\('ProductVersion', '\d+\.\d+\.\d+\'\)"
@@ -52,6 +56,8 @@ for ($i = 0; $i -lt $content.Length; $i++) {
 $content | Set-Content -Path $file
 
 }
+ModifyVer '.\compare-my-stocks.iss'
+
 ModifyVer '.\pyproject.toml'
 ModifyVer '.\setup.py'
 ModifyVer '.\version.txt'
