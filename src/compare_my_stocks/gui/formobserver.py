@@ -24,6 +24,7 @@ from gui.graphhandler import GraphsHandler
 
 from gui.jupyterhandler import JupyterHandler
 from gui.listobserver import ListsObserver
+from gui.voilastatus import DfDesc, VoilaStatus
 
 
 class DisplayModes(int, Enum):
@@ -252,6 +253,13 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.groups: QListWidget
         self.window.groups.sortItems(order=PySide6.QtCore.Qt.SortOrder.AscendingOrder)
 
+    def open_status(self):
+        v=VoilaStatus()
+        d= DfDesc (
+        df_name = "my" , df_desc= 'aaa',
+        df = self.graphObj.input_processor._current_status)
+        v.generate_dialog([d]) 
+
     def edit_groups(self):
 
         # jw=json_editor_ui.JSONEditorWindow(None)
@@ -327,6 +335,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.deletebtn.pressed.connect(self.del_in_lists)
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
+        self.window.open_statusbtn.pressed.connect(self.open_status)
         self.window.exportport.pressed.connect(
             self.graphObj.transaction_handler.export_portfolio)  # Transaction handler manager
         self.window.edit_groupBtn.pressed = safeconnect(self.window.edit_groupBtn.pressed, (self.edit_groups))

@@ -61,7 +61,7 @@ def mscatter(x,y,ax=None, m=None, **kw):
     return sc
 
 @simple_exception_handling(err_description="simple err", never_throw=True)
-def show_annotation(sel, cls=None, ax=None, generation=None):
+def show_annotation(sel, cls, ax, generation):
     cls.generation_mutex.lock()
     logging.log(TRACELEVEL, ('show locked'))
     try:
@@ -102,9 +102,9 @@ def show_annotation(sel, cls=None, ax=None, generation=None):
 
             val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
             basic_str= lambda n,v1,val_orig   :     (f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}')
-            hold_str = lambda hold,price: f'holding: {round_til_2(hold)} price: {round_til_2(price)}'
+            hold_str = lambda hold,price: f'(qty: {round_til_2(hold)} price: {round_til_2(price)})'
 
-            if cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT):
+            if cls.additional_df and ( cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT) ):
                 ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
                 holding_orig = [numpy.interp(xi, ls, cls.additional_df[0][n]) for n in names]
                 price_orig = [numpy.interp(xi, ls, cls.additional_df[1][n]) for n in names]
@@ -363,9 +363,9 @@ class GraphGenerator:
         vec = np.array(vec) - np.array(origin)
         distance = np.linalg.norm(vec, ord=2)  # distange on display node
         return distance
-    def order_labels(self,ar):
+
+    def order_labels(self,ar : Axes):
         handles, labels = ar.get_legend_handles_labels()
-        ar : Axes
         lines = []
         line_labels = []
         collections = []

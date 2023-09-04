@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 import webbrowser
-from enum import Enum, auto, IntEnum
+from enum import auto, IntEnum
 
 import psutil
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QFrame
@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QLabel, QVBoxLayout, QFrame
 from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
+from gui.jupytercommon import JupyterCommonHandler
 from qtvoila import QtVoila
 from gui.forminterface  import FormInterface
 from common.dolongprocess import DoLongProcessSlots
@@ -19,7 +20,8 @@ class State(IntEnum):
     LOADING=auto()
     RUNNING=auto()
 
-class JupyterHandler(FormInterface):
+
+class JupyterHandler(FormInterface, JupyterCommonHandler):
 
 
     def __init__(self):
@@ -111,20 +113,6 @@ class JupyterHandler(FormInterface):
     def generation_task(self):
         self.window.voila_widget :QtVoila
         self.window.voila_widget.max_voila_wait=config.Voila.MAX_VOILA_WAIT
-        def resolve_voila():
-            if (os.path.basename(sys.executable).lower() in ['python.exe',
-                                                                 'python3.exe']) or config.Voila.VOILA_PYTHON_PROCESS_PATH is not None:
-                return True
-
-            if config.Voila.AUTO_RESOVLE_VOILA_PYTHON:
-                import shutil
-                self.window.voila_widget.python_process_path=shutil.which('python.exe')
-                if self.window.voila_widget.python_process_path!= None:
-                    logging.warning(f'Auto-resolved voila process to {self.window.voila_widget.python_process_path}')
-                    return True
-            self.reason='Not using voila because of empty python config. \n run installvoila.bat , and fill in config.Voila.VOILA_PYTHON_PROCESS_PATH'
-            logging.warning(self.reason)
-            return False
 
         self.window.voila_widget: QtVoila
         self.in_generation=True
@@ -133,7 +121,7 @@ class JupyterHandler(FormInterface):
         self.window.voila_widget.external_notebook = config.File.DEFAULTNOTEBOOK
         if self.window.voila_widget.python_process_path is None:
             self.window.voila_widget.python_process_path = config.Voila.VOILA_PYTHON_PROCESS_PATH
-            self.wont_run = not resolve_voila()
+            self.wont_run = not self.resolve_voila(self.window.voila_widget)
         if self.wont_run:
             return
         open(config.File.DATAFILEPTR,'wt').write(self.file_name)

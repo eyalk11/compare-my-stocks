@@ -604,6 +604,12 @@ class InputProcessor(InputProcessorInterface):
 
         self._current_status= st
 
+    def get_portfolio_stocks(self):
+        if self._current_status is None:
+            return set()
+        return set(self._current_status[ self._current_status['Holding']!=0].index)
+
+
 
 
 

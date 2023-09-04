@@ -56,6 +56,12 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                     plot_data[item.Symbol].append((date, item.Cost, item.Qty,item.Source,item.AdjustedPrice))
         return dict(plot_data)
 
+
+
+
+    def get_portfolio_stocks(self):
+        return self._inp.get_portfolio_stocks()
+
     def process_transactions(self): #from all sources
         self._buydic = {}
         self._buydicforexport={}

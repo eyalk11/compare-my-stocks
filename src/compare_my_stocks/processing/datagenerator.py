@@ -39,6 +39,7 @@ class DataGenerator(DataGeneratorInterface):
         self.to_use_ext = None
         self.data_generated = False
         self.df_before_act = None
+        self.additional_dfs_fixed = None
 
     def get_data_by_type(self, type=Types.RELTOMAX, compare_with=None):
         params = self.generate_initial_data(compare_with, type)
@@ -119,7 +120,7 @@ class DataGenerator(DataGeneratorInterface):
 
         #make d be the same columns and index as df 
         if self.additional_dfs:
-            self.additional_dfs_fixed = lmap(lambda d:  d.reindex(index=df.index, columns=df.columns), self.additional_dfs) 
+            self.additional_dfs_fixed = lmap(lambda d:  d.reindex(index=df.index, columns=df.columns), self.additional_dfs)
 
         return arr, df, self.used_type, fulldf
 
@@ -145,7 +146,7 @@ class DataGenerator(DataGeneratorInterface):
 
 
 
-        if div & (Types.PROFIT | Types.RELPROFIT | Types.TOTPROFIT | Types.VALUE):
+        if (unitetyp & ~UniteType.ADDTOTALS == 0 )  and (div & (Types.PROFIT | Types.RELPROFIT | Types.TOTPROFIT | Types.VALUE)):
             additionaldfs = [ df['holding_by_stock'], df['alldates'] ]
         else:
             additionaldfs = None

@@ -1280,12 +1280,12 @@
                        </widget>
                       </item>
                       <item row="2" column="3">
-                       <widget class="QPushButton" name="pushButton_3">
+                       <widget class="QPushButton" name="open_statusbtn">
                         <property name="enabled">
-                         <bool>false</bool>
+                         <bool>true</bool>
                         </property>
                         <property name="text">
-                         <string>PushButton</string>
+                         <string>Open Status</string>
                         </property>
                        </widget>
                       </item>
@@ -1661,7 +1661,7 @@
   <customwidget>
    <class>QDateRangeSlider</class>
    <extends>QSlider</extends>
-   <header location="global">mainwindow2</header>
+   <header location="global">qrangeslider</header>
   </customwidget>
   <customwidget>
    <class>QLabeledRangeSlider</class>

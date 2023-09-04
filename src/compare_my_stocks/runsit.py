@@ -11,8 +11,7 @@ from PySide6.QtWidgets import QSplashScreen
 
 from common.common import Types, UniteType, need_add_process, InputSourceType
 from common.loghandler import init_log
-from common.simpleexceptioncontext import simple_exception_handling
-
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 
 import logging
 import sys
@@ -103,10 +102,12 @@ class MainClass:
             if "compare" in wndw_title.lower(): #we don't want cmd etc.
                 win32gui.ShowWindow(the_program_to_hide, win32con.SW_HIDE)
                 logging.info('Hiding window')
+                return True
             else:
                 logging.info("Not hiding window because of title: " + wndw_title)
         else:
             logging.debug("Not hiding")
+        return False
 
     def get_scale_factor(self):
         import ctypes
@@ -145,14 +146,16 @@ class MainClass:
         config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
         config.Running.DEBUG = config.Running.DEBUG or debug
 
-
+        hiding=False
         if not console:
-            self.hide_if_needed(noconsole)
+            hiding=self.hide_if_needed(noconsole)
 
 
-        import win32api
-        win32api.SetConsoleCtrlHandler(self.func, True)
+        with SimpleExceptionContext(err_description="no win32api",detailed=False):
+            import win32api
+            win32api.SetConsoleCtrlHandler(self.func, True)
         logging.info("Started")
+
 
 
 
@@ -185,9 +188,10 @@ class MainClass:
 
             QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
             app = QApplication([])
-            pixmap = QPixmap("gui/splash.png")
-            splash = QSplashScreen(pixmap)
-            splash.show()
+            if hiding:
+                pixmap = QPixmap("gui/splash.png")
+                splash = QSplashScreen(pixmap)
+                splash.show()
             app.processEvents()
             app.aboutToQuit.connect(self.func)
             # from ib_insync import util
@@ -218,6 +222,9 @@ class MainClass:
             #import Qt
             #Qt.QtCo
         if self.USEQT:
+            if hiding:
+                splash.finish(mainwindow)
+
             def f():
                 try:
                     app.exec_()

@@ -1,6 +1,7 @@
 import os
 
 from setuptools import setup, find_packages
+print('setup.py is deprecated. Dont use it.')
 
 minimal_reqs = [
     'dacite~=1.8.0',
