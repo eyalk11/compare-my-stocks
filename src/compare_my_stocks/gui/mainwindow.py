@@ -5,7 +5,7 @@ import sys
 from PySide6 import QtCore
 import PySide6
 from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QFile, QTimer, Qt
+from PySide6.QtCore import QFile, QTimer
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
@@ -30,21 +30,17 @@ from superqt import QLabeledDoubleRangeSlider
 
 from six import with_metaclass
 
-class MainWindow(QMainWindow, FormInitializer):
+class MainWindow(FormInitializer,QMainWindow):
 
     def __init__(self):
-
-        super(MainWindow, self).__init__()
+        QMainWindow.__init__(self)
         FormInitializer.__init__(self)
-
-
         self.load_ui()
         self._modreloader= ModuleReloader()
 
-        #self.window.resize(w,h)
 
     def closeEvent(self, event):
-        self.window.voila_widget.close_renderer()
+        self.wind.voila_widget.close_renderer()
 
 
     @property
@@ -57,7 +53,6 @@ class MainWindow(QMainWindow, FormInitializer):
 
     def load_ui(self):
         # Handle high resolution displays:
-
         loader = QUiLoader()
         loader.registerCustomWidget(QDateRangeSlider)
         loader.registerCustomWidget(QLabeledRangeSlider)
@@ -70,10 +65,10 @@ class MainWindow(QMainWindow, FormInitializer):
         ui_file = QFile(path)
         ui_file.open(QFile.ReadOnly)
 
-        self.window= loader.load(ui_file, None)
-        self.window.closeEvent= self.closeEvent
+        self.wind= loader.load(ui_file, None)
+        self.wind.closeEvent= self.closeEvent
         ui_file.close()
-        self.setCentralWidget(self.window)
+        self.setCentralWidget(self.wind)
 
         self.setWindowIcon(QtGui.QIcon(iconpath))
         self.setWindowTitle(config.Running.TITLE)
@@ -82,8 +77,8 @@ class MainWindow(QMainWindow, FormInitializer):
             import ctypes
             myappid = 'MyOrganization.MyGui.1.0.0' # arbitrary string
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-
         self.after_load()
+
 
 
     def run(self,graphObj : SymbolsInterface):
@@ -116,13 +111,13 @@ class MainWindow(QMainWindow, FormInitializer):
     #self.window.findChild(QGroupBox, name='graph_groupbox')
     #self.window.findChild(QGroupBox, name='graph_groupbox')
     def prepare_sliders(self):
-        self.window.max_num: QLabeledRangeSlider
-        self.window.max_num.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
-        self.window.max_num.setEdgeLabelMode(EdgeLabelMode.NoLabel)
-        self.window.min_crit : QLabeledDoubleRangeSlider
-        self.window.min_crit.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
-        self.window.min_crit.setEdgeLabelMode(EdgeLabelMode.NoLabel)
-        self.window.min_crit.update()
+        self.wind.max_num: QLabeledRangeSlider
+        self.wind.max_num.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
+        self.wind.max_num.setEdgeLabelMode(EdgeLabelMode.NoLabel)
+        self.wind.min_crit : QLabeledDoubleRangeSlider
+        self.wind.min_crit.setOrientation(PySide6.QtCore.Qt.Orientation.Horizontal)
+        self.wind.min_crit.setEdgeLabelMode(EdgeLabelMode.NoLabel)
+        self.wind.min_crit.update()
         #self.window.min_crit.label_shift_x = 10
         #self.window.max_num.label_shift_x = 10
 

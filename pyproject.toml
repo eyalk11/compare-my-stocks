@@ -52,14 +52,15 @@ notebook = { version = "7.0.3", optional= true}
 json-editor-pyside6 = {version="^1.0.3", optional= true}
 qt-collapsible-section-pyside6 = {version="^0.1.0", optional= true}
 jupyter-server = { version="^2.7.3", optional= true} # needed really by notebook. just to simply finding.
+ipydatagrid = { version= "*",optional = true }
 
 
 voila = {version="*", optional= true}
 
 [tool.poetry.extras]
-full = [ 'flask','requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml']
+full = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml']
 mini = ['colorlog','django','numpy','ruamel.yaml']
-jupyter = ['colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila']
+jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila']
 
 [build-system]
 requires = ["poetry-core"]

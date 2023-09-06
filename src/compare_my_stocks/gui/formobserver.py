@@ -58,7 +58,6 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         GraphsHandler.__init__(self)
         JupyterHandler.__init__(self)
         self.graphObj: CompareEngineInterface = None
-        self.window = None
         self._toshow = True
         self._initiated = False
         self.disable_slider_values_updates = False

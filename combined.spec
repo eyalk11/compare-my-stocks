@@ -12,15 +12,13 @@ a = Analysis(
     binaries=[],
     datas=[
     ('C:\\Users\\ekarni\\compare-my-stocks\\venv\Lib\\site-packages\\json_editor\\ui\\json_editor_ui.ui','./json_editor/ui'),
-    ('C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\gui\\mainwindow.ui','./compare_my_stocks/gui'),
-    ('C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\gui\\icon.jpg','./compare_my_stocks/gui'),
-    ('C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\gui\\icon.ico','./compare_my_stocks/gui'),
+    ('C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\gui','./compare_my_stocks/gui'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\data' , './data'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\install' , './install'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\LICENSE' , '.'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\README.md' , '.')
     ],
-    hiddenimports=[],
+    hiddenimports=['jsonschema_specifications'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

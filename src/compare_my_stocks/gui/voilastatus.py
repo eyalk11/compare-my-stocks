@@ -46,6 +46,8 @@ class VoilaStatus(JupyterCommonHandler):
 
         # Create a dialog
         dialog = QDialog()
+        dialog.setMinimumWidth(600)
+        dialog.setMinimumHeight(400)
 
         # Create and set layout for the dialog
         layout = QVBoxLayout(dialog)

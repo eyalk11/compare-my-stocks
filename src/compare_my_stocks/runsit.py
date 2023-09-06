@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import sys
 import time
 from functools import partial
@@ -177,9 +178,12 @@ class MainClass:
         self.pd_ignore_warning()
 
         if self.USEQT:
-            from .gui.mainwindow import MainWindow
             from PySide6.QtWidgets import QApplication
             from PySide6 import QtCore
+            app = QApplication([])
+            from .gui.mainwindow import MainWindow
+
+
 
             import os
             if config.Running.TRY_TO_SCALE_DISPLAY:
@@ -187,9 +191,10 @@ class MainClass:
                 logging.debug("QT_SCALE_FACTOR is %s" % os.environ['QT_SCALE_FACTOR'])
 
             QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-            app = QApplication([])
+
             if hiding:
-                pixmap = QPixmap("gui/splash.png")
+                path = os.fspath(Path(__file__).resolve().parent / "gui" / "splash.png")
+                pixmap = QPixmap(path)
                 splash = QSplashScreen(pixmap)
                 splash.show()
             app.processEvents()
@@ -221,7 +226,6 @@ class MainClass:
             app.aboutToQuit.connect(partial(mainwindow.closeEvent,0))
             #import Qt
             #Qt.QtCo
-        if self.USEQT:
             if hiding:
                 splash.finish(mainwindow)
 

@@ -68,7 +68,7 @@ procedure InitializeWizard;
 begin
 { create a directory input page }
 DirPage := CreateInputDirPage(
-  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', '(keep it the default way unless you know what you are doing)', False, '');
+  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', 'Notice that if you have old data files there, make sure they are comptabile with this version, because they will be kept. (Specifing other directiories is not recommended if you arent aware of the resolving hierarchy)', False, '');
 { add directory input page items }
 DirPage.Add('Data Folder');
 { assign default directories for the items from the previously stored data; if }

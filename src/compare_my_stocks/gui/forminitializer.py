@@ -18,6 +18,16 @@ from gui.listobserver import additems
 
 class FormInitializer(FormObserver, FormInitializerInterface):
 
+    @property
+    def window(self):
+        return self.wind
+
+    @window.setter
+    def window(self, value):
+        self.wind = value
+
+
+
     def __init__(self):
         super().__init__()
 

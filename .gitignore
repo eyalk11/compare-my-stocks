@@ -88,4 +88,7 @@ src/compare_my_stocks/transactions/parsecsvo.py
 src/compare_my_stocks/transactions/tags
 src/compare_my_stocks/ttt/
 src/compare_my_stocks/tags
+src/compare_my_stocks/data/.virtual_documents
 venv
+rr.txt
+mm.py
