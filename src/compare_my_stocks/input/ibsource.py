@@ -81,11 +81,12 @@ class IBSourceRem:
                 IBSourceRem.ConnectedME.ib.disconnect()
                 IBSourceRem.ConnectedME.connected=False
 
-                try:
-                    IBSourceRem.ConnectedME.init()
-                except:
-                    logging.error("error re-connecting")
-                    print_formatted_traceback()
+                if IBSourceRem.ConnectedME.ib is not None:
+                    try:
+                        IBSourceRem.ConnectedME.init()
+                    except:
+                        logging.error("error re-connecting")
+                        print_formatted_traceback()
 
     @Pyro5.server.expose
     @property
@@ -172,7 +173,7 @@ class IBSourceRem:
     @make_sure_connected
     def reqHistoricalData_ext(self, contract, enddate, td):
         logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
-        bars= self.reqHistoricalData(Contract.create(**contract),
+        bars= self.reqHistoricalData(Contract(**contract),
                                       conv_date(enddate), td)
 
         ls=[asdict(x) for x in bars]
@@ -216,7 +217,7 @@ class IBSourceRem:
     @make_sure_connected
     def get_contract_details_ext(self, contractdic):
         INC=["category","subcategory", "longName","validExchanges","marketName","stockType", "lastTradeTime"]
-        c=Contract.create(**contractdic)
+        c=Contract(**contractdic)
         for x in  self.ib.reqContractDetails(c):
             logging.debug((log_conv(asdict(x),x.validExchanges)))
             yield dictfilt(asdict(x),INC)
@@ -271,7 +272,7 @@ class IBSource(InputSource):
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
             try:
-                x.update({'contract': Contract.create(**x['contractdic'])})
+                x.update({'contract': Contract(**x['contractdic'])})
                 return x
             except:
                 logging.debug((f'err in create for {x}'))

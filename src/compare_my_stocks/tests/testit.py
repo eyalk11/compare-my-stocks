@@ -14,7 +14,7 @@ config.STOP_EXCEPTION_IN_DEBUG=True
 
 from unittest.mock import patch
 
-
+from testtools import *
 @pytest.mark.parametrize("useinp", [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT, UseInput.WITHINPUT,
                                     UseInput.LOADDEFAULTCONFIG])
 def test_realengine(mock_config_to_default,realeng,useinp):
@@ -93,7 +93,7 @@ def test_ibsrv(getremibsrv):
     ls = x.get_matching_symbols('CRWD')
     ls=list(ls)
     assert len(ls)>0
-    l=list(x.get_symbol_history('CRWD',datetime.datetime.now()-datetime.timedelta(days=3),datetime.datetime.now()))
+    l=list(x.get_symbol_history(ls[0],datetime.datetime.now()-datetime.timedelta(days=3),datetime.datetime.now()))
     assert len(l) > 0
     assert True
 
@@ -113,6 +113,9 @@ def test_basic(ibsource):
     ls = x.get_matching_symbols('CRWD')
 
     ls = list(ls)
+    l = list(
+        x.get_symbol_history(ls[0], datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now()))
+    assert len(l) > 0
     assert True #len(ls)>0
 
 

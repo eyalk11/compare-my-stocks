@@ -68,7 +68,7 @@ procedure InitializeWizard;
 begin
 { create a directory input page }
 DirPage := CreateInputDirPage(
-  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', 'Notice that if you have old data files there, make sure they are comptabile with this version, because they will be kept(as long as the folder exists). Also, specifing other directiories is not recommended if you arent aware of the resolving hierarchy. In case of an arbtirary directory, please set environment variable COMPARE_STOCK_PATH to this directory manually (for now).', False, '');
+  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', 'Notice that if you have old data files there, make sure they are comptabile with this version, because they will be kept (if you dont choose to override). Also, specifing other directiories is not recommended if you arent aware of the resolving hierarchy. In case of an arbtirary directory, please set environment variable COMPARE_STOCK_PATH to this directory manually (for now).', False, '');
 { add directory input page items }
 DirPage.Add('Data Folder');
 { assign default directories for the items from the previously stored data; if }
@@ -90,9 +90,9 @@ begin
     begin 
         if DirExists(GetDir('0')) then 
         begin
-            if MsgBox('Data directory exists , delete it first?' , mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+            if MsgBox('Data directory exists, override it? This will delete all related data you have saved in compare-my-stocks, and cant be undone!' , mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
            begin
-              DelTree(GetDir('0'), False, True, False);
+              DelTree(GetDir('0'), True, True, True);
            end;
         end; 
     end;

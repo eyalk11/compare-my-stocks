@@ -21,13 +21,16 @@ from functools import partial
 
 import psutil, os
 
+
+
+
 class MainClass:
     def __init__(self, USEWX=None, USEWEB=None, USEQT=None, SIMPLEMODE=None):
         self.USEWX = USEWX
         self.USEWEB = USEWEB
         self.USEQT = USEQT
         self.SIMPLEMODE = SIMPLEMODE
-        self.proc =None
+
         self.config= None
 
     def selectmode(self):
@@ -54,6 +57,7 @@ class MainClass:
         from pandas.core.common import SettingWithCopyWarning
         warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
+    @classmethod
     def kill_proc_tree(self, pid, including_parent=True):
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
@@ -64,12 +68,15 @@ class MainClass:
             parent.kill()
             parent.wait(5)
 
-    def func(self, x=None, tolog=True):
+    @classmethod
+    def killallchilds(self,x=None, tolog=True):
         if tolog:
             logging.info(("killed"))
-        if self.proc.proc:
+        from ib.remoteprocess import RemoteProcess
+        proc=RemoteProcess()
+        if proc.proc:
             try:
-                self.kill_proc_tree(self.proc.proc.pid)
+                self.kill_proc_tree(proc.proc.pid)
             except:
                 pass
         self.kill_proc_tree(os.getpid())
@@ -138,12 +145,12 @@ class MainClass:
         from common.loghandler import init_log
         init_log()
 
-        from ib.remoteprocess import RemoteProcess
+
 
 
         from config import config
         self.config = config
-        self.proc = RemoteProcess()
+
 
         self.USEWX, self.USEWEB, self.USEQT, self.SIMPLEMODE \
         = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SIMPLEMODE
@@ -157,7 +164,7 @@ class MainClass:
 
         with SimpleExceptionContext(err_description="no win32api",detailed=False):
             import win32api
-            win32api.SetConsoleCtrlHandler(self.func, True)
+            win32api.SetConsoleCtrlHandler(MainClass.killallchilds, True)
         logging.info("Started")
 
 
@@ -166,14 +173,15 @@ class MainClass:
         #import signal
         #signal.signal(signal.SIGTERM,
         if config.IBConnection.ADDPROCESS and need_add_process(config):
-            succ=self.proc.run_additional_process()
+            from ib.remoteprocess import RemoteProcess
+            succ=RemoteProcess().run_additional_process()
             for i in range(2):
                 if succ:
                     break 
                 import sys
                 if 'python' in os.path.basename(sys.executable) and config.IBConnection.USE_PYTHON_IF_NOT_RESOLVE:
                     config.IBConnection.ADDPROCESS= [sys.executable ,'-m compare_my_stocks --ibsrv']
-                    succ=self.proc.run_additional_process()
+                    succ=RemoteProcess().run_additional_process()
             else:
                 config.Input.INPUTSOURCE=InputSourceType.Cache
                 logging.warn("Failed to start IBSrv. using cache instead")
@@ -201,7 +209,7 @@ class MainClass:
                 splash = QSplashScreen(pixmap)
                 splash.show()
             app.processEvents()
-            app.aboutToQuit.connect(self.func)
+            app.aboutToQuit.connect(self.killallchilds)
             # from ib_insync import util
             # util.useQt()
             # util.patchAsyncio()

@@ -8,5 +8,6 @@ def pytest_runtest_setup(item):
 def pytest_sessionfinish():
     # called for running each test in 'a' directory
     print("ended")
-    from runsit import func
-    func(tolog=False)
+    from runsit import MainClass
+
+    MainClass.killallchilds(tolog=False)

@@ -117,7 +117,7 @@ class InputProcessor(InputProcessorInterface):
 
         self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
-        self.currencyrange=None
+
         self._proccessing_mutex = QRecursiveMutex()
         self._reg_panel=None
         self._adjusted_panel=None
@@ -299,7 +299,10 @@ class InputProcessor(InputProcessorInterface):
 
                 return
             else:
-                hist_by_date, _ , self._cache_date,self.currency_hist,self.currencyrange = pickle.load(open(config.File.HIST_F, 'rb'))
+                hist_by_date, _ , self._cache_date,self.currency_hist,_ = pickle.load(open(config.File.HIST_F, 'rb'))
+                self.currency_hist = pandas.DataFrame(self.currency_hist) #it is a dic
+
+
 
             #self.currency_hist = None
             if self._cache_date - datetime.datetime.now() < config.Input.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
@@ -716,8 +719,9 @@ class InputProcessor(InputProcessorInterface):
                 logging.debug(('bad %s' % sym))
                 self._bad_symbols.add(sym) #we will not try again. But every run we do try once...
                 continue
+
             successful_once=True
-            if requireddays/okdays<0.5:
+            if okdays==0 or requireddays/okdays<0.5:
                 logging.debug((f'mostly problematic {sym}'))
         return successful_once
 
@@ -730,6 +734,9 @@ class InputProcessor(InputProcessorInterface):
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.Symbols.CRYPTO))  # should be rounded
 
+        if len(hist)==0:
+            logging.warn('Got empty history for %s' % sym)
+            return 0
         self.symbol_info[sym] = (l if l else {}) #just for debug I think
         if (cont := self.symbol_info[sym].get('contract')):
             logging.debug(f"resolved {sym} is {cont}")
@@ -783,8 +790,8 @@ class InputProcessor(InputProcessorInterface):
         except:
             logging.debug(('error in backuping hist file'))
         try:
-            pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist,
-                         self.currencyrange), open(config.File.HIST_F, 'wb'))
+            pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist.to_dict(),
+                         None), open(config.File.HIST_F, 'wb'))
             logging.debug(('hist saved'))
         except:
             logging.error(("error in dumping hist"))
