@@ -255,7 +255,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def open_status(self):
         v=VoilaStatus()
         d= DfDesc (
-        df_name = "my" , df_desc= 'aaa',
+        df_name = "Current status" , df_desc= 'Relevant numbers about stocks in your portfolio',
         df = self.graphObj.input_processor._current_status)
         v.generate_dialog([d]) 
 

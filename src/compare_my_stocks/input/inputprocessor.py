@@ -444,6 +444,9 @@ class InputProcessor(InputProcessorInterface):
             _cur_accumative_holding_bystock[stock] += abs(x[0])
 
             _last_action_time[stock]=cur_action[0]
+            if _first_action_time[stock] is None:
+                _first_action_time[stock]=cur_action[0]
+
             if _cur_holding_bystock[stock] < 0:
                 logging.warn((log_conv(' sell below zero', stock, cur_action[0])))
                 if 0:
@@ -470,6 +473,7 @@ class InputProcessor(InputProcessorInterface):
         _cur_unrelprofit_bystock = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         _last_action_time = defaultdict(lambda: None)
+        _first_action_time = defaultdict(lambda: None)
         cur_split = defaultdict(lambda: None)
         _last_action = defaultdict(lambda: None)
         _cur_accumative_holding_bystock = defaultdict(lambda: 0) #just used to calculate the total holding involved
@@ -575,9 +579,13 @@ class InputProcessor(InputProcessorInterface):
             if not partial_symbols_update:
                 self.update_current_status(
                     {"Holding" : _cur_holding_bystock,
-                     "Unrelprofit": _cur_unrelprofit_bystock,
-                     "Relprofit":  _cur_relprofit_bystock,
-                     "AccumulatedHolding": _cur_accumative_holding_bystock
+                     "Unrealized profit": _cur_unrelprofit_bystock,
+                     "Realized  profit":  _cur_relprofit_bystock,
+                     "AccumulatedHolding": _cur_accumative_holding_bystock,
+                     "Average Cost": _cur_avg_cost_bystock,
+                     'First Action': {x:  pd.to_datetime(y) for x,y in _first_action_time.items()},
+                     'Last Action': {x: pd.to_datetime(y)  for x,y in  _last_action_time.items()}
+
                 })
                 self._cur_splits=_cur_splited_bystock
         finally:

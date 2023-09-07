@@ -1,5 +1,5 @@
 #define MyAppName "Compare My Stocks"
-#define MyAppVersion "1.0.6"
+#define MyAppVersion "1.0.7"
 #define MyAppPublisher "eyalk11"
 #define MyAppURL "https://github.com/eyalk11/compare-my-stocks"
 #define MyAppExeName "compare-my-stocks.exe"
@@ -68,7 +68,7 @@ procedure InitializeWizard;
 begin
 { create a directory input page }
 DirPage := CreateInputDirPage(
-  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', 'Notice that if you have old data files there, make sure they are comptabile with this version, because they will be kept. (Specifing other directiories is not recommended if you arent aware of the resolving hierarchy)', False, '');
+  wpSelectDir, 'Select Data Folder', 'Select folder to use for local data', 'Notice that if you have old data files there, make sure they are comptabile with this version, because they will be kept(as long as the folder exists). Also, specifing other directiories is not recommended if you arent aware of the resolving hierarchy. In case of an arbtirary directory, please set environment variable COMPARE_STOCK_PATH to this directory manually (for now).', False, '');
 { add directory input page items }
 DirPage.Add('Data Folder');
 { assign default directories for the items from the previously stored data; if }
@@ -86,6 +86,17 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var 
 ResultCode: Integer;
 begin
+    if CurStep = ssInstall then 
+    begin 
+        if DirExists(GetDir('0')) then 
+        begin
+            if MsgBox('Data directory exists , delete it first?' , mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+           begin
+              DelTree(GetDir('0'), False, True, False);
+           end;
+        end; 
+    end;
+
   if CurStep = ssPostInstall then
   begin
     

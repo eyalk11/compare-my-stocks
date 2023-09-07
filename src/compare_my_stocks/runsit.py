@@ -87,12 +87,15 @@ class MainClass:
                 import psutil
 
                 # Get the parent process
-                parent =psutil.Process().parent().name()
+                with SimpleExceptionContext(err_description='resolve parent',never_throw=True):
+                    parent =psutil.Process().parent().name()
 
-                if ('explorer.exe' != parent.lower()):
-                    logging.info("Not hiding window because parent is {}".format(parent))
-                    return False
-                return True
+                    if ('explorer.exe' != parent.lower()):
+                        logging.info("Not hiding window because parent is {}".format(parent))
+                        return False
+                    return True
+                logging.info('Not hiding because of exception resolving parent process')
+                return False
             else:
                 return False
 

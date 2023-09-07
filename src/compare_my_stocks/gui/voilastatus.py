@@ -37,7 +37,6 @@ class VoilaStatus(JupyterCommonHandler):
             import pandas as pd
             from ipydatagrid import DataGrid
             json = StringIO( """{}""")
-            print('bbb')
             df = pd.read_json(json)
             DataGrid(df)
             ''' .format(buffer.getvalue())

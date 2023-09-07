@@ -6,7 +6,7 @@ log_cli_format = "%(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelna
 
 [tool.poetry]
 name = "compare-my-stocks"
-version = "1.0.6"
+version = "1.0.7"
 description = "A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib."
 authors = ["eyalk5"]
 readme = "README.md"
@@ -58,7 +58,7 @@ ipydatagrid = { version= "*",optional = true }
 voila = {version="*", optional= true}
 
 [tool.poetry.extras]
-full = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml']
+full = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml','notebook']
 mini = ['colorlog','django','numpy','ruamel.yaml']
 jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila']
 
