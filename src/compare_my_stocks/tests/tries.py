@@ -10,6 +10,8 @@ from input.inputprocessor import InputProcessor
 from transactions.IBtransactionhandler import IBTransactionHandler
 from transactions.parsecsv import return_trades
 import config
+from tests.testtools import inp, realeng, ibsource
+
 cfg.STOP_EXCEPTION_IN_DEBUG=True
 
 def test_fix_histdic(inp):

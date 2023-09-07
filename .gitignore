@@ -92,3 +92,4 @@ src/compare_my_stocks/data/.virtual_documents
 venv
 rr.txt
 mm.py
+src/compare_my_stocks/data/jupyter/.virtual_documents

@@ -300,7 +300,8 @@ class InputProcessor(InputProcessorInterface):
                 return
             else:
                 hist_by_date, _ , self._cache_date,self.currency_hist,_ = pickle.load(open(config.File.HIST_F, 'rb'))
-                self.currency_hist = pandas.DataFrame(self.currency_hist) #it is a dic
+                if type(self.currency_hist) == dict: # backward compatability
+                    self.currency_hist = pandas.DataFrame(self.currency_hist)
 
 
 
