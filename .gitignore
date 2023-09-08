@@ -78,7 +78,6 @@ src/compare_my_stocks/ib/ibtestx.py
 src/compare_my_stocks/iblog.txt
 src/compare_my_stocks/ibsrv_error.log
 src/compare_my_stocks/ibsrv_ready.txt
-src/compare_my_stocks/jupyter/__init__.py
 src/compare_my_stocks/resources/
 src/compare_my_stocks/runibsrv.ps1
 src/compare_my_stocks/runmain.ps1
@@ -93,3 +92,5 @@ venv
 rr.txt
 mm.py
 src/compare_my_stocks/data/jupyter/.virtual_documents
+src/compare_my_stocks/data/jupyter/memory
+src/compare_my_stocks/data/hist_file.cache_befchange

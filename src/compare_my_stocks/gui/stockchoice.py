@@ -15,9 +15,14 @@ from input.inputsource import InputSource, InputSourceInterface
 
 class MyTableModel(QAbstractTableModel):
     def __init__(self, parent, results, *args):
-        header = list(results[0].keys())
-        datalist = [list(r.values()) for r in results]
         QAbstractTableModel.__init__(self, parent, *args)
+        if len(results)==0:
+            header = []
+            datalist = []
+        else:
+            header = list(results[0].keys())
+            datalist = [list(r.values()) for r in results]
+
         self.mylist = datalist
         self.header = header
         self._results=results
@@ -28,7 +33,8 @@ class MyTableModel(QAbstractTableModel):
     def rowCount(self, parent):
         return len(self.mylist)
     def columnCount(self, parent):
-        return len(self.mylist[0])
+
+        return len(self.header)
     def data(self, index, role):
         if not index.isValid():
             return None

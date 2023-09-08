@@ -87,7 +87,13 @@ class MainClass:
             logging.info("Not hiding window because it is not windows (not implemented)")
             return
         def check_conditions():
-            if (not self.config.Running.DISPLAY_CONSOLE) and (not (os.environ.get('PYCHARM_HOSTED') == '1')):
+            if os.environ.get('PYCHARM_HOSTED') == '1':
+                return False
+            if force:
+                logging.debug("aaabbb")
+                return True
+            logging.debug("aaa")
+            if not self.config.Running.DISPLAY_CONSOLE:
                 if 'python' in os.path.basename(sys.executable):
                     logging.info("Not hiding window because it is python")
                     return False
@@ -103,19 +109,20 @@ class MainClass:
                     return True
                 logging.info('Not hiding because of exception resolving parent process')
                 return False
-            else:
-                return False
+            return False
 
-        if force or check_conditions():
+        if check_conditions():
             import win32gui, win32con
             the_program_to_hide = win32gui.GetForegroundWindow()
             wndw_title = win32gui.GetWindowText(the_program_to_hide)
             if "compare" in wndw_title.lower(): #we don't want cmd etc.
                 win32gui.ShowWindow(the_program_to_hide, win32con.SW_HIDE)
                 logging.info('Hiding window')
-                return True
+
             else:
                 logging.info("Not hiding window because of title: " + wndw_title)
+                logging.info("but will say we did")
+            return True
         else:
             logging.debug("Not hiding")
         return False

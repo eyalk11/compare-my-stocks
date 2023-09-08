@@ -220,6 +220,8 @@ class DataGenerator(DataGeneratorInterface):
             incomplete = (arr.shape[0] != len(stocks))
             if incomplete:
                 logging.debug(('incomplete unite'))
+            if len(arr)==0:
+                return ndf,[]
             if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
 
                 ndf.loc[:, gr] = numpy.nansum(arr, axis=0)

@@ -10,7 +10,9 @@ sys.path.insert(0,
 # from . import processing
 # from . import graph
 # from . import ib
-# from . import config
+
+
+#from . import config
 from . import jupyter
 from .runsit import MainClass
 #from config import config

@@ -188,6 +188,8 @@ class InputConf:
     DOWNLOADDATAFORPROT: bool = True
     DEFAULTFROMDATE: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
     TZINFO: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
+    MAX_RELEVANT_CURRENCY_TIME : datetime.timedelta = datetime.timedelta(minutes=60)
+    MAX_RELEVANT_CURRENCY_TIME_HUER: datetime.timedelta = datetime.timedelta(days=5)
 
 @paramaware
 @dataclass
@@ -196,6 +198,13 @@ class VoilaConf:
     VOILA_PYTHON_PROCESS_PATH: Optional[str] = None
     AUTO_RESOVLE_VOILA_PYTHON: bool = True
     MAX_VOILA_WAIT: int = 9
+
+@paramaware
+@dataclass
+class JupyterConf:
+    MEMO_FOLDER : str = '.\memory'
+    RAPID_YFINANACE_KEY: str = ''
+    RAPID_YFINANACE_HOST: str = "yfinance-stock-market-data.p.rapidapi.com"
 
 @paramaware
 @dataclass
@@ -213,6 +222,7 @@ class Config:
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
     SEEKINGALPHAHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
+    Jupyter: JupyterConf = field(default_factory=JupyterConf)
 
 
 CONFIGFILENAME = 'myconfig.yaml'
@@ -384,6 +394,7 @@ class ConfigLoader():
         yaml = YAML(typ='unsafe')
         import common.common
         from common.common import TransactionSourceType
+
         yaml.register_class(common.common.UseCache)
         yaml.register_class(common.common.CombineStrategy)
         yaml.register_class(common.common.InputSourceType)
@@ -400,6 +411,7 @@ class ConfigLoader():
         yaml.register_class(UIConf)
         yaml.register_class(IBConnectionConf)
         yaml.register_class(FileConf)
+        yaml.register_class(JupyterConf)
         # register all classes defined here ends with Conf
         yaml.register_class(VoilaConf)
         yaml.register_class(EarningsConf)

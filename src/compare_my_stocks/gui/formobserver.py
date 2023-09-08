@@ -285,10 +285,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.graphObj.params.adjust_to_currency = False
         self.graphObj.params.adjusted_for_base_cur = False
 
-        if val == PySide6.QtCore.Qt.CheckState.Checked:
+        if val == PySide6.QtCore.Qt.CheckState.Checked.value:
             self.graphObj.params.adjust_to_currency = True
 
-        elif val == PySide6.QtCore.Qt.CheckState.PartiallyChecked:
+        elif val == PySide6.QtCore.Qt.CheckState.PartiallyChecked.value:
             self.graphObj.params.adjusted_for_base_cur = True
 
         self.update_graph(1)

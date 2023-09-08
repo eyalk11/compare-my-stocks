@@ -2,6 +2,7 @@ import dataclasses
 import logging
 import logging
 import math
+import threading
 import time
 from collections import defaultdict, namedtuple
 from contextlib import suppress
@@ -158,6 +159,7 @@ class GraphGenerator:
         self.point_to_annotation = {}
         self.lines_dict= {}
         self.symbols_to_blobs = defaultdict(list)
+        self.pick_lock= threading.Lock()
 
         if eng is not None: #for testing
             self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
@@ -597,41 +599,44 @@ class GraphGenerator:
         # ofig.canvas.flush_events()
 
     def onpick(self, event):
-        # on the pick event, find the orig line corresponding to the
-        # legend proxy line, and toggle the visibility
-        # legline = event.artist
-        b = False
-        ar = self._axes
-        fig = ar.legend_.figure
-        blobs= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.collections.PathCollection)}
+        with self.pick_lock:
+            # on the pick event, find the orig line corresponding to the
+            # legend proxy line, and toggle the visibility
+            # legline = event.artist
+            b = False
+            ar = self._axes
+            fig = ar.legend_.figure
+            blobs= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.collections.PathCollection)}
 
-        for origline, legline in zip(ar.lines, ar.legend_.get_lines()):
-            if legline == event.artist:
-                # origline = lined[legline]
-                vis = not origline.get_visible()
-                origline.set_visible(vis)
-                if legline._label in blobs:
-                    blobs[legline._label].set_visible(vis)
-                    #self.handles_labels[legline._label][1].set_visible(vis)
-                    # if legline._label in self.blobs_legends:
-                    #     self.blobs_legends[legline._label].set_alpha(0.2 if vis else 0.5)
+            for origline, legline in zip(ar.lines, ar.legend_.get_lines()):
+                if legline == event.artist:
+                    # origline = lined[legline]
+                    vis = not origline.get_visible()
+                     #to avoid double counting
+                    origline.set_visible(vis)
+                    time.sleep(0.1)
+                    if legline._label in blobs:
+                        blobs[legline._label].set_visible(vis)
+                        #self.handles_labels[legline._label][1].set_visible(vis)
+                        # if legline._label in self.blobs_legends:
+                        #     self.blobs_legends[legline._label].set_alpha(0.2 if vis else 0.5)
 
-                # Change the alpha on the line in the legend so we can see what lines
-                # have been toggled
-                if vis:
-                    legline.set_alpha(1.0)
-                    self.cur_shown_stock.add(legline._label)
-                else:
-                    legline.set_alpha(0.2)
-                    self.cur_shown_stock.remove(legline._label)
-                b = True
-                break
-        if b:
+                    # Change the alpha on the line in the legend so we can see what lines
+                    # have been toggled
+                    if vis:
+                        legline.set_alpha(1.0)
+                        self.cur_shown_stock.add(legline._label)
+                    else:
+                        legline.set_alpha(0.2)
+                        self.cur_shown_stock.remove(legline._label)
+                    break
+            else:
+                logging.log(TRACELEVEL, ("onpick failed"))
+                return
+
             self.update_limit(ar, fig, origline.figure, ar.lines)
-            if USEQT:
-                fig.canvas.draw()  # draw
-        else:
-            logging.log(TRACELEVEL, ("onpick failed"))
+                # if USEQT:
+                #    fig.canvas.draw()  # draw
         # self._ax=
 
     def show_hide(self, toshow):

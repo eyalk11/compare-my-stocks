@@ -22,7 +22,7 @@ from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
     localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap
-from common.simpleexceptioncontext import simple_exception_handling
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningscommon import localize_me
@@ -117,6 +117,7 @@ class InputProcessor(InputProcessorInterface):
 
         self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
+        self._relevant_currencies_time = None
 
         self._proccessing_mutex = QRecursiveMutex()
         self._reg_panel=None
@@ -264,7 +265,7 @@ class InputProcessor(InputProcessorInterface):
         logging.debug(('finish initi'))
         self.simplify_hist(partial_symbols_update)
         logging.debug(('finish simpl'))
-        self.process_hist_internal(buyoperations, cur_action, partial_symbols_update,splits,maxsplit)
+        self.process_hist_internal(buyoperations, cur_action, partial_symbols_update,splits,maxsplit) #takes around 1 sec
 
         logging.debug(('finish internal'))
         try:
@@ -629,6 +630,7 @@ class InputProcessor(InputProcessorInterface):
 
 
     def simplify_hist(self, partial_symbols_update):
+        #very not efficient, can be rewritten. Still fast enough.
         self._simp_hist_by_date = collections.OrderedDict()
         for date, symdic in self._hist_by_date.items():
             for s, (dica, dicb) in symdic.items():
@@ -874,18 +876,47 @@ class InputProcessor(InputProcessorInterface):
 
     @simple_exception_handling("adjusting for currency", return_succ=0)
     def adjust_for_currency(self):
-        a=1
-        relevant_currencies = set([v.get('currency','unk') for v in self.symbol_info.values() if not (v is None)]) - \
+        a=1 #updates adjusted panel
+        cursymdic={v.get('currency', 'unk'):k for k,v in self.symbol_info.items() if not (v is None)}
+
+        relevant_currencies = set(cursymdic.keys()) - \
                               set(['unk', config.Symbols.BASECUR])
-        if self._inputsource is None:
-            logging.warn("Could not adjust for currency because no input source. Ignoring adjustment.")
-            return False
+
+        if self._relevant_currencies_time is not None and (datetime.datetime.now() - self._relevant_currencies_time) < config.Input.MAX_RELEVANT_CURRENCY_TIME:
+            logging.debug('Using cached relevant currencies {}'.format(self._relevant_currencies_time))
+
+        upd= False
         for x in relevant_currencies:
             self._relevant_currencies_rates[x] = ifnotnan(self._inputsource.get_current_currency((config.Symbols.BASECUR, x)),lambda t:1/t)
+            upd = upd or (self._relevant_currencies_rates[x] is not None)
+
+
+
+
+        if upd:
+            self._relevant_currencies_time = datetime.datetime.now()
+
+        for x,v in self._relevant_currencies_rates.items():
+            if v is None:
+                sym=cursymdic[x]
+
+                with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False):
+                    m= max(list(self._alldates_adjusted[sym].keys())) #can fail if empty
+                    if (datetime.datetime.now()-m) < config.Input.MAX_RELEVANT_CURRENCY_TIME_HUER:
+                        logging.debug(f'Using heuristic for currency {x} {sym}')
+                        self._relevant_currencies_rates[x]=self._alldates_adjusted[sym][m]/self._alldates[sym][m]
+
+
+
+
+
+
+
         #fix the following line for case 'currency' is not in dictonary of value v of symbol_info
         dic={k: self._relevant_currencies_rates.get(curr) for k,v in self.symbol_info.items() if (curr:=v.get('currency', 'unk')) in self._relevant_currencies_rates and self._relevant_currencies_rates[curr] is not None}
         #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
-
+        if len(dic)==0:
+            return False
         self._adjusted_panel=self.get_adjusted_df_for_currency(dic)
         return True
 
