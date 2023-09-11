@@ -47,9 +47,6 @@ class InputData:
     def __init__(self):
         self._reg_panel=None
         self._adjusted_panel=None
-        self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
-                      self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
-                      self._alldates_adjusted,self._unrel_profit_adjusted]
         self._bad_symbols = set()
         self.mindate = None
         self.maxdate = None
@@ -73,6 +70,12 @@ class InputData:
         self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
         self._split_by_stock = defaultdict(lambda: defaultdict(lambda: 1))
         self._avg_cost_by_stock_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+    @property
+    def dicts(self) -> List:
+        """doc"""
+        return [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
+                      self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
+                      self._alldates_adjusted,self._unrel_profit_adjusted]
 
 
 
@@ -184,38 +187,38 @@ class InputProcessor(InputProcessorInterface, InputData):
             x = copy(self._eng.params)
             x.use_cache = UseCache.FORCEUSE
             tmpinp.process(params=x, buy_filter=lambda x: (filter_str in x[1].Notes))
-            status = tmpinp._current_status
+            status = tmpinp.data._current_status
             return status
 
         return  get_stat("IB"), get_stat("MYSTOCK")
 
     @property
     def usable_symbols(self):
-        return self._usable_symbols
+        return self.data._usable_symbols
 
 
     @property
     def reg_panel(self):
         self._proccessing_mutex.lock()
-        x= self._reg_panel
+        x= self.data._reg_panel
         self._proccessing_mutex.unlock()
         return x
 
     @reg_panel.setter
     def reg_panel(self, value):
-        self._reg_panel=value
+        self.data._reg_panel=value
         pass
 
     @property
     def adjusted_panel(self):
         self._proccessing_mutex.lock()
-        x= self._adjusted_panel
+        x= self.data._adjusted_panel
         self._proccessing_mutex.unlock()
         return x
 
     @adjusted_panel.setter
     def adjusted_panel(self, value):
-        self._adjusted_panel=value #we are under lock
+        self.data._adjusted_panel=value #we are under lock
         pass
 
     @property
@@ -253,7 +256,7 @@ class InputProcessor(InputProcessorInterface, InputData):
 
     @cached
     def trivial_currency(self,sym):
-        return (self.symbol_info[sym].get('currency') in [config.Symbols.BASECUR, 'unk'])
+        return (self.data.symbol_info[sym].get('currency') in [config.Symbols.BASECUR, 'unk'])
 
     def resolve_currency(self, sym, l, hist):
         #very inefficient . but for few..
@@ -361,7 +364,7 @@ class InputProcessor(InputProcessorInterface, InputData):
         gok=False
         for t,v in items:
             v: BuyDictItem
-            curr=self.symbol_info[v.Symbol].get('currency')
+            curr=self.data.symbol_info[v.Symbol].get('currency')
             if curr in set(['unk', config.Symbols.BASECUR]):
                 self._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
                 yield BuyOp(date=t,currency=None,buydic=v)
@@ -636,10 +639,10 @@ class InputProcessor(InputProcessorInterface, InputData):
                 logging.debug('current unrelprofit of stock %s is %f' % (stock, _cur_unrelprofit_bystock[stock]))
                 logging.debug('current avg cost reflected of stock %s is %f' % (stock, _cur_avg_cost_bystock_reflected_splits[stock]))
                 logging.debug('current price of stock %s is %f' % (stock, _cur_stock_price[stock][0]))
-        self.mindate = min(
-            self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
-        self.maxdate = max(
-            self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
+        self.data.mindate = min(
+            self.data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self.data._hist_by_date.keys())/1000,tz)
+        self.data.maxdate = max(
+            self.data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self.data._hist_by_date.keys())/1000,tz)
 
         _cur_splited_bystock = defaultdict(lambda:1)
         _cur_avg_cost_bystock = defaultdict(lambda: 0)
@@ -656,7 +659,7 @@ class InputProcessor(InputProcessorInterface, InputData):
         cur_split = defaultdict(lambda: None)
         _last_action = defaultdict(lambda: None)
         _cur_accumative_holding_bystock = defaultdict(lambda: 0) #just used to calculate the total holding involved
-        if len(self._simp_hist_by_date)==0 and (not partial_symbols_update):
+        if len(self.data._simp_hist_by_date)==0 and (not partial_symbols_update):
             logging.warn(("WARNING: No History at all!"))
             return
         hh = pytz.UTC  # timezone('Israel')
@@ -668,7 +671,7 @@ class InputProcessor(InputProcessorInterface, InputData):
         try:
             if not partial_symbols_update:
                 self._fset=set()
-            simphist=iter(sorted(self._simp_hist_by_date.items()))
+            simphist=iter(sorted(self.data._simp_hist_by_date.items()))
             t=1
 
             dic={}
@@ -717,20 +720,20 @@ class InputProcessor(InputProcessorInterface, InputData):
                 for sym in holdopt:
                     if partial_symbols_update and not sym in partial_symbols_update:
                         continue
-                    self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
-                    self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
-                    self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
+                    self.data._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
+                    self.data._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
+                    self.data._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
                     if sym not in self._no_adjusted_for:
-                        self._avg_cost_by_stock_adjusted[sym][tim] = _cur_avg_cost_bystock_reflected_splits[
+                        self.data._avg_cost_by_stock_adjusted[sym][tim] = _cur_avg_cost_bystock_reflected_splits[
                             sym] if config.Input.AdjustUnrelProfitToReflectSplits else _cur_avg_cost_bystock_adjusted[sym]
                     elif self.trivial_currency(sym):
-                        self._avg_cost_by_stock_adjusted[sym][tim] =_cur_avg_cost_bystock[sym]
+                        self.data._avg_cost_by_stock_adjusted[sym][tim] =_cur_avg_cost_bystock[sym]
 
-                    self._split_by_stock[sym][tim] = _cur_splited_bystock[sym]
+                    self.data._split_by_stock[sym][tim] = _cur_splited_bystock[sym]
                 if mini:
                     continue
-                symopt = self._usable_symbols.intersection(
-                    partial_symbols_update) if partial_symbols_update else self._usable_symbols
+                symopt = self.data._usable_symbols.intersection(
+                    partial_symbols_update) if partial_symbols_update else self.data._usable_symbols
                 for sym in symopt:
                     if partial_symbols_update and not sym in partial_symbols_update:
                         continue
@@ -739,12 +742,12 @@ class InputProcessor(InputProcessorInterface, InputData):
                     else:
                         v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
 
-                    self._alldates[sym][tim] = v[0]
-                    self._alldates_adjusted[sym][tim]=v[1]
+                    self.data._alldates[sym][tim] = v[0]
+                    self.data._alldates_adjusted[sym][tim]=v[1]
                     _cur_stock_price[sym] = v
                     #v = v[0]
-                    self._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
-                    self._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
+                    self.data._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
+                    self.data._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
 
                     if config.Input.AdjustUnrelProfitToReflectSplits:
                         cursplit = maxsplit[sym] / _cur_splited_bystock[sym]
@@ -771,10 +774,10 @@ class InputProcessor(InputProcessorInterface, InputData):
 
 
 
-                    self._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
-                    self._unrel_profit_adjusted[sym][tim] = _cur_unrelprofit_bystock_adjusted[sym]
+                    self.data._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
+                    self.data._unrel_profit_adjusted[sym][tim] = _cur_unrelprofit_bystock_adjusted[sym]
 
-                    self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
+                    self.data._tot_profit_by_stock[sym][tim] = self.data._rel_profit_by_stock[sym][tim] + self.data._unrel_profit[sym][tim]
                     _last_action[sym] = cur_action
                 self._fset.add(tim)
             if not partial_symbols_update:
@@ -812,12 +815,12 @@ class InputProcessor(InputProcessorInterface, InputData):
         for k in dfs[1:]:
             st=st.join(k,on='stock',how='left')
 
-        self._current_status= st
+        self.data._current_status= st
 
     def get_portfolio_stocks(self):
-        if self._current_status is None:
+        if self.data._current_status is None:
             return set()
-        return set(self._current_status[ self._current_status['Holding']!=0].index)
+        return set(self.data._current_status[ self.data._current_status['Holding']!=0].index)
 
 
 
@@ -880,14 +883,14 @@ class InputProcessor(InputProcessorInterface, InputData):
 
 
 
-        self.symbol_info_tmp={}
+        self.data.symbol_info_tmp={}
 
         if not partial_symbols_update:
-            self._usable_symbols = set()
-            self._bad_symbols = set()
-            self._hist_by_date = collections.OrderedDict()  # like all dates but by
+            self.data._usable_symbols = set()
+            self.data._bad_symbols = set()
+            self.data._hist_by_date = collections.OrderedDict()  # like all dates but by
         else:
-            self._bad_symbols=self._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
+            self.data._bad_symbols=self.data._bad_symbols - set(partial_symbols_update) #meaning we don't ignore symbols here , even if before they were bad
         todate = todate if todate is not None else datetime.datetime.now()
 
         todate = localize_it(todate)
@@ -897,7 +900,7 @@ class InputProcessor(InputProcessorInterface, InputData):
         successful_once=False
         if fromdate==todate:
             raise Exception("identical dates")
-        for sym in list(self._symbols_wanted if not partial_symbols_update else partial_symbols_update):
+        for sym in list(self.data._symbols_wanted if not partial_symbols_update else partial_symbols_update):
 
             sym_corrected = self.process_params.resolve_hack.get(sym, None)
             if not sym_corrected:
@@ -934,8 +937,8 @@ class InputProcessor(InputProcessorInterface, InputData):
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.Symbols.CRYPTO))  # should be rounded
 
-        self.symbol_info[sym] = (l if l else {}) #just for debug I think
-        if (cont := self.symbol_info[sym].get('contract')):
+        self.data.symbol_info[sym] = (l if l else {}) #just for debug I think
+        if (cont := self.data.symbol_info[sym].get('contract')):
             logging.debug(f"resolved {sym} is {cont}")
         if hist is None:
             raise SymbolError("bad symbol")
@@ -948,14 +951,14 @@ class InputProcessor(InputProcessorInterface, InputData):
         if l is None:
             logging.warn("no info for %s , using default " % sym)
             currency =  'unk'
-        elif not (sym in self.symbol_info and ('currency' in self.symbol_info[sym] ) and self.symbol_info[sym]['currency']) :
+        elif not (sym in self.data.symbol_info and ('currency' in self.data.symbol_info[sym] ) and self.data.symbol_info[sym]['currency']) :
             currency = self.resolve_currency(sym, l, hist)
-            self.symbol_info[sym].update( {'currency': currency})
+            self.data.symbol_info[sym].update( {'currency': currency})
         else:
-            currency= self.symbol_info[sym]['currency']
+            currency= self.data.symbol_info[sym]['currency']
 
         if currency != config.Symbols.BASECUR and currency != 'unk':
-            adjusted =  self.adjust_sym_for_currency(currency, maxdate, mindate, hist, sym)
+            adjusted =  self.adjust_sym_for_currency(currency, data.maxdate, data.mindate, hist, sym)
         else:
             adjusted=None
 
@@ -964,7 +967,7 @@ class InputProcessor(InputProcessorInterface, InputData):
             adjusted = adjusted.to_dict('index')
         okdays = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
 
-        self._usable_symbols.add(sym)
+        self.data._usable_symbols.add(sym)
         for date, dic in hist.items():
             if not date in self._hist_by_date:
                 self._hist_by_date[date] = {}
@@ -974,12 +977,10 @@ class InputProcessor(InputProcessorInterface, InputData):
 
     def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
         dataframes = []
-        self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
-                      self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
-                      self._alldates_adjusted,self._unrel_profit_adjusted]
-        NONADJUSTEDDICTS= len(self.dicts) -2
+
+        NONADJUSTEDDICTS= len(self.data.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
-        seldict= self.dicts[:NONADJUSTEDDICTS]
+        seldict= self.data.dicts[:NONADJUSTEDDICTS]
 
         try:
 
@@ -997,7 +998,7 @@ class InputProcessor(InputProcessorInterface, InputData):
             combinedindex=sorted(list(self._fset))
 
 
-        for name, dic in zip(self.dicts_names,seldict):
+        for name, dic in zip(self.data.dicts_names,seldict):
             df = pd.DataFrame(dic, index=combinedindex)
             if name=='alldates':
                 df = df.fillna(method='ffill', axis=0)
@@ -1021,7 +1022,7 @@ class InputProcessor(InputProcessorInterface, InputData):
             traceback.print_exc()
             logging.debug(('earnings calc failed '))
 
-        self._reg_panel = pd.concat(dataframes,axis=1)
+        self.data._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
     def return_df(df, cur,commonstock_df,name):
@@ -1048,7 +1049,7 @@ class InputProcessor(InputProcessorInterface, InputData):
     @simple_exception_handling("adjusting for currency", return_succ=0)
     def adjust_for_currency(self):
         a=1 #updates adjusted panel
-        cursymdic={v.get('currency', 'unk'):k for k,v in self.symbol_info.items() if not (v is None)}
+        cursymdic={v.get('currency', 'unk'):k for k,v in self.data.symbol_info.items() if not (v is None)}
 
         relevant_currencies = set(cursymdic.keys()) - \
                               set(['unk', config.Symbols.BASECUR])
@@ -1072,10 +1073,10 @@ class InputProcessor(InputProcessorInterface, InputData):
                 sym=cursymdic[x]
 
                 with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False,never_throw=True):
-                    m= max(list(self._alldates_adjusted[sym].keys())) #can fail if empty
+                    m= max(list(self.data._alldates_adjusted[sym].keys())) #can fail if empty
                     if (datetime.datetime.now()-m) < config.Input.MAX_RELEVANT_CURRENCY_TIME_HUER:
                         logging.debug(f'Using heuristic for currency {x} {sym}')
-                        self._relevant_currencies_rates[x]=self._alldates_adjusted[sym][m]/self._alldates[sym][m]
+                        self._relevant_currencies_rates[x]=self.data._alldates_adjusted[sym][m]/self.data._alldates[sym][m]
 
 
 
@@ -1083,12 +1084,12 @@ class InputProcessor(InputProcessorInterface, InputData):
 
 
 
-        #fix the following line for case 'currency' is not in dictonary of value v of symbol_info
-        dic={k: self._relevant_currencies_rates.get(curr) for k,v in self.symbol_info.items() if (curr:=v.get('currency', 'unk')) in self._relevant_currencies_rates and self._relevant_currencies_rates[curr] is not None}
-        #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
+        #fix the following line for case 'currency' is not in dictonary of value v of data.symbol_info
+        dic={k: self._relevant_currencies_rates.get(curr) for k,v in self.data.symbol_info.items() if (curr:=v.get('currency', 'unk')) in self._relevant_currencies_rates and self._relevant_currencies_rates[curr] is not None}
+        #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.data.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
         if len(dic)==0:
             return False
-        self._adjusted_panel=self.get_adjusted_df_for_currency(dic)
+        self.data._adjusted_panel=self.get_adjusted_df_for_currency(dic)
         return True
 
     def get_adjusted_df_for_currency(self, currency_dict):
@@ -1098,7 +1099,7 @@ class InputProcessor(InputProcessorInterface, InputData):
                 [[df_name], list(ndf.columns)], names=['Name', 'Symbols'])
             return ndf
 
-        relevant = set(lmap(lambda x: x[1], self._reg_panel.columns)).intersection(
+        relevant = set(lmap(lambda x: x[1], self.data._reg_panel.columns)).intersection(
             set(currency_dict.keys()))
 
         currency_symbols_multiIndex = pd.MultiIndex.from_product(
@@ -1107,28 +1108,28 @@ class InputProcessor(InputProcessorInterface, InputData):
             logging.debug('no symbols to adjust')
             return False
         adjusted_currency_df = pd.DataFrame(
-            index=self._reg_panel.index, columns=currency_symbols_multiIndex)
+            index=self.data._reg_panel.index, columns=currency_symbols_multiIndex)
         for x in SymbolsInterface.TOADJUST:
             for key, value in currency_dict.items():
                 adjusted_currency_df.loc[:, (x, key)] = currency_dict[key]
 
         adjusted_reg_panel_df = pd.DataFrame(
-            index=self._reg_panel.index, columns=self._reg_panel.columns)
+            index=self.data._reg_panel.index, columns=self.data._reg_panel.columns)
         for x in SymbolsInterface.TOKEEP:
-            if x in self._reg_panel:
-                adjusted_reg_panel_df[x] = self._reg_panel[x].copy()
+            if x in self.data._reg_panel:
+                adjusted_reg_panel_df[x] = self.data._reg_panel[x].copy()
 
-        df1 = self._reg_panel[currency_symbols_multiIndex]
+        df1 = self.data._reg_panel[currency_symbols_multiIndex]
         cols_to_multiply = df1.columns.intersection(adjusted_currency_df.columns)
         adjusted_reg_panel_df[cols_to_multiply] = df1[cols_to_multiply].mul(
             adjusted_currency_df[cols_to_multiply])
 
         adjusted_reg_panel_df = adjusted_reg_panel_df[[(
-            c, d) for (c, d) in self._reg_panel.columns if c not in SymbolsInterface.TOADJUSTLONG]]
-        value_panel = return_subpanel('value', self._adjusted_value)
-        date_adjusted_panel = return_subpanel('alldates', self._alldates_adjusted)
-        unrel_profit_panel = return_subpanel('unrel_profit', self._unrel_profit_adjusted)
-        avg_cost_panel = return_subpanel('avg_cost_by_stock', self._avg_cost_by_stock_adjusted)
+            c, d) for (c, d) in self.data._reg_panel.columns if c not in SymbolsInterface.TOADJUSTLONG]]
+        value_panel = return_subpanel('value', self.data._adjusted_value)
+        date_adjusted_panel = return_subpanel('alldates', self.data._alldates_adjusted)
+        unrel_profit_panel = return_subpanel('unrel_profit', self.data._unrel_profit_adjusted)
+        avg_cost_panel = return_subpanel('avg_cost_by_stock', self.data._avg_cost_by_stock_adjusted)
 
         adjusted_reg_panel_df['rel_profit_by_stock'] = adjusted_reg_panel_df['rel_profit_by_stock'].fillna(0)
         total_profit_df = adjusted_reg_panel_df['rel_profit_by_stock'] + unrel_profit_panel['unrel_profit']
@@ -1141,7 +1142,7 @@ class InputProcessor(InputProcessorInterface, InputData):
 
     def filter_input(self,keys):
 
-        for x in self.dicts:
+        for x in self.data.dicts:
             for k in keys:
                 x.pop(str(k),'')
 
@@ -1188,11 +1189,11 @@ class InputProcessor(InputProcessorInterface, InputData):
             self.used_unitetype = self.process_params.unite_by_group
             required = set(self._eng.required_syms(True, True))
             if config.Input.DOWNLOADDATAFORPROT:
-                self._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
+                self.data._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
             else:
-                self._symbols_wanted = required.copy()
+                self.data._symbols_wanted = required.copy()
         else:
-            self._symbols_wanted.update(
+            self.data._symbols_wanted.update(
                 partial_symbol_update)  # will try also the symbols wanted. That are generally only updated first..
         t = time.process_time()
         ret= self.process_history(partial_symbol_update)
