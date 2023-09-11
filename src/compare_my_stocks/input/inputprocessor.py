@@ -1,4 +1,7 @@
-from transactions.transactioninterface import BuyDictItem,TransactionSource 
+from memoization import cached
+
+from common.refvar import RefVar, GenRefVar
+from transactions.transactioninterface import BuyDictItem,TransactionSource
 import collections
 import logging
 import math
@@ -9,7 +12,7 @@ from collections import defaultdict
 # from datetime import datetime
 import datetime
 from copy import copy
-from functools import lru_cache, reduce, partial
+from functools import reduce, partial
 
 import matplotlib
 import numpy
@@ -21,28 +24,157 @@ from PySide6.QtCore import QRecursiveMutex
 from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, print_formatted_traceback, log_conv, \
-    localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap
-from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
+    localize_it, unlocalize_it, VerifySave, conv_date, tzawareness, ifnotnan, lmap, selfifnn, StandardColumns
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
-from input.earningscommon import localize_me
 from input.earningsproc import EarningProcessor
 from input.inputprocessorinterface import InputProcessorInterface
 
 from input.inputsource import InputSource, InputSourceInterface
 from engine.symbolsinterface import SymbolsInterface
 from transactions.transactionhandlermanager import TransactionHandlerManager
-#import input.earningsinp
-StandardColumns = ['Open', 'High', 'Low', 'Close']
+from typing import NamedTuple, Optional, Union
 
+#import input.earningsinp
+BuyOp= NamedTuple("BuyOp", [('date', datetime.datetime), ('buydic', BuyDictItem), ('currency',Union[Optional[float],str])])
 
 class SymbolError(Exception):
     pass
 
 
+class InputData:
+    def __init__(self):
+        self._reg_panel=None
+        self._adjusted_panel=None
+        self.dicts = [self._alldates, self._unrel_profit, self._value, self._avg_cost_by_stock,
+                      self._rel_profit_by_stock, self._tot_profit_by_stock, self._holding_by_stock,
+                      self._alldates_adjusted,self._unrel_profit_adjusted]
+        self._bad_symbols = set()
+        self.mindate = None
+        self.maxdate = None
+        self._usable_symbols = set()
+        self._symbols_wanted = set()
+        self.symbol_info = collections.defaultdict(lambda:dict())
+        self.cached_used = None
+        self._current_status = None
+
+    def init_input(self):
+        #todo: make dataframe... but it is 3d...
+        self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._alldates_adjusted= defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._adjusted_value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # how much we hold
+        self._avg_cost_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # cost per unit
+        self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # re
+        self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+        self._split_by_stock = defaultdict(lambda: defaultdict(lambda: 1))
+        self._avg_cost_by_stock_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+
+
+
+
+    def load_cache(self,minimal=False):
+        query_source = True
+        try:
+            if minimal: # Symbol info is needed by TransactionHandler . So we load just this...
+                _, symbinfo, _, _, _ = pickle.load(open(config.File.HIST_F, 'rb'))
+                self.symbol_info = collections.defaultdict(dict)
+                self.symbol_info.update(symbinfo)
+                #patch
+                for x in self.symbol_info:
+                    if self.symbol_info[x]==None:
+                        self.symbol_info[x]={}
+
+
+                return
+
+            # not minimal
+
+            hist_by_date, _ , self._cache_date,self.currency_hist,_ = pickle.load(open(config.File.HIST_F, 'rb'))
+
+            if type(self.currency_hist) == dict: # backward compatability
+                self.currency_hist = pandas.DataFrame(self.currency_hist)
+
+            if self._cache_date - datetime.datetime.now() < config.Input.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
+                logging.info(f"Loaded and used cache: {self._cache_date}")
+                self._hist_by_date = hist_by_date
+                self.cached_used = True
+            else:
+                logging.info(f"Cache not used {self._cache_date}  {self.process_params.use_cache}")
+                self.cached_used = False
+            #log the current hist_by_date status, include max date,min date,num of entries
+            logging.debug((f'hist_by_date status: max date {max(self._hist_by_date.keys())}, min date {min(self._hist_by_date.keys())}, num of entries {len(self._hist_by_date)}'))
+
+
+
+            self.update_usable_symbols()
+            logging.debug((f'cache symbols used {sorted(list(self._usable_symbols))}'))
+            if not self.process_params.use_cache == UseCache.FORCEUSE:
+                query_source = not (set(self._symbols_wanted) <= set(
+                    self._usable_symbols))  # all the buy and required are in there
+            else:
+                logging.debug((log_conv('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))))
+                query_source = False
+        except FileNotFoundError:
+            logging.warn('No cache file found')
+            query_source = True
+            self.cached_used=True #lets lie because we don't want verifysave
+        except Exception as e:
+            e = e
+            logging.warn((f'failed to use cache {e}'))
+            import traceback;traceback.print_exc()
+            if not minimal:
+                self.cached_used = False
+        return query_source
+
+    def save_data(self):
+
+
+        if not self.cached_used:
+            logging.warn("Cache wasnt used! (possibly first time)")
+            if config.Running.VERIFY_SAVING == VerifySave.DONT:
+                logging.warn("Not saving data because not using cache")
+                return
+            logging.warn("Saving data without using cache! Can earse data!")
+            if config.Running.VERIFY_SAVING == VerifySave.Ask :
+
+                x=input('Are you sure you want to? (y to accept)') #TODO: msgbox
+                if x.lower()!='y':
+                    return
+
+
+        import shutil
+        try:
+            shutil.copy(config.File.HIST_F, config.File.HIST_F_BACKUP)
+        except:
+            logging.debug(('error in backuping hist file'))
+        try:
+            pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist.to_dict(),
+                         None), open(config.File.HIST_F, 'wb'))
+            logging.debug(('hist saved'))
+        except:
+            logging.error(("error in dumping hist"))
+            print_formatted_traceback()
+
+    def update_usable_symbols(self):
+        self._usable_symbols = set()
+        for t, dic in self._hist_by_date.items():
+            self._usable_symbols.update(set(dic.keys()))
+
+
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
-class InputProcessor(InputProcessorInterface):
+class InputProcessor(InputProcessorInterface, InputData):
+    dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock',
+                   'tot_profit_by_stock', 'holding_by_stock']
+
+    def __getattr__(self, item):
+        if hasattr(self.data,item):
+            return getattr(self.data,item)
 
     def complete_status(self):
         def get_stat(filter_str):
@@ -103,31 +235,25 @@ class InputProcessor(InputProcessorInterface):
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
-        self.cached_used = None
-        self._symbols_wanted = set()
-        self.symbol_info = collections.defaultdict(lambda:dict())
-        self._usable_symbols = set()
-        self._bad_symbols = set()
         self.currency_hist= None
 
+        self.data= InputData()
 
-
-        self.init_input()
+        self.data.init_input()
         self._initial_process_done=False
 
-        self.dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock','rel_profit_by_stock', 'tot_profit_by_stock', 'holding_by_stock']
         self._relevant_currencies_rates={}
         self._relevant_currencies_time = None
 
         self._proccessing_mutex = QRecursiveMutex()
-        self._reg_panel=None
-        self._adjusted_panel=None
         self._earningProc=EarningProcessor.generate_or_make()
 
-        self.mindate=None
-        self.maxdate=None
+
         self.failed_to_get_new_data=None
 
+    @cached
+    def trivial_currency(self,sym):
+        return (self.symbol_info[sym].get('currency') in [config.Symbols.BASECUR, 'unk'])
 
     def resolve_currency(self, sym, l, hist):
         #very inefficient . but for few..
@@ -178,8 +304,7 @@ class InputProcessor(InputProcessorInterface):
             self.currency_hist=self.currency_hist.combine_first(df)
 
 
-    @lru_cache
-    def get_currency_hist(self, currency, fromdate, enddate):
+    def get_currency_hist(self, currency, fromdate, enddate,minimal=False,queried: Optional[RefVar]=None):
         fromdate=localize_it(conv_date(fromdate,premissive=False))
         enddate=localize_it(conv_date(enddate))
         pair = ( currency,config.Symbols.BASECUR)
@@ -191,33 +316,116 @@ class InputProcessor(InputProcessorInterface):
 
         # if isinstance(self.currency_hist,dict):
         #     self.currency_hist=None
-        ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist is not None  and currency in self.currency_hist else [(fromdate,enddate)])
-        ls =list(ls)
 
-        for (mindate, maxdate) in ls:
-            tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
-            if tmpdf is not None:
-                self.update_currency_hist(currency,tmpdf)
-        if not currency in self.currency_hist:
-            raise ValueError("cant get currency to adjust")
-        df = self.currency_hist[currency]
-        return df #whatever we get is ok
+        fromdateaware = pd.to_datetime(unlocalize_it(fromdate))
+        enddateaware =  pd.to_datetime(unlocalize_it(enddate))
+        didquery=False
+
+        try:
+            df = self.currency_hist[currency]
+            tmpdf = df.loc[fromdateaware:enddateaware]
+        except: 
+            ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.currency_hist is not None  and currency in self.currency_hist else [(fromdate,enddate)])
+            ls =list(ls)
+            if len(ls) == 0:
+                logging.error('Get range gap return none. very strange')
+                return None
+
+
+            for (mindate, maxdate) in ls:
+                tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
+                didquery=True
+                logging.debug("get currency history %s %s %s %s" % (pair, mindate, maxdate,selfifnn(tmpdf,len(tmpdf))))
+                if tmpdf is not None:
+                    self.update_currency_hist(currency,tmpdf)
+            if not currency in self.currency_hist:
+                raise ValueError("cant get currency to adjust")
+        if queried is not None:
+            queried.value= didquery
+        elif didquery:
+            self.save_data()
+
+        if not minimal:
+            return df #whatever we get is ok
+        else: 
+            return tmpdf #we need to get the exact range
+
+
+
+
         #goodind=  list(set([x for x in  self.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
         #return df.loc[ goodind ]
+    
+    def get_buy_operations_with_adjusted(self,items):
+        self._no_adjusted_for = set()
+        gok=False
+        for t,v in items:
+            v: BuyDictItem
+            curr=self.symbol_info[v.Symbol].get('currency')
+            if curr in set(['unk', config.Symbols.BASECUR]):
+                self._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
+                yield BuyOp(date=t,currency=None,buydic=v)
+            else:
+                ok=False 
+                try:
+                    with SimpleExceptionContext(err_description= f"error getting currency for transaction {v.Symbol}", detailed=False):
+                        for i in range(1,3):
+                            queried=RefVar(False)
+                            df= self.get_currency_hist(curr, t - datetime.timedelta(days=i),
+                                                       t + datetime.timedelta(days=i),
+                                                       minimal=True,queried=queried)  #To do : account for base currency different than USD, such as EUR.ILS
+                            if len(df)==0:
+                                continue
+                            else:
+                                #df.where(lambda x: df.index == t).dropna().iloc[0]
+                                try:
+                                    row= list(filter(lambda x: x[0].day == t.day, df.iterrows()))[0][1]
+                                except:
+                                    row= df.iloc[0]
+                                    logging.warn(f"could not find exact date for currency {t} {v.Symbol} {curr} got {row.name}")
+
+                                curval= (row['Open']+row['Close']) /2
+
+                                yield BuyOp(date=t,currency=curval ,buydic=v)
+                                ok=True
+                                if queried.value:
+                                    gok=True
+                            break
+                        else:
+                            logging.error(f"no currency for {v.Symbol} {curr} {t}")
+                            yield BuyOp(date=t, currency='err', buydic=v)
+                except KeyError as e:
+                    logging.error(str(e))
+                if not ok:
+                    yield BuyOp(date=t,currency='err' ,buydic=v)
+                    self._no_adjusted_for.add(v.Symbol)
+        if gok:
+            self.save_data()
+            
+        
 
     def process_history(self, partial_symbols_update=set()):
 
         if not partial_symbols_update:
-            self.init_input()
+            self.data.init_input()
         else:
             self.filter_input(partial_symbols_update)
-
+        query_source = True
+        if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
+            query_source = self.load_cache()
 
         items= self._transaction_handler.buydic.items()
         if self._buy_filter:
             items = filter(self._buy_filter,items)
 
-        buyoperations = collections.OrderedDict(sorted(items))  # ordered
+
+        #items= map(lambda x: (x[0],x[1]._replace(Symbol=config.Symbols.REPLACE_SYM_IN_INPUT.get(x[1].Symbol,x[1].Symbol)))  ,items)
+
+
+
+        buyoperations = collections.OrderedDict(map(lambda x: (x[0],x), self.get_buy_operations_with_adjusted(sorted(items))))  # ordered
+        
+        
 
         if self._transaction_handler._stockprices:
             self._transaction_handler._stockprices.filter_bad()
@@ -234,7 +442,7 @@ class InputProcessor(InputProcessorInterface):
 
 
 
-        cur_action = buyoperations.popitem(False) if len(buyoperations)!=0 else None
+        _ , cur_action = buyoperations.popitem(False) if len(buyoperations)!=0 else None
 
 
         if self.process_params.transactions_fromdate == None:
@@ -251,13 +459,12 @@ class InputProcessor(InputProcessorInterface):
             fromdate=self.process_params.transactions_fromdate
             todate=self.process_params.transactions_todate
 
-        query_source = True
-        if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
-            query_source = self.load_cache()
+
 
         if query_source:
             succ=self.get_data_from_source(partial_symbols_update,fromdate,todate)
-            self.save_data()
+            if succ:
+                self.save_data()
         else:
             succ=True
         self.failed_to_get_new_data = succ == False
@@ -284,52 +491,6 @@ class InputProcessor(InputProcessorInterface):
             self._proccessing_mutex.unlock()
             logging.log(TRACELEVEL,('exit proc lock'))
         return succ
-
-    def load_cache(self,minimal=False):
-        query_source = True
-        try:
-            if minimal: # Symbol info is needed by TransactionHandler . So we load just this...
-                _, symbinfo, _, _, _ = pickle.load(open(config.File.HIST_F, 'rb'))
-                self.symbol_info = collections.defaultdict(dict)
-                self.symbol_info.update(symbinfo)
-                #patch
-                for x in self.symbol_info:
-                    if self.symbol_info[x]==None:
-                        self.symbol_info[x]={}
-
-
-                return
-            else:
-                hist_by_date, _ , self._cache_date,self.currency_hist,_ = pickle.load(open(config.File.HIST_F, 'rb'))
-                if type(self.currency_hist) == dict: # backward compatability
-                    self.currency_hist = pandas.DataFrame(self.currency_hist)
-
-
-
-            #self.currency_hist = None
-            if self._cache_date - datetime.datetime.now() < config.Input.MAXCACHETIMESPAN or self.process_params.use_cache == UseCache.FORCEUSE:
-                self._hist_by_date = hist_by_date
-            #log the current hist_by_date status, include max date,min date,num of entries
-            logging.debug((f'hist_by_date status: max date {max(self._hist_by_date.keys())}, min date {min(self._hist_by_date.keys())}, num of entries {len(self._hist_by_date)}'))
-
-
-
-            self.update_usable_symbols()
-            logging.debug((f'cache symbols used {sorted(list(self._usable_symbols))}'))
-            if not self.process_params.use_cache == UseCache.FORCEUSE:
-                query_source = not (set(self._symbols_wanted) <= set(
-                    self._usable_symbols))  # all the buy and required are in there
-            else:
-                logging.debug((log_conv('using cache anyway', not (set(self._symbols_wanted) <= set(self._usable_symbols)))))
-                query_source = False
-                self.cached_used=True
-        except Exception as e:
-            e = e
-            logging.warn((f'failed to use cache {e}'))
-            import traceback;traceback.print_exc()
-            if not minimal:
-                self.cached_used = False
-        return query_source
 
     def process_hist_internal(self, buyoperations, cur_action, partial_symbols_update, splits, maxsplit):
         def calc_splited(sym,last_time, time):
@@ -375,8 +536,10 @@ class InputProcessor(InputProcessorInterface):
             #here we passed time and updated splits.
 
         def update_curholding():
+            nonlocal  _cur_avg_cost_bystock_adjusted
             x: BuyDictItem = cur_action[1]
             stock = x.Symbol
+            currency_val = cur_action[2] 
             #if stock is in TrackStockList , write to log state in terms of holding before and after transaction is applied
 
 
@@ -387,10 +550,12 @@ class InputProcessor(InputProcessorInterface):
             cursplit = maxsplit[stock] / _cur_splited_bystock[stock]
 
             old_cost = _cur_avg_cost_bystock[stock]
+            old_cost_adjusted = _cur_avg_cost_bystock_adjusted[stock]
             old_holding = _cur_holding_bystock[stock]
             old_holding_reflected = old_holding * cursplit
 
             old_cost_reflected= _cur_avg_cost_bystock_reflected_splits[stock]
+            old_cost_reflected_adjusted= _cur_avg_cost_bystock_reflected_splits[stock]
             if (x.Source == TransactionSource.IB or x.Source == TransactionSource.CACHEDIBINSTOCK) and config.TransactionHandlers.ReadjustJustIB:
                 if cursplit not in [0,1]:
                     orgcost = x.Cost
@@ -424,26 +589,31 @@ class InputProcessor(InputProcessorInterface):
                             old_holding + x[0])
                 _cur_avg_cost_bystock_reflected_splits[stock] = (old_holding_reflected * old_cost_reflected + x[0] * x[1] / cursplit) / (
                             old_holding_reflected + x[0])
+                if x.Symbol not in self._no_adjusted_for and currency_val:
+                    _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (old_holding_reflected * old_cost_reflected_adjusted + x[0] * x[1] * currency_val / cursplit) / (
+                                old_holding_reflected + x[0])
+                    _cur_avg_cost_bystock[stock] = (old_holding * old_cost_adjusted + x[0] * x[1] * currency_val) / (
+                    old_holding + x[0])
 
-                # self._avg_cost_by_stock[stock][cur_action[0]] = nv
+
             else:
                 if abs(int(x.Qty))>abs(int(old_holding)): #we switch to the other side. so we do selling of old_holding, and buying on the other
                     _cur_relprofit_bystock[stock] += old_holding * (
                             x[1] - _cur_avg_cost_bystock[stock])
                     _cur_avg_cost_bystock[stock] = (x[1])
                     _cur_avg_cost_bystock_reflected_splits[stock] = (x[1]/ cursplit)#* ( -1 if x[0]< 0 else 1) #-905 if neg
+                    if x.Symbol not in self._no_adjusted_for and currency_val:
+                        _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (x[1]/ cursplit)* currency_val #* ( -1 if x[0]< 0 else 1) #-905 if neg
+                        _cur_avg_cost_bystock_adjusted = x[1]* currency_val 
+
+
 
                 else:
                     _cur_relprofit_bystock[stock] += old_holding * (
-                            x[1] - _cur_avg_cost_bystock[stock])
+                            x[1] - _cur_avg_cost_bystock[stock]) # We adjust relprofit at the end by the constant value of base currency
                     if int(x.Qty)== int(old_holding):
                         _cur_avg_cost_bystock[stock] = 0
-                    #_cur_relprofit_bystock[stock] += (-1) * ( x[0] * (
-                    #            x[1]  - _cur_avg_cost_bystock[stock]))
-
-                 #_cur_relprofit_bystock[stock] += x[0] * (
-                 #                        x[1] * (-1) - _cur_avg_cost_bystock[stock])
-                # self.rel_profit_by_stock[stock][cur_action[0]] =  _cur_relprofit_bystock[stock]
+                        _cur_avg_cost_bystock_adjusted[stock] = 0
 
             _cur_holding_bystock[stock] += x[0]
             _cur_accumative_holding_bystock[stock] += abs(x[0])
@@ -455,7 +625,7 @@ class InputProcessor(InputProcessorInterface):
             if _cur_holding_bystock[stock] < 0:
                 logging.warn((log_conv(' sell below zero', stock, cur_action[0])))
                 if 0:
-                    self._transaction_handler.try_fix_dic(cur_action,_last_action[stock], _cur_holding_bystock[stock] )
+                    self._transaction_handler.try_fix_dic(cur_action.buydic,_last_action[stock], _cur_holding_bystock[stock] )
             if stock in config.TransactionHandlers.TrackStockList:
                 logging.debug('after applying action ' + str(x) +" time is "+ str(t))
                 logging.debug('current holding of stock %s is %f' % (stock, _cur_holding_bystock[stock])) 
@@ -470,12 +640,16 @@ class InputProcessor(InputProcessorInterface):
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._hist_by_date.keys())/1000,tz)
         self.maxdate = max(
             self._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._hist_by_date.keys())/1000,tz)
+
         _cur_splited_bystock = defaultdict(lambda:1)
         _cur_avg_cost_bystock = defaultdict(lambda: 0)
+        _cur_avg_cost_bystock_adjusted = defaultdict(lambda: 0)
         _cur_avg_cost_bystock_reflected_splits = defaultdict(lambda: 0) #adjust the splits to today
+        _cur_avg_cost_bystock_reflected_splits_adjusted = defaultdict(lambda: 0) #adjust the splits to today
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock = defaultdict(lambda: 0)
         _cur_unrelprofit_bystock = defaultdict(lambda: 0)
+        _cur_unrelprofit_bystock_adjusted = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
         _last_action_time = defaultdict(lambda: None)
         _first_action_time = defaultdict(lambda: None)
@@ -505,7 +679,7 @@ class InputProcessor(InputProcessorInterface):
                 except StopIteration:
                     logging.log(TRACELEVEL,("stop iter"))
                     if len(buyoperations)>0:
-                        cur_action = buyoperations.popitem(False)
+                        _ , cur_action = buyoperations.popitem(False)
                         t=cur_action[0]
                         mini=True
                     else:
@@ -535,7 +709,7 @@ class InputProcessor(InputProcessorInterface):
                     if len(buyoperations) == 0:
                         cur_action = None
                         break
-                    cur_action = buyoperations.popitem(False)
+                    _, cur_action = buyoperations.popitem(False)
 
                 tim = matplotlib.dates.date2num(t)
                 holdopt = set(_cur_holding_bystock.keys()).intersection(
@@ -546,6 +720,12 @@ class InputProcessor(InputProcessorInterface):
                     self._holding_by_stock[sym][tim] = _cur_holding_bystock[sym]
                     self._rel_profit_by_stock[sym][tim] = _cur_relprofit_bystock[sym]
                     self._avg_cost_by_stock[sym][tim] = _cur_avg_cost_bystock[sym]
+                    if sym not in self._no_adjusted_for:
+                        self._avg_cost_by_stock_adjusted[sym][tim] = _cur_avg_cost_bystock_reflected_splits[
+                            sym] if config.Input.AdjustUnrelProfitToReflectSplits else _cur_avg_cost_bystock_adjusted[sym]
+                    elif self.trivial_currency(sym):
+                        self._avg_cost_by_stock_adjusted[sym][tim] =_cur_avg_cost_bystock[sym]
+
                     self._split_by_stock[sym][tim] = _cur_splited_bystock[sym]
                 if mini:
                     continue
@@ -569,15 +749,31 @@ class InputProcessor(InputProcessorInterface):
                     if config.Input.AdjustUnrelProfitToReflectSplits:
                         cursplit = maxsplit[sym] / _cur_splited_bystock[sym]
                         _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock_reflected_splits[sym]) * _cur_holding_bystock[sym]*cursplit
+                        if sym not in self._no_adjusted_for:
+                            _cur_unrelprofit_bystock_adjusted[sym] = v[1] * _cur_holding_bystock[sym] - \
+                                                                    _cur_holding_bystock[sym] * \
+                                                                    _cur_avg_cost_bystock_reflected_splits_adjusted[sym]
+                        elif self.trivial_currency(sym):
+                            _cur_unrelprofit_bystock_adjusted[sym] = _cur_unrelprofit_bystock[sym]
+
+
                     else:
                         _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock[sym]) * _cur_holding_bystock[sym]
+                        if sym not in self._no_adjusted_for:
+                            _cur_unrelprofit_bystock_adjusted[sym] = v[1] * _cur_holding_bystock[sym] - \
+                                                                    _cur_holding_bystock[sym] * \
+                                                                    _cur_avg_cost_bystock_adjusted[sym]
+                        elif self.trivial_currency(sym):
+                            _cur_unrelprofit_bystock_adjusted[sym] = _cur_unrelprofit_bystock[sym]
+
+
 
 
 
 
                     self._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
-                    self._unrel_profit_adjusted[sym][tim] = v[1] * _cur_holding_bystock[sym] - _cur_holding_bystock[sym] * \
-                                                   _cur_avg_cost_bystock[sym]
+                    self._unrel_profit_adjusted[sym][tim] = _cur_unrelprofit_bystock_adjusted[sym]
+
                     self._tot_profit_by_stock[sym][tim] = self._rel_profit_by_stock[sym][tim] + self._unrel_profit[sym][tim]
                     _last_action[sym] = cur_action
                 self._fset.add(tim)
@@ -585,6 +781,7 @@ class InputProcessor(InputProcessorInterface):
                 self.update_current_status(
                     {"Holding" : _cur_holding_bystock,
                      "Unrealized profit": _cur_unrelprofit_bystock,
+                     "Unrealized profit in base": _cur_unrelprofit_bystock_adjusted,
                      "Realized  profit":  _cur_relprofit_bystock,
                      "AccumulatedHolding": _cur_accumative_holding_bystock,
                      "Average Cost": _cur_avg_cost_bystock,
@@ -631,16 +828,16 @@ class InputProcessor(InputProcessorInterface):
 
     def simplify_hist(self, partial_symbols_update):
         #very not efficient, can be rewritten. Still fast enough.
-        self._simp_hist_by_date = collections.OrderedDict()
+        self.data._simp_hist_by_date = collections.OrderedDict()
         for date, symdic in self._hist_by_date.items():
             for s, (dica, dicb) in symdic.items():
                 if partial_symbols_update and s not in partial_symbols_update:
                     continue
-                if not date in self._simp_hist_by_date:
-                    self._simp_hist_by_date[date] = {}
+                if not date in self.data._simp_hist_by_date:
+                    self.data._simp_hist_by_date[date] = {}
                 adjust = ifnn(dicb, lambda: (dicb['Close'] + dicb['Open']) / 2,
                               lambda: (dica['Close'] + dica['Open']) / 2)
-                self._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
+                self.data._simp_hist_by_date[date][s] = ((dica['Close'] + dica['Open']) / 2, adjust)
 
     @staticmethod
     def get_range_gap(dates,fromdate,todate):
@@ -737,16 +934,17 @@ class InputProcessor(InputProcessorInterface):
         l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.Symbols.CRYPTO))  # should be rounded
 
-        if len(hist)==0:
-            logging.warn('Got empty history for %s' % sym)
-            return 0
         self.symbol_info[sym] = (l if l else {}) #just for debug I think
         if (cont := self.symbol_info[sym].get('contract')):
             logging.debug(f"resolved {sym} is {cont}")
         if hist is None:
             raise SymbolError("bad symbol")
+        elif len(hist)==0:
+                raise SymbolError("empty history")
         else:
             logging.debug(f"got history for {sym}")
+
+
         if l is None:
             logging.warn("no info for %s , using default " % sym)
             currency =  'unk'
@@ -773,33 +971,6 @@ class InputProcessor(InputProcessorInterface):
 
             self._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
         return okdays
-
-    def save_data(self):
-        if self.process_params.use_cache == UseCache.DONT:
-            if config.Running.VERIFY_SAVING == VerifySave.DONT:
-                logging.warn("Not saving data because not using cache")
-                return
-            logging.warn("Saving data without using cache! Can earse data!")
-            if config.Running.VERIFY_SAVING == VerifySave.Ask :
-
-                x=input('Are you sure you want to? (y to accept)')
-                if x.lower()!='y':
-                    return
-
-
-        import shutil
-        try:
-            shutil.copy(config.File.HIST_F, config.File.HIST_F_BACKUP)
-        except:
-            logging.debug(('error in backuping hist file'))
-        try:
-            pickle.dump((self._hist_by_date, dict(self.symbol_info), datetime.datetime.now(), self.currency_hist.to_dict(),
-                         None), open(config.File.HIST_F, 'wb'))
-            logging.debug(('hist saved'))
-        except:
-            logging.error(("error in dumping hist"))
-            print_formatted_traceback()
-
 
     def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
         dataframes = []
@@ -900,7 +1071,7 @@ class InputProcessor(InputProcessorInterface):
             if v is None:
                 sym=cursymdic[x]
 
-                with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False):
+                with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False,never_throw=True):
                     m= max(list(self._alldates_adjusted[sym].keys())) #can fail if empty
                     if (datetime.datetime.now()-m) < config.Input.MAX_RELEVANT_CURRENCY_TIME_HUER:
                         logging.debug(f'Using heuristic for currency {x} {sym}')
@@ -920,65 +1091,52 @@ class InputProcessor(InputProcessorInterface):
         self._adjusted_panel=self.get_adjusted_df_for_currency(dic)
         return True
 
-    def init_input(self):
-        #todo: make dataframe... but it is 3d...
-        self._alldates = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._alldates_adjusted= defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._adjusted_value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._unrel_profit = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._value = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # how much we hold
-        self._avg_cost_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # cost per unit
-        self._rel_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))  # re
-        self._tot_profit_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._holding_by_stock = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._unrel_profit_adjusted = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
-        self._split_by_stock = defaultdict(lambda: defaultdict(lambda: 1))
+    def get_adjusted_df_for_currency(self, currency_dict):
+        def return_subpanel(df_name, dic):
+            ndf = pd.DataFrame.from_dict(dic)
+            ndf.columns = pd.MultiIndex.from_product(
+                [[df_name], list(ndf.columns)], names=['Name', 'Symbols'])
+            return ndf
 
-    def get_adjusted_df_for_currency(self, dic):
-        def return_subpanel(s,dic):
-            t=pd.DataFrame.from_dict(dic)
-            t.columns=pd.MultiIndex.from_product([[s], list(t.columns)], names=['Name', 'Symbols'])
-            return t
+        relevant = set(lmap(lambda x: x[1], self._reg_panel.columns)).intersection(
+            set(currency_dict.keys()))
 
-        relevant=set(lmap(lambda x: x[1], self._reg_panel.columns)).intersection(set(dic.keys()))
-        #list(dic.keys())
-
-        multiIndex = pd.MultiIndex.from_product([SymbolsInterface.TOADJUST,relevant ], names=['Name', 'Symbols'])
-        if len(multiIndex)==0:
+        currency_symbols_multiIndex = pd.MultiIndex.from_product(
+            [SymbolsInterface.TOADJUST, relevant], names=['Name', 'Symbols'])
+        if len(currency_symbols_multiIndex) == 0:
             logging.debug('no symbols to adjust')
             return False
-        df = pd.DataFrame(index=self._reg_panel.index, columns=multiIndex)
+        adjusted_currency_df = pd.DataFrame(
+            index=self._reg_panel.index, columns=currency_symbols_multiIndex)
         for x in SymbolsInterface.TOADJUST:
-            for k, v in dic.items():
-                df.loc[:, (x, k)] = dic[k]
+            for key, value in currency_dict.items():
+                adjusted_currency_df.loc[:, (x, key)] = currency_dict[key]
 
-        nn=pd.DataFrame(index=self._reg_panel.index, columns=self._reg_panel.columns)#[ (c,d)  for (c,d) in   self.reg_panel.columns if c!='tot_profit_by_stock']  )
+        adjusted_reg_panel_df = pd.DataFrame(
+            index=self._reg_panel.index, columns=self._reg_panel.columns)
         for x in SymbolsInterface.TOKEEP:
             if x in self._reg_panel:
-                nn[x] = self._reg_panel[x].copy() #nn.merge( self.reg_panel[x],on=nn.index, suffixes=None)
+                adjusted_reg_panel_df[x] = self._reg_panel[x].copy()
 
-        df1 = self._reg_panel[multiIndex]
-        cols_to_multiply = df1.columns.intersection(df.columns)
-        nn[cols_to_multiply] = df1[cols_to_multiply].mul(df[cols_to_multiply])
+        df1 = self._reg_panel[currency_symbols_multiIndex]
+        cols_to_multiply = df1.columns.intersection(adjusted_currency_df.columns)
+        adjusted_reg_panel_df[cols_to_multiply] = df1[cols_to_multiply].mul(
+            adjusted_currency_df[cols_to_multiply])
 
-       # nn['alldates'] = pd.DataFrame.from_dict(self._alldates_adjusted)
-        #nn['unrel_profit'] = pd.DataFrame.from_dict(self._unrel_profit_adjusted)
-        #nn['value']  = pd.DataFrame.from_dict(self._adjusted_value)
+        adjusted_reg_panel_df = adjusted_reg_panel_df[[(
+            c, d) for (c, d) in self._reg_panel.columns if c not in SymbolsInterface.TOADJUSTLONG]]
+        value_panel = return_subpanel('value', self._adjusted_value)
+        date_adjusted_panel = return_subpanel('alldates', self._alldates_adjusted)
+        unrel_profit_panel = return_subpanel('unrel_profit', self._unrel_profit_adjusted)
+        avg_cost_panel = return_subpanel('avg_cost_by_stock', self._avg_cost_by_stock_adjusted)
 
-
-
-
-
-
-        nn = nn[[(c, d) for (c, d) in self._reg_panel.columns if c not in SymbolsInterface.TOADJUSTLONG]]
-        n1= return_subpanel('value',self._adjusted_value)
-        n2= return_subpanel('alldates', self._alldates_adjusted)
-        n3 = return_subpanel('unrel_profit',self._unrel_profit_adjusted)
-        nn['rel_profit_by_stock']= nn['rel_profit_by_stock'].fillna(0)
-        t = nn['rel_profit_by_stock'] + n3['unrel_profit']
-        t.columns = pd.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)], names=['Name', 'Symbols'])
-        x= pd.concat([nn,t,n1,n2,n3], axis=1)
-        return  x
+        adjusted_reg_panel_df['rel_profit_by_stock'] = adjusted_reg_panel_df['rel_profit_by_stock'].fillna(0)
+        total_profit_df = adjusted_reg_panel_df['rel_profit_by_stock'] + unrel_profit_panel['unrel_profit']
+        total_profit_df.columns = pd.MultiIndex.from_product(
+            [['tot_profit_by_stock'], list(total_profit_df.columns)], names=['Name', 'Symbols'])
+        concatenated_df = pd.concat(
+            [adjusted_reg_panel_df, total_profit_df, value_panel, avg_cost_panel, date_adjusted_panel, unrel_profit_panel], axis=1)
+        return concatenated_df
 
 
     def filter_input(self,keys):
@@ -986,13 +1144,6 @@ class InputProcessor(InputProcessorInterface):
         for x in self.dicts:
             for k in keys:
                 x.pop(str(k),'')
-
-
-
-    def update_usable_symbols(self):
-        self._usable_symbols = set()
-        for t, dic in self._hist_by_date.items():
-            self._usable_symbols.update(set(dic.keys()))
 
     def process(self, partial_symbol_update=set(),params=None,buy_filter=None,force_upd_all_range=False):
 
@@ -1055,4 +1206,4 @@ class InputProcessor(InputProcessorInterface):
         self._transaction_handler.process_transactions()
     #self._proccessing_mutex.unlock()
 
-    
+
