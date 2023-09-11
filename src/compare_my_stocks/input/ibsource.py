@@ -6,12 +6,13 @@ import multiprocessing
 import random
 import threading
 from dataclasses import asdict
-from functools import partial
+from functools import partial, lru_cache
 
 import pandas as pd
 from ib_insync import Forex, util as nbutil, Contract, RequestError
+from memoization import cached
 
-from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback
+from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, selfifnn, ifnn, StandardColumns
 from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import TRACELEVEL
 from config import config
@@ -151,6 +152,9 @@ class IBSourceRem:
 
 
 
+
+
+
     @Pyro5.server.expose
     @make_sure_connected
     def get_current_currency(self, pair):
@@ -173,7 +177,11 @@ class IBSourceRem:
     @make_sure_connected
     def reqHistoricalData_ext(self, contract, enddate, td):
         logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
-        bars= self.reqHistoricalData(Contract(**contract),
+        try:
+            cont=Contract.create(**contract)
+        except:
+            cont = Contract(**contract)
+        bars= self.reqHistoricalData(cont,
                                       conv_date(enddate), td)
 
         ls=[asdict(x) for x in bars]
@@ -382,11 +390,34 @@ class IBSource(InputSource):
     def query_symbol(self, sym):
         pass
 
+    @cached  # type: ignore
+    def to_reverse_pair(self,pair):
+        f = pair[1] + pair[0]
+        contract = Forex(f)
+        ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(), contract)
+        if ls is not None and  len(ls) > 0:
+            return False
+        else:
+            f = pair[0] + pair[1]
+            contract = Forex(f)
+            ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(),
+                                       contract)
+            if ls is not None and len(ls) > 0:
+                return True
+            else:
+                raise KeyError(f"no data for {pair} ")
 
     def get_currency_history(self, pair, startdate, enddate):
         f=pair[1]+pair[0]
+        if b:=self.to_reverse_pair(pair): #might raise keyerror
+            f=pair[0]+pair[1]
         contract=Forex(f)
-        return self.historicalhelper(startdate,enddate,contract)
+        res= self.historicalhelper(startdate,enddate,contract)
+
+        if b:
+            if res is not None:
+                res[StandardColumns] = res[StandardColumns].applymap(lambda x: 1 / x)
+        return res
 
     # v = {"Sym":w['contractDesc'], "Qty": w["position"], "Last": last , "RelProfit": w['realizedPnl'], "Value": w['mktValue'],
     #      'Currency': w['currency'], 'Crypto': 0, 'Open': open, 'Source': 'IB', 'AvgConst': w['AvgCost'],

@@ -111,6 +111,9 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
     def log_buydict_stats(self):
         pass
 
+    def translate_symbol(self,symbol):
+        return config.Symbols.REPLACE_SYM_IN_INPUT.get(symbol,symbol)
+
     def process_transactions(self):
 
         self._buydic = {}

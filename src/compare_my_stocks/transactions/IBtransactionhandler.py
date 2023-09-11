@@ -80,8 +80,10 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             logging.info(f'using ib cache. Cache date is {self._cache_date}')
             newres=[]
             self.need_to_save=False
+        toquery = self.TryToQueryAnyway or (self._cache_date >= datetime.now() - self.QueryIfOlderThan) 
 
-        if not usecache or self.TryToQueryAnyway:
+
+        if not usecache or toquery:
             newres= self.doquery()
             logging.debug('completed')
             if newres is None:
@@ -114,7 +116,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             z : Trade
             while date in self._buydic:
                 date += timedelta(seconds=1)
-            self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),z.symbol,'IB',z, Source=TransactionSource.IB )
+            self._buydic[date] = BuyDictItem(float(z.quantity),float(z.tradePrice),self.translate_symbol(z.symbol),'IB',z, Source=TransactionSource.IB )
             self._buysymbols.add(z.symbol)
 
             self.update_sym_property(z.symbol, z.currency)

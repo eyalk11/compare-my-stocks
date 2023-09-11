@@ -111,7 +111,7 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
     logging.addLevelName(TRACELEVEL,"TRACE")
     if debug and not dont_print():
         logging.getLogger().setLevel(logging.DEBUG)
-        logging.getLogger('Voila').setLevel(logging.DEBUG)
+        #logging.getLogger('Voila').setLevel(logging.DEBUG)
 
     log=logging.getLogger(mod)
     log.setLevel(logging.getLogger().level)

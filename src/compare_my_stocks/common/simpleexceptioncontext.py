@@ -41,7 +41,7 @@ class SimpleExceptionContext:
 
         tostop= os.environ.get('PYCHARM_HOSTED') == '1'
 
-        tostop = tostop and bol
+        tostop = tostop or bol
 
         self.do_nothing= tostop and not self.never_throw and self.return_succ is None
 
@@ -62,7 +62,7 @@ class SimpleExceptionContext:
         logf = logging.debug if self.debug else logging.error
         tmpst = format_traceback_str(exc_type, exc_value, traceback , detailed=self.detailed)
         strng = "# if you see this in your traceback, you should probably inspect the remote traceback as well"
-        if strng in tmpst:
+        if strng in tmpst and e.__class__ not in default_not_detailed_errors:
             logf(("".join(get_pyro_traceback())))
         if self.err_description:
             logf(self.err_description)

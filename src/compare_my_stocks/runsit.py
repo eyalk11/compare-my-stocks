@@ -14,10 +14,6 @@ from common.common import Types, UniteType, need_add_process, InputSourceType
 from common.loghandler import init_log
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 
-import logging
-import sys
-import time
-from functools import partial
 
 import psutil, os
 
@@ -54,7 +50,7 @@ class MainClass:
 
     def pd_ignore_warning(self):
         import warnings
-        from pandas.core.common import SettingWithCopyWarning
+        from pandas.errors import SettingWithCopyWarning
         warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
     @classmethod
@@ -90,9 +86,7 @@ class MainClass:
             if os.environ.get('PYCHARM_HOSTED') == '1':
                 return False
             if force:
-                logging.debug("aaabbb")
                 return True
-            logging.debug("aaa")
             if not self.config.Running.DISPLAY_CONSOLE:
                 if 'python' in os.path.basename(sys.executable):
                     logging.info("Not hiding window because it is python")

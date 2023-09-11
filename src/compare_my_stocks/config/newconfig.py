@@ -19,7 +19,7 @@ from common.paramaware import paramaware
 
 RESOLVE_FILES = ['LOGFILE', 'LOGERRORFILE', 'IB_LOGFILE', 'IB_LOGERRORFILE']
 FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
-                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT','IBSRVREADY']
+                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT','IBSRVREADY','FULLDATA']
 
 @paramaware
 @dataclass
@@ -40,6 +40,7 @@ class IBConf:
     DoQuery: bool = True
     FlexToken: Optional[str] = None
     FlexQuery: Optional[str] = None
+    QueryIfOlderThan: datetime.timedelta = datetime.timedelta(days=3)
 
 
 @dataclass
@@ -157,6 +158,7 @@ class SymbolsConf:
     EXCHANGES: list = field(default_factory=list)
     DEFAULTCURR: list = field(default_factory=list) #currency list
     BASECUR: str = "USD"
+    REPLACE_SYM_IN_INPUT: dict = field(default_factory=dict)
 
 
 
@@ -176,13 +178,16 @@ class FileConf:
     GRAPHFN: str = 'graphs.json'
     EXPORTEDPORT: str = "exported.csv"
     IBSRVREADY: str = "ibsrv_ready.txt"
+    FULLDATA: str = "fullinpdata.bin"
 
 @paramaware
 @dataclass
 class InputConf:
     PRICES_ARE_ADJUSTED_TO_TODAY:bool = True
     AdjustUnrelProfitToReflectSplits: bool = True
-    MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
+    MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=20)
+    MAXFULLCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
+    FULLCACHEUSAGE: UseCache = UseCache.USEIFAVALIABLE 
     INPUTSOURCE: InputSourceType = InputSourceType.IB
     IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT
     DOWNLOADDATAFORPROT: bool = True
@@ -202,9 +207,10 @@ class VoilaConf:
 @paramaware
 @dataclass
 class JupyterConf:
-    MEMO_FOLDER : str = '.\memory'
+    MEMO_FOLDER : str = '.\\memory'
     RAPID_YFINANACE_KEY: str = ''
     RAPID_YFINANACE_HOST: str = "yfinance-stock-market-data.p.rapidapi.com"
+    EXPRIES : int = 24
 
 @paramaware
 @dataclass
@@ -259,14 +265,14 @@ def resolvefile(filename,use_alternative=False):
         if filename == '':
             return False, None
         if os.path.isabs(filename):
-            return os.path.exists(filename), filename
+            return os.path.exists(filename), os.path.abspath(filename)
 
         for loc in paths + [datapath]:
             fil = os.path.join(loc, filename)
             if os.path.exists(fil):
                 return True, os.path.abspath(fil)
 
-        return False, os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename) # default location
+        return False, os.path.abspath(os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename)) # default location
     except:
         return False, None
 

@@ -68,14 +68,14 @@ def test_adjust_currency(realeng):
 #pytest.
 def test_get_currency(inp):
     tmpinp = inp
-    df= tmpinp.get_currency_hist('ILS',datetime.datetime.now()-datetime.timedelta(days=3),datetime.datetime.now())
+    df= tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now())
     assert len(df)==3
 def test_get_currency_adv(inp):
     tmpinp = inp
     df2 = tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=7),
                                    datetime.datetime.now() - datetime.timedelta(days=2))
 
-    df= tmpinp.get_currency_hist('ILS',datetime.datetime.now()-datetime.timedelta(days=5),datetime.datetime.now())
+    df= tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=5), datetime.datetime.now())
 
     #df = tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now())
     assert len(df)>=3

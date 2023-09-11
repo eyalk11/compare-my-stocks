@@ -57,7 +57,10 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         return dict(plot_data)
 
 
-
+    @property
+    def need_to_save(self):
+        if (self._ib):
+            return self._ib.need_to_save
 
     def get_portfolio_stocks(self):
         return self._inp.get_portfolio_stocks()

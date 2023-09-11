@@ -1,4 +1,5 @@
 import dataclasses
+import datetime
 import logging
 import logging
 import math
@@ -26,7 +27,6 @@ except:
 
 from common.loghandler import TRACELEVEL
 from engine.compareengineinterface import CompareEngineInterface
-from gui.formobserverinterface import ResetRanges
 
 matplotlib.set_loglevel("INFO")
 import mplcursors
@@ -160,6 +160,7 @@ class GraphGenerator:
         self.lines_dict= {}
         self.symbols_to_blobs = defaultdict(list)
         self.pick_lock= threading.Lock()
+        self.last_pick_event = None
 
         if eng is not None: #for testing
             self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
@@ -599,7 +600,11 @@ class GraphGenerator:
         # ofig.canvas.flush_events()
 
     def onpick(self, event):
+
         with self.pick_lock:
+            if self.last_pick_event is not None:
+                if datetime.datetime.now() - self.last_pick_event < datetime.timedelta(seconds=0.5):
+                    return
             # on the pick event, find the orig line corresponding to the
             # legend proxy line, and toggle the visibility
             # legline = event.artist
@@ -614,7 +619,9 @@ class GraphGenerator:
                     vis = not origline.get_visible()
                      #to avoid double counting
                     origline.set_visible(vis)
-                    time.sleep(0.1)
+                    self.last_pick_event= datetime.datetime.now()
+                    logging.debug(('onpick legend hide or show', origline._label, vis))
+                    #time.sleep(0.1)
                     if legline._label in blobs:
                         blobs[legline._label].set_visible(vis)
                         #self.handles_labels[legline._label][1].set_visible(vis)

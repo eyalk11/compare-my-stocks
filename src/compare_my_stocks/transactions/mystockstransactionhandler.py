@@ -73,6 +73,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
         x=x.rename(columns={'Shares Owned':'Quantity','Transaction Date':'Date','Transaction Time':'TimeOfDay','Display Symbol':'DisplaySymbol'})
         for q in zip(x['Portfolio'], x['Symbol'], x['Quantity'], x['Cost Per Share'], x['Type'], x['Date'],x['TimeOfDay'],x['Currency'],x['Exchange'],x["DisplaySymbol"],x["Notes"]):
             t=q[:-4]
+            t= tuple([t[0], self.translate_symbol(t[1]) ] + list(t[2:]))
             #   x['TimeOfDay']):
             # if not math.isnan(t[1]):
             #    self._symbols.add(t[1])

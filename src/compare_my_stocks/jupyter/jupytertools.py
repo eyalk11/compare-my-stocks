@@ -27,7 +27,7 @@ def unite_if_needed(x,data,query_func=query_symbol):
         df=convert_to_dec(convert_to_dec(df))
         df=df.astype(float)
         df=df.mean(axis=1,skipna = True)
-        df=df.apply(lambda x: numerize.numerize(x) if not math.isnan(x) else x)
+        df=df.apply(lambda x: numerize(x) if not math.isnan(x) else x)
         return df.to_dict()
     else:
         return query_func(x)
@@ -124,7 +124,6 @@ def calc_closeness(dat, ski=1, interval=30):
 
     avgofinterval = np.average(sliding_window_view(percchange, window_shape=(interval, 1)), axis=2)
     arr = avgofinterval.reshape(avgofinterval.shape[:-1])
-    from itertools import product
     from numpy import linalg as LA
 
     zz = np.array([[LA.norm(arr[:, x] - arr[:, y], 2) for x in range(arr.shape[1])] for y in range(arr.shape[1])])
@@ -132,9 +131,9 @@ def calc_closeness(dat, ski=1, interval=30):
 
 def convert_df_dates(df):
 
-    import matplotlib
+    from matplotlib.dates import num2date
 
     # assuming df is your DataFrame and df.index is the matplotlib dates
-    df.index = df.index.to_series().apply(lambda x: matplotlib.dates.num2date(x).date())
+    df.index = df.index.to_series().apply(lambda x: num2date(x).date())
     return df
 

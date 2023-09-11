@@ -401,7 +401,7 @@
                 <x>9</x>
                 <y>9</y>
                 <width>322</width>
-                <height>90</height>
+                <height>116</height>
                </rect>
               </property>
               <layout class="QFormLayout" name="formLayout">
@@ -421,7 +421,7 @@
                <item row="0" column="1">
                 <widget class="QLabeledRangeSlider" name="max_num">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -429,19 +429,19 @@
                  <property name="minimumSize">
                   <size>
                    <width>90</width>
-                   <height>0</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>30</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="baseSize">
                   <size>
                    <width>90</width>
-                   <height>0</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="orientation">
@@ -468,7 +468,7 @@
                <item row="1" column="1">
                 <widget class="QLabeledDoubleRangeSlider" name="min_crit">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -476,19 +476,19 @@
                  <property name="minimumSize">
                   <size>
                    <width>90</width>
-                   <height>0</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
-                   <height>30</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="baseSize">
                   <size>
                    <width>90</width>
-                   <height>0</height>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="orientation">

@@ -1,8 +1,10 @@
 import collections
+import datetime
 import logging
 from unittest.mock import patch
 
 import pandas
+from ib_insync import Forex
 
 from config import config as cfg
 from input.earningsproc import EarningProcessor
@@ -30,6 +32,28 @@ def y():
     e=EarningProcessor()
     zz=e._pr.get_hist_split(['TSLA']) #get_earnings(['TSLA'])
     zz=zz
+
+def test_var():
+    from common.refvar import GenRefVar
+    import typing
+
+    g=GenRefVar[bool]()()
+    g.value=(True)
+    assert g
+    g.value=False
+    assert not g
+def test_basic_sym(ibsource):
+    x = ibsource
+    pair=('ILS','USD')
+    f = pair[1] + pair[0]
+    contract = Forex(f)
+
+
+    ls = x.historicalhelper(datetime.datetime.now()-datetime.timedelta(days=3),datetime.datetime.now(),contract)
+
+    #ls = x.get_matching_symbols('GBPUSD')
+
+    assert len(ls) >= 1
 
 
 def test_fix_transactions(inp):

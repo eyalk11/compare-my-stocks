@@ -10,9 +10,9 @@ A subset of compareengine. Used by input processor to resolve it.
 '''
 
 class SymbolsInterface(ABC):
-    TOADJUST = ['avg_cost_by_stock', 'rel_profit_by_stock']
+    TOADJUST = [ 'rel_profit_by_stock']
     #TOADJUST = ['unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock']
-    TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock']
+    TOADJUSTLONG = ['alldates', 'unrel_profit', 'value', 'tot_profit_by_stock','avg_cost_by_stock']
     TOKEEP= ['holding_by_stock','rel_profit_by_stock','avg_cost_by_stock','peratio','pricesells']
 
     # @property casues some headache.

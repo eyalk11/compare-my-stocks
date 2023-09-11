@@ -8,6 +8,11 @@ import numpy as np
 import pytz
 import psutil
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
+
+def subdates(a,b):
+    ach=tzawareness(a,b) 
+    return ach-b 
+
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -297,3 +302,6 @@ class TransactionSourceType(Flag):
     IB=auto()
     MyStock=auto()
     Both= IB | MyStock
+
+
+StandardColumns = ['Open', 'High', 'Low', 'Close']
