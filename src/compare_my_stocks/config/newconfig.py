@@ -159,6 +159,8 @@ class SymbolsConf:
     DEFAULTCURR: list = field(default_factory=list) #currency list
     BASECUR: str = "USD"
     REPLACE_SYM_IN_INPUT: dict = field(default_factory=dict)
+    TRANSLATE_CURRENCY: dict = field(default_factory=dict)
+    CURRENCY_FACTOR: dict = field(default_factory=dict)
 
 
 
@@ -246,7 +248,7 @@ def print_if_ok(*args):
         return
 
     if 'SILENT' in __builtins__ and __builtins__['SILENT'] == False\
-            or any('testit' in x for x in sys.argv):
+            or any('pytest' in x for x in sys.argv):
         logging.info(*args)
 
 
@@ -265,14 +267,14 @@ def resolvefile(filename,use_alternative=False):
         if filename == '':
             return False, None
         if os.path.isabs(filename):
-            return os.path.exists(filename), os.path.abspath(filename)
+            return os.path.exists(filename), os.path.realpath(filename)
 
         for loc in paths + [datapath]:
             fil = os.path.join(loc, filename)
             if os.path.exists(fil):
                 return True, os.path.abspath(fil)
 
-        return False, os.path.abspath(os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename)) # default location
+        return False, os.path.realpath(os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename)) # default location
     except:
         return False, None
 
@@ -346,7 +348,7 @@ class ConfigLoader():
         else:
             use_alternative = cls.config.Running.USE_ALTERANTIVE_LOCATION
 
-        if not 'SILENT' in __builtins__ and not  any('testit' in x for x in sys.argv):
+        if not 'SILENT' in __builtins__ and not  any('pytest' in x for x in sys.argv):
             logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
 
         for x in RESOLVE_FILES:

@@ -40,6 +40,8 @@ class DataGenerator(DataGeneratorInterface):
         self.data_generated = False
         self.df_before_act = None
         self.additional_dfs_fixed = None
+        self.used_type=None 
+        self.used_unitetype=None
 
     def get_data_by_type(self, type=Types.RELTOMAX, compare_with=None):
         params = self.generate_initial_data(compare_with, type)
@@ -58,6 +60,7 @@ class DataGenerator(DataGeneratorInterface):
         df, self.used_unitetype , self.additional_dfs = self.get_df_by_type(type, self.params.unite_by_group)
         self.orig_df = df
         self.used_type = type
+
         # self.to_use_ext = use_ext and self.params.use_ext
         self.to_use_ext = self.params.use_ext
         if (self.used_unitetype & ~UniteType.NONE):

@@ -55,8 +55,10 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
     def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False):
         #the want it all is in the case of populating dict
+        used_type = self.used_type if self.used_type is not None  else self.params.type
+        used_unitetype= self.used_unitetype if self.used_unitetype is not None  else self.params.unite_by_group
         selected = set()
-        if want_unite_symbols and (self.used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
+        if want_unite_symbols and (used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
             selected.update(set([self.params.compare_with]))
 
 
@@ -66,7 +68,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
 
-        if (self.used_unitetype & ~UniteType.ADDTOTALS) and want_unite_symbols:
+        if (used_unitetype & ~UniteType.ADDTOTALS) and want_unite_symbols:
             if only_unite: #it is a bit of cheating but we don't need to specify require data symbols in that case
                 return selected
         if  self.params.use_groups:
@@ -83,6 +85,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         self.params._baseclass = self
 
         self.to_use_ext = self.params.use_ext
+        #Any reason it is here?
         self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
 

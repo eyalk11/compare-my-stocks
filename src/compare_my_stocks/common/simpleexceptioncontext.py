@@ -16,7 +16,7 @@ def print_formatted_traceback(detailed=True):
 
 
 class SimpleExceptionContext:
-    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[]):
+    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None):
         self.err_description=err_description
         self.return_succ=return_succ
         self.never_throw=never_throw
@@ -24,6 +24,7 @@ class SimpleExceptionContext:
         self.debug=debug
         self.detailed=detailed
         self.err_to_ignore=err_to_ignore
+        self.callback=callback
 
 
     def __enter__(self):
@@ -50,6 +51,11 @@ class SimpleExceptionContext:
         # Code to be executed when exiting the context
         if self.do_nothing:
             return False
+        try:
+            if self.callback is not None:
+                self.callback(exc_value)
+        except:
+            logging.warn("error in callback")
         if exc_type is not None:
             # Handle any exceptions raised within the context
             return self.on_exception(exc_type,exc_value,traceback)   # Propagate any exceptions raised within the context

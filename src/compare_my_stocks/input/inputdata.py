@@ -11,6 +11,7 @@ import pandas
 
 from common.common import UseCache, log_conv, VerifySave
 from common.simpleexceptioncontext import print_formatted_traceback
+from compare_my_stocks.common.common import ifnn
 from compare_my_stocks.common.simpleexceptioncontext import SimpleExceptionContext
 from config import config
 
@@ -60,6 +61,7 @@ class InputDataImpl:
         self.init_input()
         self.fullcachedate =None
         self._fset = set()
+        self.currency_hist = None
     @staticmethod
     def init_func():
         return defaultdict(InputDataImpl.returnNan)
@@ -133,6 +135,7 @@ class InputDataImpl:
         try:
             if minimal: # Symbol info is needed by TransactionHandler . So we load just this...
                 _, symbinfo, _, _, _ = pickle.load(open(config.File.HIST_F, 'rb'))
+                
                 self.symbol_info = collections.defaultdict(dict)
                 self.symbol_info.update(symbinfo)
                 #patch
@@ -182,8 +185,19 @@ class InputDataImpl:
                 self.cached_used = False
         return query_source
 
-    def save_data(self):
+    def get_currency_factor_for_sym(self,sym):
+        currency = self.get_currency_for_sym(sym)
+        if currency is None:
+            return 1
+        currecncy_factor = config.Symbols.CURRENCY_FACTOR.get(currency, 1.0)
+        return currecncy_factor
+    def get_currency_for_sym(self,sym):
+        cur = self.symbol_info[sym].get('currency')
+        
+        return ifnn(cur, lambda: config.Symbols.TRANSLATE_CURRENCY.get(cur,cur))
 
+    def save_data(self):
+        #The difference between the regular cache and fullcache is that fullcache doesn't know how to handle transactions diffs .
 
         if not self.cached_used:
             logging.warn("Cache wasnt used! (possibly first time)")

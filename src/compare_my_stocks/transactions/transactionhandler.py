@@ -30,7 +30,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         if not ok:
             logging.info((f'Cache not found for {self.NAME}'))
         else:
-            logging.info(f"Cache for {self.NAME}  is {self.File}")
+            logging.info(f"Cache for {self.NAME} is {path}")
         self.File=path
 
 

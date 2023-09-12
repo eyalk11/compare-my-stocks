@@ -130,7 +130,7 @@ class InputProcessor(InputProcessorInterface):
 
     @cached
     def trivial_currency(self,sym):
-        return (self.data.symbol_info[sym].get('currency') in [config.Symbols.BASECUR, 'unk'])
+        return (self.data.get_currency_for_sym(sym) in [config.Symbols.BASECUR, 'unk'])
 
     def resolve_currency(self, sym, l, hist):
         #very inefficient . but for few..
@@ -150,7 +150,7 @@ class InputProcessor(InputProcessorInterface):
         return currency
 
     @simple_exception_handling(err_description="error in adjusting sym for currency")
-    def adjust_sym_for_currency(self, currency, enddate, fromdate, hist, sym):
+    def get_adjusted_df_for_currency(self, currency, enddate, fromdate, hist, sym):
         fromdate=unlocalize_it(fromdate)
         enddate=unlocalize_it(enddate)
         logging.debug(('adjusting for currency %s %s ' % (sym, currency)))
@@ -158,11 +158,13 @@ class InputProcessor(InputProcessorInterface):
 
 
         currency_df = self.get_currency_hist(currency, fromdate, enddate)
-        currency_df=currency_df.apply(lambda x: 1 / x)
+        factor=self.data.get_currency_factor_for_sym(sym)
+        currency_df=currency_df.apply(lambda x: 1 / x / factor) #notice that this should be in the hist not here, but same same
         currency_df = currency_df[StandardColumns]
         hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.NaN)
         if len(set(hist.index) - set(currency_df.index)) > 0:
-            logging.debug((log_conv(' missing ', set(hist.index) - (set(currency_df.index)))))
+            logging.debug((log_conv('Not all entiries could be adjusted ', set(hist.index) - (set(currency_df.index)))))
+
         return hh
 
     def update_currency_hist(self,currency,df):
@@ -198,9 +200,11 @@ class InputProcessor(InputProcessorInterface):
         enddateaware =  pd.to_datetime(unlocalize_it(enddate))
         didquery=False
 
+        df=None
+
         try:
             df = self.data.currency_hist[currency]
-            tmpdf=df.loc[pd.to_datetime(fromdate-datetime.timedelta(1)):pd.to_datetime(enddate)+datetime.timedelta(1)]
+            tmpdf=df.loc[pd.to_datetime(fromdate.date()):pd.to_datetime( (enddate+datetime.timedelta(days=1)).date() )]
             if tmpdf.empty:
                 raise KeyError("empty")
         except: 
@@ -225,6 +229,8 @@ class InputProcessor(InputProcessorInterface):
             self.save_data()
 
         if not minimal:
+            if df is None:
+                return tmpdf
             return df #whatever we get is ok
         else: 
             return tmpdf #we need to get the exact range
@@ -240,10 +246,10 @@ class InputProcessor(InputProcessorInterface):
         gok=False
         for t,v in items:
             v: BuyDictItem
-            curr=self.data.symbol_info[v.Symbol].get('currency')
+            curr=self.data.get_currency_for_sym(v.Symbol)
             if curr in set(['unk', config.Symbols.BASECUR]):
                 self.data._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
-                yield BuyOp(date=t,currency=None,buydic=v)
+                yield BuyOp(date=localize_it(t),currency=None,buydic=v)
             else:
                 ok=False 
                 try:
@@ -265,7 +271,7 @@ class InputProcessor(InputProcessorInterface):
 
                                 curval= (row['Open']+row['Close']) /2
 
-                                yield BuyOp(date=t,currency=curval ,buydic=v)
+                                yield BuyOp(date=localize_it(t),currency=curval ,buydic=v)
                                 ok=True
                                 if queried.value:
                                     gok=True
@@ -276,7 +282,7 @@ class InputProcessor(InputProcessorInterface):
                 except KeyError as e:
                     logging.error(str(e))
                 if not ok:
-                    yield BuyOp(date=t,currency='err' ,buydic=v)
+                    yield BuyOp(date=localize_it(t),currency='err' ,buydic=v)
                     self.data._no_adjusted_for.add(v.Symbol)
         if gok:
             self.save_data()
@@ -302,7 +308,7 @@ class InputProcessor(InputProcessorInterface):
 
 
 
-        buyoperations = collections.OrderedDict(map(lambda x: (x[0],x), self.get_buy_operations_with_adjusted(sorted(items))))  # ordered
+        buyoperations = collections.OrderedDict(map(lambda x: ((x[0]),x), self.get_buy_operations_with_adjusted(sorted(items))))  # ordered
         
         
 
@@ -417,8 +423,9 @@ class InputProcessor(InputProcessorInterface):
         def update_curholding():
             nonlocal  _cur_avg_cost_bystock_adjusted
             x: BuyDictItem = cur_action[1]
+
             stock = x.Symbol
-            currency_val = cur_action[2] 
+            currency_val = 1/cur_action[2] if cur_action[2] is not None else 1 #adjusted is in usd. so we cancel out the currency
             #if stock is in TrackStockList , write to log state in terms of holding before and after transaction is applied
 
 
@@ -462,40 +469,50 @@ class InputProcessor(InputProcessorInterface):
             if (cursplit !=1 ):
                 self.transaction_handler.update_buydic(cur_action[0], val=x._replace(AdjustedPrice = x.Cost / cursplit ))
 
+            #no more replaces from here 
+            qty= x.Qty 
+            cost= x.Cost
 
-            if x[0]*old_holding >= 0: #we increase our holding.
-                _cur_avg_cost_bystock[stock] = (old_holding * old_cost + x[0] * x[1]) / (
-                            old_holding + x[0])
-                _cur_avg_cost_bystock_reflected_splits[stock] = (old_holding_reflected * old_cost_reflected + x[0] * x[1] / cursplit) / (
-                            old_holding_reflected + x[0])
+            currecncy_factor=self.data.get_currency_factor_for_sym(stock)
+
+
+            costadj = x.Cost / currecncy_factor
+                #Currencies such as ILS has their cost in agorot (1/100 of shekel) .
+
+            if qty*old_holding >= 0: #we increase our holding.
+                _cur_avg_cost_bystock[stock] = (old_holding * old_cost + qty * cost) / (
+                            old_holding + qty)
+                _cur_avg_cost_bystock_reflected_splits[stock] = (old_holding_reflected * old_cost_reflected + qty * cost / cursplit) / (
+                            old_holding_reflected + qty)
                 if x.Symbol not in self.data._no_adjusted_for and currency_val:
-                    _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (old_holding_reflected * old_cost_reflected_adjusted + x[0] * x[1] * currency_val / cursplit) / (
-                                old_holding_reflected + x[0])
-                    _cur_avg_cost_bystock[stock] = (old_holding * old_cost_adjusted + x[0] * x[1] * currency_val) / (
-                    old_holding + x[0])
+                    _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (old_holding_reflected * old_cost_reflected_adjusted + qty * costadj * currency_val / cursplit) / (
+                                old_holding_reflected + qty)
+                    _cur_avg_cost_bystock_adjusted[stock] = (old_holding * old_cost_adjusted + qty * costadj * currency_val) / (
+                    old_holding + qty)
 
 
             else:
                 if abs(int(x.Qty))>abs(int(old_holding)): #we switch to the other side. so we do selling of old_holding, and buying on the other
                     _cur_relprofit_bystock[stock] += old_holding * (
-                            x[1] - _cur_avg_cost_bystock[stock])
-                    _cur_avg_cost_bystock[stock] = x[1]
-                    _cur_avg_cost_bystock_reflected_splits[stock] = (x[1]/ cursplit)#* ( -1 if x[0]< 0 else 1) #-905 if neg
+                            cost - _cur_avg_cost_bystock[stock]) / currecncy_factor #sell full
+
+                    _cur_avg_cost_bystock[stock] = cost
+                    _cur_avg_cost_bystock_reflected_splits[stock] = (cost/ cursplit)#* ( -1 if qty< 0 else 1) #-905 if neg
                     if x.Symbol not in self.data._no_adjusted_for and currency_val:
-                        _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (x[1]/ cursplit)* currency_val #* ( -1 if x[0]< 0 else 1) #-905 if neg
-                        _cur_avg_cost_bystock_adjusted = x[1]* currency_val 
+                        _cur_avg_cost_bystock_reflected_splits_adjusted[stock] = (cost/ cursplit)* currency_val #* ( -1 if qty< 0 else 1) #-905 if neg
+                        _cur_avg_cost_bystock_adjusted[stock] = cost* currency_val
 
 
 
                 else:
-                    _cur_relprofit_bystock[stock] += old_holding * (
-                            x[1] - _cur_avg_cost_bystock[stock]) # We adjust relprofit at the end by the constant value of base currency
+                    _cur_relprofit_bystock[stock] += ((-1)*int(x.Qty)) * (
+                            cost - _cur_avg_cost_bystock[stock]) / currecncy_factor # We adjust relprofit at the end by the constant value of base currency
                     if int(x.Qty)== int(old_holding):
                         _cur_avg_cost_bystock[stock] = 0
                         _cur_avg_cost_bystock_adjusted[stock] = 0
 
-            _cur_holding_bystock[stock] += x[0]
-            _cur_accumative_holding_bystock[stock] += abs(x[0])
+            _cur_holding_bystock[stock] += qty
+            _cur_accumative_holding_bystock[stock] += abs(qty)
 
             _last_action_time[stock]=cur_action[0]
             if _first_action_time[stock] is None:
@@ -506,15 +523,16 @@ class InputProcessor(InputProcessorInterface):
                 if 0:
                     self._transaction_handler.try_fix_dic(cur_action.buydic,_last_action[stock], _cur_holding_bystock[stock] )
             if stock in config.TransactionHandlers.TrackStockList:
-                logging.debug('after applying action ' + str(x) +" time is "+ str(t))
+                logging.debug('after applying action ' + str(x))
+                logging.debug(" time is "+ str(t))
                 logging.debug('current holding of stock %s is %f' % (stock, _cur_holding_bystock[stock])) 
                 logging.debug('current avg cost of stock %s is %f' % (stock, _cur_avg_cost_bystock[stock]))
                 logging.debug('current splits of stock %s is %f' % (stock, cursplit))
                 #relprofit
                 logging.debug('current relprofit of stock %s is %f' % (stock, _cur_relprofit_bystock[stock]))
-                logging.debug('current unrelprofit of stock %s is %f' % (stock, _cur_unrelprofit_bystock[stock]))
-                logging.debug('current avg cost reflected of stock %s is %f' % (stock, _cur_avg_cost_bystock_reflected_splits[stock]))
-                logging.debug('current price of stock %s is %f' % (stock, _cur_stock_price[stock][0]))
+                logging.debug('current unrelprofit of stock %s is %f(%f)' % (stock, _cur_unrelprofit_bystock[stock], _cur_unrelprofit_bystock_adjusted[stock]))
+                logging.debug('current avg cost reflected of stock %s is %f(%f)' % (stock, _cur_avg_cost_bystock_reflected_splits[stock], _cur_avg_cost_bystock_reflected_splits_adjusted[stock]))
+                logging.debug('current price of stock %s is %f(%s)' % (stock, _cur_stock_price[stock][0], _cur_stock_price[stock][1]))
         self.data.mindate = min(
             self.data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self.data._hist_by_date.keys())/1000,tz)
         self.data.maxdate = max(
@@ -527,6 +545,7 @@ class InputProcessor(InputProcessorInterface):
         _cur_avg_cost_bystock_reflected_splits_adjusted = defaultdict(lambda: 0) #adjust the splits to today
         _cur_holding_bystock = defaultdict(lambda: 0)
         _cur_relprofit_bystock = defaultdict(lambda: 0)
+        _cur_relprofit_bystock_adjusted= defaultdict(lambda: 0)
         _cur_unrelprofit_bystock = defaultdict(lambda: 0)
         _cur_unrelprofit_bystock_adjusted = defaultdict(lambda: 0)
         _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
@@ -554,12 +573,18 @@ class InputProcessor(InputProcessorInterface):
             while cur_action or t:
                 try:
                     t, dic = next(simphist)
+                    t = localize_it(t)
                     mini=False
+                    if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
+                        raise StopIteration()
                 except StopIteration:
                     logging.log(TRACELEVEL,("stop iter"))
                     if len(buyoperations)>0:
                         _ , cur_action = buyoperations.popitem(False)
                         t=cur_action[0]
+                        t = localize_it(t)
+                        if t> self.process_params.transactions_todate:
+                            break
                         mini=True
                     else:
                         break
@@ -572,10 +597,9 @@ class InputProcessor(InputProcessorInterface):
                     dic = dictfilt(dic, partial_symbols_update)
 
                 #t=tzawareness(t,self.process_params.transactions_todate)
-                t=localize_it(t)
 
-                if self.process_params.transactions_todate and t > self.process_params.transactions_todate:
-                    break
+
+
                 holdopt = set(_cur_holding_bystock.keys()).intersection(
                     partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
 
@@ -618,30 +642,31 @@ class InputProcessor(InputProcessorInterface):
                     else:
                         v = _cur_stock_price[sym]  # actually, should fix for currency. but doesn't matter
 
+
+                    currecncy_factor = self.data.get_currency_factor_for_sym(sym)
+
                     self.data._alldates[sym][tim] = v[0]
                     self.data._alldates_adjusted[sym][tim]=v[1]
                     _cur_stock_price[sym] = v
                     #v = v[0]
-                    self.data._value[sym][tim] = v[0] * _cur_holding_bystock[sym]
+                    self.data._value[sym][tim] = v[0] * _cur_holding_bystock[sym] / currecncy_factor
                     self.data._adjusted_value[sym][tim] = v[1] * _cur_holding_bystock[sym]
-
                     if config.Input.AdjustUnrelProfitToReflectSplits:
                         cursplit = maxsplit[sym] / _cur_splited_bystock[sym]
-                        _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock_reflected_splits[sym]) * _cur_holding_bystock[sym]*cursplit
+                        _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock_reflected_splits[sym]) * _cur_holding_bystock[sym]*cursplit / currecncy_factor
                         if sym not in self.data._no_adjusted_for:
-                            _cur_unrelprofit_bystock_adjusted[sym] = v[1] * _cur_holding_bystock[sym] - \
+                            _cur_unrelprofit_bystock_adjusted[sym] = (v[1] * _cur_holding_bystock[sym] - \
                                                                     _cur_holding_bystock[sym] * \
-                                                                    _cur_avg_cost_bystock_reflected_splits_adjusted[sym]
+                                                                    _cur_avg_cost_bystock_reflected_splits_adjusted[sym])
                         elif self.trivial_currency(sym):
                             _cur_unrelprofit_bystock_adjusted[sym] = _cur_unrelprofit_bystock[sym]
 
 
                     else:
-                        _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock[sym]) * _cur_holding_bystock[sym]
+                        _cur_unrelprofit_bystock[sym]= (v[0] - _cur_avg_cost_bystock[sym]) * _cur_holding_bystock[sym] / currecncy_factor
                         if sym not in self.data._no_adjusted_for:
-                            _cur_unrelprofit_bystock_adjusted[sym] = v[1] * _cur_holding_bystock[sym] - \
-                                                                    _cur_holding_bystock[sym] * \
-                                                                    _cur_avg_cost_bystock_adjusted[sym]
+                            _cur_unrelprofit_bystock_adjusted[sym] = ((v[1] * _cur_holding_bystock[sym]) - \
+                                                                      (_cur_holding_bystock[sym] * _cur_avg_cost_bystock_adjusted[sym]) )
                         elif self.trivial_currency(sym):
                             _cur_unrelprofit_bystock_adjusted[sym] = _cur_unrelprofit_bystock[sym]
 
@@ -652,6 +677,7 @@ class InputProcessor(InputProcessorInterface):
 
                     self.data._unrel_profit[sym][tim] = _cur_unrelprofit_bystock[sym]
                     self.data._unrel_profit_adjusted[sym][tim] = _cur_unrelprofit_bystock_adjusted[sym]
+
 
                     self.data._tot_profit_by_stock[sym][tim] = self.data._rel_profit_by_stock[sym][tim] + self.data._unrel_profit[sym][tim]
                     _last_action[sym] = cur_action
@@ -669,6 +695,7 @@ class InputProcessor(InputProcessorInterface):
 
                 })
                 self._cur_splits=_cur_splited_bystock
+            a=1
         finally:
             pass#self.process_params.transactions_todate=to_date
             #self.process_params.transactions_fromdate=from_date
@@ -784,7 +811,13 @@ class InputProcessor(InputProcessorInterface):
 
 
             if not self._force_upd_all_range and sym in self.data._hist_by_date:
-                ls = self.get_range_gap(list(self.data._hist_by_date[str(sym)].keys()),fromdate,todate) #we have data for this symbol
+                init_keys=  filter (lambda x : ((y:=localize_it(x))>= fromdate and y<=todate) ,self.data._hist_by_date.keys() )
+                if sym in self.data._no_adjusted_for:
+                    cond= lambda x: not math.isnan(x[0].get('Open'))
+                else:
+                    cond = lambda x: not math.isnan(x[0].get('Open')) and not math.isnan(x[1].get('Open'))
+                dates= (date for date in init_keys if ifnotnan(self.data._hist_by_date[date].get(sym),cond ))
+                ls = self.get_range_gap(dates,fromdate,todate) #we have data for this symbol
             else:
                 ls = [(fromdate,todate)]
             okdays=0
@@ -827,14 +860,14 @@ class InputProcessor(InputProcessorInterface):
         if l is None:
             logging.warn("no info for %s , using default " % sym)
             currency =  'unk'
-        elif not (sym in self.data.symbol_info and ('currency' in self.data.symbol_info[sym] ) and self.data.symbol_info[sym]['currency']) :
+        elif not (sym in self.data.symbol_info and ('currency' in self.data.symbol_info[sym] ) and self.data.get_currency_for_sym(sym)) :
             currency = self.resolve_currency(sym, l, hist)
             self.data.symbol_info[sym].update( {'currency': currency})
         else:
-            currency= self.data.symbol_info[sym]['currency']
+            currency= self.data.get_currency_for_sym(sym)
 
         if currency != config.Symbols.BASECUR and currency != 'unk':
-            adjusted =  self.adjust_sym_for_currency(currency, maxdate, mindate, hist, sym)
+            adjusted =  self.get_adjusted_df_for_currency(currency, maxdate, mindate, hist, sym)
         else:
             adjusted=None
 
@@ -925,7 +958,7 @@ class InputProcessor(InputProcessorInterface):
     @simple_exception_handling("adjusting for currency", return_succ=0)
     def adjust_for_currency(self):
         a=1 #updates adjusted panel
-        cursymdic={v.get('currency', 'unk'):k for k,v in self.data.symbol_info.items() if not (v is None)}
+        cursymdic={ config.Symbols.TRANSLATE_CURRENCY.get(curr:=v.get('currency', 'unk'),curr) :k for k,v in self.data.symbol_info.items() if not (v is None)}
 
         relevant_currencies = set(cursymdic.keys()) - \
                               set(['unk', config.Symbols.BASECUR])
@@ -961,14 +994,16 @@ class InputProcessor(InputProcessorInterface):
 
 
         #fix the following line for case 'currency' is not in dictonary of value v of data.symbol_info
-        dic={k: self._relevant_currencies_rates.get(curr) for k,v in self.data.symbol_info.items() if (curr:=v.get('currency', 'unk')) in self._relevant_currencies_rates and self._relevant_currencies_rates[curr] is not None}
+        dic={k: self._relevant_currencies_rates.get(curr) for k in self.data.symbol_info.keys()
+             if (curr:=self.data.get_currency_for_sym(k) ) in self._relevant_currencies_rates \
+             and self._relevant_currencies_rates[curr] is not None}
         #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self.data.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
         if len(dic)==0:
             return False
-        self.data._adjusted_panel=self.get_adjusted_df_for_currency(dic)
+        self.data._adjusted_panel=self.build_adjust_panel(dic)
         return True
 
-    def get_adjusted_df_for_currency(self, currency_dict):
+    def build_adjust_panel(self, currency_dict):
         def return_subpanel(df_name, dic):
             ndf = pd.DataFrame.from_dict(dic)
             ndf.columns = pd.MultiIndex.from_product(
@@ -1035,21 +1070,13 @@ class InputProcessor(InputProcessorInterface):
         #This would return text for each symbol. see comment about resolve_hack in parameters.
         #From this point, symbols are textual!
         ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
-        try:
+        callback = lambda e: self._eng.statusChanges.emit(f'Exception in processing {e}')
+        with SimpleExceptionContext('exception in processing',callback=callback):
             ret=self.process_internal(ls)
-            logging.debug("process end")
-        except Exception as e:
-            if os.environ.get('PYCHARM_HOSTED') == '1' and config.Running.STOP_EXCEPTION_IN_DEBUG:
-                raise #will try
-            import traceback
-            logging.error(('exception in processing' ))
-            print_formatted_traceback()
-            try:
-                import Pyro5
-                logging.error(("".join(Pyro5.errors.get_pyro_traceback())))
-            except:
-                pass
-            self._eng.statusChanges.emit(f'Exception in processing {e}')
+            logging.debug(f"process end {ret}")
+            return ret
+
+
 
 
     def process_internal(self, partial_symbol_update):
@@ -1090,6 +1117,7 @@ class InputProcessor(InputProcessorInterface):
             else:
                 self.data._symbols_wanted.update(
                     partial_symbol_update)  # will try also the symbols wanted. That are generally only updated first..
+                #so symbol_wanted is incremental list . Interesting.
             t = time.process_time()
             ret= self.process_history(partial_symbol_update)
             if firsttime:
