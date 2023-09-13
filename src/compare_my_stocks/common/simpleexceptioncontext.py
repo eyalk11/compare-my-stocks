@@ -5,7 +5,7 @@ from Pyro5.errors import get_pyro_traceback
 
 from Pyro5.errors import format_traceback
 
-default_not_detailed_errors = [ConnectionRefusedError,TimeoutError ]
+default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError ]
 
 #don't import config here
 

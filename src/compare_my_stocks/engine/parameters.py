@@ -53,6 +53,7 @@ class Parameters:
     limit_to_portfolio : bool =False
     resolve_hack: dict = field(default_factory=dict)
     show_transactions_graph : bool = True
+    is_forced: bool = False #doesn't matter actually, only for caching
 
     #Resolve hack is meant to provide custom symbol data to the input processor
     #most of the code originally written to work with strings. So, here we input the entire info the dic and treat the symbol as dic.
@@ -99,6 +100,7 @@ class Parameters:
         # super(Parameters,self).__init__(*args,**kwargs)
         self._baseclass=baseclass
         self.adjust_date=0
+        self.is_forced=False #so that only if excplicitly set to true, it will be true
 
 
     @property

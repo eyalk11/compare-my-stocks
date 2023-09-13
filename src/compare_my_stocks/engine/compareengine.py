@@ -41,7 +41,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         input_source=  self.get_input_source()
 
         self._tr = TransactionHandlerManager(None)
-        self._inp = InputProcessor(self, self._tr,input_source)
+        self._inp : InputProcessor= InputProcessor(self, self._tr,input_source)
         self._tr._inp = self._inp  # double redirection.
 
         self._datagen: DataGenerator = DataGenerator(self)
@@ -174,6 +174,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 upd(f"Generated Graph with old data  (  Query failed :() ")
             else:
                 upd("Generated Graph :)")
+            self.params.is_forced=False
             self.finishedGeneration.emit(1)
         except TypeError as e:
             upd(f"failed generating graph {e}",err=True)

@@ -61,7 +61,7 @@ def inp(ibsource):
     tr._inp=tmpinp
     tmpinp.process_params= copy(eng.params)
     tmpinp.process_params.use_cache=UseCache.FORCEUSE
-    tmpinp.save_data = Mock(return_value=None)
+    #tmpinp.save_data = Mock(return_value=None)
     return tmpinp
 
 @pytest.fixture

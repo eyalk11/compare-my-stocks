@@ -2,11 +2,12 @@ from memoization import cached
 
 from common.refvar import RefVar
 from input.inputdata import InputDataImpl
+from input.inputdatainterface import InputDataImplInterface
+from input.inputprocessorinterface import InputProcessorInterface
 from transactions.transactioninterface import BuyDictItem,TransactionSource
 import collections
 import logging
 import math
-import os
 import time
 from collections import defaultdict
 # from datetime import datetime
@@ -25,11 +26,10 @@ from common.loghandler import TRACELEVEL
 from config import config
 from common.common import UseCache, addAttrs, dictfilt, ifnn, log_conv, \
     localize_it, unlocalize_it, conv_date, tzawareness, ifnotnan, lmap, selfifnn, StandardColumns, subdates
-from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
 from input.earningsproc import EarningProcessor
-from input.inputprocessorinterface import InputProcessorInterface
 
 from input.inputsource import InputSource, InputSourceInterface
 from engine.symbolsinterface import SymbolsInterface
@@ -49,6 +49,9 @@ class InputProcessor(InputProcessorInterface):
     dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock',
                    'tot_profit_by_stock', 'holding_by_stock']
 
+    @property
+    def dataimp(self) -> InputDataImplInterface:
+        return self.data
     def __getattr__(self, item): #for external access mainly
         if hasattr(self.data,item):
             return getattr(self.data,item)
@@ -207,16 +210,21 @@ class InputProcessor(InputProcessorInterface):
             tmpdf=df.loc[pd.to_datetime(fromdate.date()):pd.to_datetime( (enddate+datetime.timedelta(days=1)).date() )]
             if tmpdf.empty:
                 raise KeyError("empty")
+            if not minimal:
+                raise KeyError("not minimal")#lets avoid checks here and let get_range_gap handle it
         except: 
             ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self.data.currency_hist is not None  and currency in self.data.currency_hist else [(fromdate,enddate)])
             ls =list(ls)
             if len(ls) == 0:
-                logging.error('Get range gap return none. very strange')
-                return None
+                logging.debug("have all data")
+                return df
 
 
             for (mindate, maxdate) in ls:
-                tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
+                try:
+                    tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
+                except AssertionError:
+                    raise ValueError("Bad currency")
                 didquery=True
                 logging.debug("get currency history %s %s %s %s" % (pair, mindate, maxdate,len(selfifnn(tmpdf,[]))))
                 if tmpdf is not None:
@@ -881,7 +889,7 @@ class InputProcessor(InputProcessorInterface):
             if not date in self.data._hist_by_date:
                 self.data._hist_by_date[date] = {}
 
-            self.data._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  # should be =l
+            self.data._hist_by_date[date][sym] = (dic, adjusted.get(date) if adjusted else None)  #We will fill it anyway in simp_hist
         return okdays
 
     def convert_dicts_to_df_and_add_earnings(self,partial_symbols_update):
@@ -1018,6 +1026,7 @@ class InputProcessor(InputProcessorInterface):
         if len(currency_symbols_multiIndex) == 0:
             logging.debug('no symbols to adjust')
             return False
+
         adjusted_currency_df = pd.DataFrame(
             index=self.data._reg_panel.index, columns=currency_symbols_multiIndex)
         for x in SymbolsInterface.TOADJUST:
@@ -1048,7 +1057,7 @@ class InputProcessor(InputProcessorInterface):
             [['tot_profit_by_stock'], list(total_profit_df.columns)], names=['Name', 'Symbols'])
         concatenated_df = pd.concat(
             [adjusted_reg_panel_df, total_profit_df, value_panel, avg_cost_panel, date_adjusted_panel, unrel_profit_panel], axis=1)
-        return concatenated_df
+        return concatenated_df #set(lmap(lambda x: x[0], adjusted_reg_panel_df.columns))
 
 
     def filter_input(self,keys):

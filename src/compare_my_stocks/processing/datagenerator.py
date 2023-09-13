@@ -5,12 +5,14 @@ import matplotlib
 import numpy
 import numpy as np
 import pandas
+from memoization import cached
 
 from common.common import Types, UniteType, NoDataException, get_first_where_all_are_good, Serialized, \
     LimitType, log_conv
 from config import config
 from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolsinterface import SymbolsInterface
+from input.inputprocessorinterface import InputProcessorInterface
 from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
 from common.common import lmap 
@@ -23,7 +25,7 @@ class DataGenerator(DataGeneratorInterface):
 
     def __init__(self, eng: CompareEngineInterface):
         self._eng = eng
-        self._inp = self._eng.input_processor
+        self._inp : InputProcessorInterface = self._eng.input_processor
         # DataGenerator.minMaxChanged.initemit()
         self.colswithoutext = []
         self.tmp_colswithoutext = []
@@ -297,6 +299,29 @@ class DataGenerator(DataGeneratorInterface):
             self._eng.minMaxChanged.emit((self.minValue, self.maxValue))
         return upd1 or diff
 
+    def fill_same_currency(self,ncurrency,df: pandas.DataFrame):
+        '''
+        For example if we are in ILS and already another stock is ILS .
+        '''
+        def retk():
+            for k in self._inp.symbol_info:
+                if ( self._inp.dataimp.get_currency_for_sym(k,True) == ncurrency or self._inp.dataimp.get_currency_for_sym(k,False) == ncurrency):
+                    yield k
+        s=set(retk())
+        for l in df.columns:
+            if l[1] in s and l in self._inp._reg_panel.columns:
+                df[l]= self._inp._reg_panel[l].copy()
+        return df
+
+
+    def key_maker(self,ncurrency):
+        import random 
+        if self.params.is_forced:
+            return random.randint(0,100000)
+        return (ncurrency, self.params.fromdate, self.params.todate)
+
+    #TODO: use cached with smart key based on params
+    @cached(custom_key_maker=key_maker,ttl=300)
     def readjust_for_currency(self, ncurrency):
         '''
         Adapt to a new home currency
@@ -309,19 +334,19 @@ class DataGenerator(DataGeneratorInterface):
         if rate is None:
             logging.error(("cant adjust"))
             return
-        nn = self._inp.adjusted_panel.copy()  # adjusted_panel is already at base currency.
+        newdf = self._inp.adjusted_panel.copy()  # adjusted_panel is already at base currency.
         for x in SymbolsInterface.TOADJUST:
-            nn[x] = nn[x].mul(1 / rate)
+            newdf[x] = newdf[x].mul(1 / rate)
         simplified = pandas.DataFrame(simplified, columns=['data'])
         simplified = simplified.set_index(matplotlib.dates.date2num(list(simplified.index)))
         oldind = min(simplified.index)
-        oldnindex=min(nn.index)
+        oldnindex=min(newdf.index)
         oldmaxind= max(simplified.index)
-        oldnmaxind=max(nn.index)
-        missingvalues = set(list(nn.index)) - set(list(simplified.index))
+        oldnmaxind=max(newdf.index)
+        missingvalues = set(list(newdf.index)) - set(list(simplified.index))
         logging.debug((log_conv('missing in readjust', len(missingvalues))))
 
-        simplified = simplified.reindex(nn.index, method='pad')#padding just in between values
+        simplified = simplified.reindex(newdf.index, method='pad')#padding just in between values
 
         if oldnindex<oldind:
             simplified.loc[oldnindex:oldind]=numpy.nan
@@ -331,14 +356,14 @@ class DataGenerator(DataGeneratorInterface):
 
 
         for y in SymbolsInterface.TOADJUSTLONG:
-            nn[y] = nn[y].mul(simplified['data'], axis=0)
+            newdf[y] = newdf[y].mul(simplified['data'], axis=0)
 
-        nn = nn[[(c, d) for (c, d) in self._inp.reg_panel.columns if c not in ['tot_profit_by_stock']]]
-        t = nn['rel_profit_by_stock'] + nn['unrel_profit']
+        newdf = newdf[[(c, d) for (c, d) in self._inp.reg_panel.columns if c not in ['tot_profit_by_stock']]]
+        t = newdf['rel_profit_by_stock'] + newdf['unrel_profit']
         t.columns = pandas.MultiIndex.from_product([['tot_profit_by_stock'], list(t.columns)],
                                                    names=['Name', 'Symbols'])
-        nn = pandas.concat([nn, t], axis=1)
-        return nn
+        newdf = pandas.concat([newdf, t], axis=1)
+        return self.fill_same_currency(ncurrency,newdf)
 
     def serialize_me(self, filepath=config.File.SERIALIZEDFILE):
         logging.debug((f'writing serialized file to {config.File.SERIALIZEDFILE}'))

@@ -138,7 +138,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
-                taskparams = TaskParams(params=(Parameters(ignore_minmax=(reset_ranges > ResetRanges.DONT)),),
+                param=Parameters(ignore_minmax=(reset_ranges > ResetRanges.DONT))
+                param.is_forced=force #after init
+                taskparams = TaskParams(params=(param,),
                                         finish_params=(after, adjust_date))
                 self._update_graph_task.command.emit(taskparams)  # no params so update current
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))

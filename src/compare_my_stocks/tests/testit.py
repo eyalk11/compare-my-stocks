@@ -89,7 +89,10 @@ def test_get_currentcurrency(inp):
 def test_example_inp(inp):
     tmpinp= inp
 
-
+def test_ibsrvils(getremibsrv):
+    x= getremibsrv
+    ls = x.get_matching_symbols('LUMI')
+    ls=list(ls)
 
 def test_ibsrv(getremibsrv):
     x= getremibsrv
