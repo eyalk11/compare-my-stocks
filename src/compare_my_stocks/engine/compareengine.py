@@ -9,6 +9,7 @@ from engine.symbolshandler import SymbolsHandler
 from input.ibsource import get_ib_source
 from input.inputsource import InputSourceInterface
 from input.investpysource import InvestPySource
+from input.polygon import get_polysource
 
 from processing.datagenerator import DataGenerator
 from graph.graphgenerator import GraphGenerator

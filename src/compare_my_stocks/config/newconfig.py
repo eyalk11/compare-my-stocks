@@ -202,11 +202,12 @@ class FileConf:
 @paramaware
 @dataclass
 class InputConf:
+    SaveData:bool =True 
     PRICES_ARE_ADJUSTED_TO_TODAY:bool = True
     AdjustUnrelProfitToReflectSplits: bool = True
     MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=20)
     MAXFULLCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
-    FULLCACHEUSAGE: UseCache = UseCache.USEIFAVALIABLE
+    FULLCACHEUSAGE: UseCache = UseCache.FORCEUSE 
     AlwaysStoreFullCache: bool = False
     INPUTSOURCE: InputSourceType = InputSourceType.IB
     IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT

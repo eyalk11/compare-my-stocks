@@ -3,6 +3,7 @@ import logging
 import datetime
 from dataclasses import asdict
 
+from memoization import cached
 from polygon.rest.models import TickerDetails
 
 from common.common import c, lmap
@@ -21,24 +22,26 @@ class PolySource(InputSource):
         self.client = RESTClient(api_key=config.Sources.PolySource.Key)
         self.lock = threading.Lock()
 
+
     def get_current_currency(self, pair):
         return self.client.get_last_forex_quote(pair[0],to=pair[1])
 
 
     @simple_exception_handling(err_description='error in resolve symbol',return_succ=None,never_throw=True)
+    @cached
     def resolve_symbol(self, sym): 
-        return c(self.convert_sym_dic,self.client.get_ticker_details(sym))
+        return c(self.convert_sym_dic,self.client.get_ticker_details)(sym)
 
     def get_matching_symbols(self, sym, results=10):
         ls=lmap(c(self.client.get_ticker_details,lambda x:x.ticker) ,self.client.list_tickers(search=sym))
         ls=lmap(self.convert_sym_dic, ls)
         return ls[:results] 
 
-    def get_best_matches(self, sym, results=10, strict=True):
-        if not strict:
-            return self.get_matching_symbols(sym,results=results)
-        else:
-            return [self.resolve_symbol(sym)]
+    # def get_best_matches(self, sym, results=10, strict=True):
+        # if not strict:
+            # return self.get_matching_symbols(sym,results=results)
+        # else:
+            # return [self.resolve_symbol(sym)]
 
 
 
@@ -52,18 +55,22 @@ class PolySource(InputSource):
     def convert_sym_dic(dic):
         if type(dic) is not dict: 
             dic=asdict(dic)
-        dic['currency']=dic.get('currency_name')
+        dic['currency']=dic.get('currency_name').upper()
         dic['exchange']=dic.get('primary_exchange')
+        dic['symbol']=dic.get('ticker') 
         return dic 
 
 
     @simple_exception_handling(err_description='error in get_symbol_history',return_succ=(None,[]),never_throw=True)
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
-        if hasattr(sym,'ticker') or sym.get('ticker') is not None:
-            try:
-                sym=sym.ticker 
-            except:
-                sym=sym.get('ticker')
+        if not(type(sym) is str):
+            if hasattr(sym,'ticker') or sym.get('ticker') is not None:
+                try:
+                    sym=sym.ticker
+                except:
+                    sym=sym.get('ticker')
+            else:
+                raise ValueError(f"Dont know how to handle {sym}")
 
         l = self.resolve_symbol(sym)
         if not l:
@@ -109,7 +116,7 @@ class PolySource(InputSource):
     def query_symbol(self, sym):
         pass
 
-
+    @simple_exception_handling(err_description='error in get_symbol_history',return_succ=None,never_throw=True)
     def get_currency_history(self, pair, startdate, enddate):
        raise NotImplementedError()  
 

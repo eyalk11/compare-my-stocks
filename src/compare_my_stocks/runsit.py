@@ -227,7 +227,9 @@ class MainClass:
 
         gg.gen_graph(Parameters(
             type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=config.DefaultParams.DefaultGroups, use_cache=config.DefaultParams.CACHEUSAGE,
-            show_graph=False))  # ,adjust_to_currency=True,currency_to_adjust='ILS'))
+            show_graph=False))
+        #those parameters sets the default UI controls. Probably should be in config, though most of it is.
+        # I do some assumptions on it later.
 
         if self.SIMPLEMODE:
             from matplotlib import pyplot as plt

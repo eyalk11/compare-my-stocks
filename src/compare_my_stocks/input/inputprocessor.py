@@ -246,12 +246,11 @@ class InputProcessor(InputProcessorInterface):
                 logging.debug("get currency history %s %s %s %s" % (pair, mindate, maxdate,len(selfifnn(tmpdf,[]))))
                 if tmpdf is not None:
                     self.update_currency_hist(currency,tmpdf)
+                    self.save_data()
             if not currency in self._data.currency_hist:
                 raise ValueError("cant get currency to adjust")
         if queried is not None:
             queried.value= didquery
-        elif didquery:
-            self.save_data()
 
         if not minimal:
             if df is None:
@@ -381,7 +380,7 @@ class InputProcessor(InputProcessorInterface):
         if query_source:
             succ=self.get_data_from_source(partial_symbols_update,fromdate,todate)
             if succ:
-                self._data.save_data()
+                self.save_data()
         else:
             succ=True
         self.failed_to_get_new_data = succ == False
@@ -399,10 +398,10 @@ class InputProcessor(InputProcessorInterface):
             self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
             logging.log(TRACELEVEL,('fin convert'))
             if config.Input.IGNORE_ADJUST:
-                self.adjusted_panel=self.reg_panel.copy()
+                self.adjusted_panel=self._data._reg_panel.copy()
             else:
                 if not self.adjust_for_currency():
-                    self.adjusted_panel = self.reg_panel.copy()
+                    self.adjusted_panel = self._data._reg_panel.copy()
             logging.log(TRACELEVEL,('last'))
         finally:
             self._proccessing_mutex.unlock()
@@ -886,6 +885,8 @@ class InputProcessor(InputProcessorInterface):
             self._proccessing_mutex.unlock()
     
     def save_data(self):
+        if not config.Input.SaveData:
+            return
         self._data.save_data()
         if config.Input.FULLCACHEUSAGE != UseCache.DONT or config.Input.AlwaysStoreFullCache:
             self._save_data_proc.command.emit(TaskParams(params=tuple()))

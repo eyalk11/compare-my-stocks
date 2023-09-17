@@ -4,8 +4,9 @@ import os
 from Pyro5.errors import get_pyro_traceback
 
 from Pyro5.errors import format_traceback
+from ibflex.client import BadResponseError
 
-default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError ]
+default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError,BadResponseError ]
 
 #don't import config here
 
