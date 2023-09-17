@@ -213,8 +213,6 @@ Please consult the corresponding site's license before using this software, and 
 
 4. I of course take no responsibilty on the correctness of the displayed graphs/data. 
 
-5. Investpy is not supported currently. So you have to have an account in interactive brokers to be able to work properly with it.
-
 ## Final words
 
 *  Not fully tested, and prerelease. Still has surprisingly low number of bugs :)
