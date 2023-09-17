@@ -56,7 +56,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             logging.debug(f"not saving cache because of config{self.NAME}")
             return
         if not self.need_to_save:
-            logging.debug(f"not saving cache {self.NAME}")
+            logging.debug(f"no need to save cache {self.NAME}")
             return
         try:
             self._cache_date =datetime.now()

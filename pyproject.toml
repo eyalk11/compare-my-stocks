@@ -68,3 +68,6 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 [mypy]
 mypy_path = "src/compare_my_stocks"
+[tool.pyright]
+pythonVersion= "3.9.6"
+

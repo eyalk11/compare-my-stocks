@@ -1,9 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from common.better_abc import ABCMeta, abstractmethod
 
 from input.inputdatainterface import InputDataImplInterface
 
 
-class InputProcessorInterface():
+class InputProcessorInterface(metaclass=ABCMeta):
+
     @abstractmethod
     def complete_status(self):
         pass
@@ -46,5 +47,5 @@ class InputProcessorInterface():
 
     @property
     @abstractmethod
-    def dataimp(self) -> InputDataImplInterface:
+    def _data(self) -> InputDataImplInterface:
         pass

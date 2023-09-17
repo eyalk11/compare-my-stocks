@@ -325,7 +325,7 @@ class IBSource(InputSource):
         if 'ibrem' in item:
             raise Exception('asdasdasd')
             #raise AttributeError(item)
-        logging.debug(("getatt",item))
+        #logging.debug(("getatt",item))
         if hasattr(self.ibrem,item):
             z=getattr(self.ibrem,item)
         else:

@@ -105,7 +105,8 @@ def show_annotation(sel, cls, ax, generation):
             basic_str= lambda n,v1,val_orig   :     (f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}')
             hold_str = lambda hold,price: f'(qty: {round_til_2(hold)} price: {round_til_2(price)})'
 
-            if cls.additional_df and ( cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT) ):
+            if cls.additional_df and ( ( cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT) )
+            ):
                 ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
                 holding_orig = [numpy.interp(xi, ls, cls.additional_df[0][n]) for n in names]
                 price_orig = [numpy.interp(xi, ls, cls.additional_df[1][n]) for n in names]
@@ -476,7 +477,10 @@ class GraphGenerator:
                 pass  # plt.show()
             if plot_data and self.params.show_transactions_graph:
                 #special if not a price graph
-                self.plot_transaction_info(ar, plot_data, special= (not ((Types.PRICE & type) == Types.PRICE or type==Types.ABS)))
+                self.plot_transaction_info(ar, plot_data, special=
+                (self.params.adjust_to_currency or self.params.adjusted_for_base_cur)  or not
+                ( (Types.PRICE & type) == Types.PRICE or type==Types.ABS))
+
             # self.remove_all_anotations()
             self.cursor = mplcursors.cursor(mfig, hover=True)
             self.generation += 1
@@ -621,7 +625,7 @@ class GraphGenerator:
                     origline.set_visible(vis)
                     self.last_pick_event= datetime.datetime.now()
                     logging.debug(('onpick legend hide or show', origline._label, vis))
-                    #time.sleep(0.1)
+                    time.sleep(0.1)
                     if legline._label in blobs:
                         blobs[legline._label].set_visible(vis)
                         #self.handles_labels[legline._label][1].set_visible(vis)

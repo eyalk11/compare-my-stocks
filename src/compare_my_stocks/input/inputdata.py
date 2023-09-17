@@ -70,6 +70,7 @@ class InputDataImpl(InputDataImplInterface):
         self.fullcachedate = None
         self._fset = set()
         self.currency_hist = None
+        self._err_transactions = set()
 
     @staticmethod
     def init_func():
@@ -120,13 +121,14 @@ class InputDataImpl(InputDataImplInterface):
     @classmethod
     def full_data_load(self):
         if config.Input.FULLCACHEUSAGE == UseCache.DONT:
+            logging.info("Full data cache not loaded because of FULLCACHEUSAGE in config")
             return InputDataImpl()
         try:
             cache_date, cls = pickle.load(open(config.File.FULLDATA, "rb"))
             if (
                 cache_date - datetime.datetime.now() > config.Input.MAXFULLCACHETIMESPAN
             ) and config.Input.FULLCACHEUSAGE == UseCache.USEIFAVALIABLE:
-                logging.info("Full data cache too old")
+                logging.info("Full data cache too old.Not loaded")
                 return InputDataImpl()
 
             logging.info(f"Loaded and used fulldata cache: {cache_date}")
@@ -290,8 +292,9 @@ class InputDataImpl(InputDataImplInterface):
         except:
             logging.error(("error in dumping hist"))
             print_formatted_traceback()
-        if config.Input.FULLCACHEUSAGE != UseCache.DONT:
-            self.save_full_data()
+
+
+
 
     def update_usable_symbols(self):
         self._usable_symbols = set()

@@ -111,29 +111,30 @@ def realeng(additional_process):
 #patch get_ib_source to return ibsource instead of None
 
 @pytest.fixture
-@patch.object(InputDataImpl,"save_data",new_callable=Mock(return_value=None))
-def realenghookinp(ibsource):
+
+def realenghookinp():
     config.IBConnection.ADDPROCESS=None
+    config.Input.INPUTSOURCE = InputSourceType.Cache
     
-    with mock.patch('input.ibsource.get_ib_source',new_callable=lambda : ibsource):
-        eng= CompareEngine(None)
-        eng.transaction_handler.save_cache = Mock(return_value=None)
-        eng.transaction_handler._ib.save_cache =Mock(return_value=None)
-        eng.transaction_handler._stock.save_cache =Mock(return_value=None)
-        eng.transaction_handler._stockprices.save_cache =Mock(return_value=None)
+    #with mock.patch('input.ibsource.get_ib_source',new_callable=lambda : ibsource):
+    eng= CompareEngine(None)
+    eng.transaction_handler.save_cache = Mock(return_value=None)
+    eng.transaction_handler._ib.save_cache =Mock(return_value=None)
+    eng.transaction_handler._stock.save_cache =Mock(return_value=None)
+    eng.transaction_handler._stockprices.save_cache =Mock(return_value=None)
 
-        eng.params = Parameters(
-            type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
-            show_graph=False)
+    eng.params = Parameters(
+        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
+        show_graph=False)
 
-        eng.call_graph_generator = Mock(return_value=None)
+    eng.call_graph_generator = Mock(return_value=None)
 
-        #eng.input_processor.save_data = Mock(return_value=None) #Dont save anything please . Because loading data like that is not nice.
-        tmpinp = eng._inp
-        tmpinp.process_params = copy(eng.params)
-        tmpinp.process_params.use_cache = UseCache.FORCEUSE
-        tmpinp.save_data = Mock(return_value=None)
-        return eng
+    #eng.input_processor.save_data = Mock(return_value=None) #Dont save anything please . Because loading data like that is not nice.
+    tmpinp = eng._inp
+    tmpinp.process_params = copy(eng.params)
+    tmpinp.process_params.use_cache = UseCache.FORCEUSE
+    #tmpinp.data.save_data = Mock(return_value=None)
+    return eng
 
 def generate_config(useinp):
     if useinp & UseInput.LOADDEFAULTCONFIG:

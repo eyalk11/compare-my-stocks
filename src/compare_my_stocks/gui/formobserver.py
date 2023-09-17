@@ -43,6 +43,8 @@ except:
 class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def update_task(self, params):
         self.graphObj.update_graph(params)
+        if params.is_forced:
+            self.graphObj.input_processor.save_data() #not strictly needed
 
     def refresh_task(self, x, params):
         self.window.last_status.setText('refreshing data')
@@ -115,7 +117,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         # self._dolongprocess.run(set(toupdate))
 
-    def update_graph(self, reset_ranges: ResetRanges, force=False, after=None, adjust_date=False):
+    def update_graph(self, reset_ranges: ResetRanges, force=False, after=None, adjust_date=False, btn=False):
         # ignores adjust_data for now.
         def call(params):
             after_task, adjust_date = params  # arab
@@ -139,7 +141,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
                 param=Parameters(ignore_minmax=(reset_ranges > ResetRanges.DONT))
-                param.is_forced=force #after init
+                param.is_forced=btn #after init
                 taskparams = TaskParams(params=(param,),
                                         finish_params=(after, adjust_date))
                 self._update_graph_task.command.emit(taskparams)  # no params so update current
@@ -324,7 +326,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.findChild(QPushButton, name="refresh_stock").pressed.connect(self.refresh_stocks)
         self.window.findChild(QPushButton, name="sortGroupsBtn").pressed.connect(self.sort_groups)
         self.window.findChild(QPushButton, name="update_btn").pressed.connect(
-            partial(self.update_graph, force=True, reset_ranges=ResetRanges.FORCE))
+            partial(self.update_graph, force=True, reset_ranges=ResetRanges.FORCE,btn=True))
         self.window.use_groups.toggled = safeconnect(self.window.use_groups.toggled, (self.use_groups))
         self.window.groups.itemSelectionChanged.connect(self.groups_changed)
         self.window.addselected.pressed.connect(self.add_selected)

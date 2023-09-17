@@ -305,7 +305,7 @@ class DataGenerator(DataGeneratorInterface):
         '''
         def retk():
             for k in self._inp.symbol_info:
-                if ( self._inp.dataimp.get_currency_for_sym(k,True) == ncurrency or self._inp.dataimp.get_currency_for_sym(k,False) == ncurrency):
+                if ( self._inp._data.get_currency_for_sym(k, True) == ncurrency or self._inp._data.get_currency_for_sym(k, False) == ncurrency):
                     yield k
         s=set(retk())
         for l in df.columns:

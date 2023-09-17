@@ -88,8 +88,10 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         #Any reason it is here?
         self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
-
-        if self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
+        if not self._inp.initialized:
+            symbols_needed = set()
+            reprocess=1 # process all...
+        elif self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
             symbols_needed = set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols - set(
                 config.Symbols.IGNORED_SYMBOLS) #TODO::make bad symbols property
 

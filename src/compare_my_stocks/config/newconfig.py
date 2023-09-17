@@ -54,9 +54,18 @@ class MyStocksConf:
 @paramaware
 @dataclass()
 class TransactionHandlersConf:
+    '''
+    Configurations for transactions handlers.
+
+    Args:
+        TrackStockList (List): stocks to track(add logging messages) . It always prints the operations but also the list of times.
+
+
+    '''
     JustFromTheEndOfMyStock : bool = False
     TRANSACTIONSOURCE:  TransactionSourceType = TransactionSourceType.Both
-    TrackStockList : list = field(default_factory=list)
+    TrackStockDict : Dict[str,Set[datetime.datetime]] = field(default_factory=dict)
+
     ReadjustJustIB : bool = False
     DontAdjustSplitsMyStock : bool = False
     DontReadjust : list = field(default_factory=list)
@@ -189,7 +198,8 @@ class InputConf:
     AdjustUnrelProfitToReflectSplits: bool = True
     MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=20)
     MAXFULLCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
-    FULLCACHEUSAGE: UseCache = UseCache.USEIFAVALIABLE 
+    FULLCACHEUSAGE: UseCache = UseCache.USEIFAVALIABLE
+    AlwaysStoreFullCache: bool = False
     INPUTSOURCE: InputSourceType = InputSourceType.IB
     IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT
     DOWNLOADDATAFORPROT: bool = True

@@ -77,7 +77,7 @@ class SimpleExceptionContext:
         elif e.__class__ not in default_not_detailed_errors and self.detailed:
             logf(format_traceback_str(exc_type,exc_value, traceback, detailed=self.detailed))
         else:
-            logf(str(e))
+            logf('%s %s ' % (e.__class__ ,str(e))  )
         if self.always_throw:
            return False
         return True

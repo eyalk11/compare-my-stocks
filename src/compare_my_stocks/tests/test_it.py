@@ -1,3 +1,10 @@
+import sys
+import os
+from pathlib import Path
+
+sys.path.insert(0,
+    str(Path(os.path.dirname(os.path.abspath(__file__))).parent) )
+
 #__builtins__.SILENT=False
 import datetime
 import logging
@@ -8,13 +15,13 @@ from graph.graphgenerator import GraphGenerator, StringPointer
 import pytest
 
 from tests.testtools import UseInput
-from config import config
+import config
 import numpy
-config.STOP_EXCEPTION_IN_DEBUG=True
+#config.STOP_EXCEPTION_IN_DEBUG=True
 
 from unittest.mock import patch
 
-from testtools import *
+from .testtools import *
 @pytest.mark.parametrize("useinp", [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT, UseInput.WITHINPUT,
                                     UseInput.LOADDEFAULTCONFIG])
 def test_realengine(mock_config_to_default,realeng,useinp):

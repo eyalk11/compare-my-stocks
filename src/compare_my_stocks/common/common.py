@@ -4,10 +4,34 @@ from collections import namedtuple
 from datetime import datetime,date
 from functools import wraps
 import time
+from typing import TypeVar
+from typing_extensions import ParamSpec
 import numpy as np
 import pytz
 import psutil
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
+
+T = TypeVar('T')
+P = ParamSpec('P')
+Q = ParamSpec('Q')
+U = TypeVar('U')
+
+def ass(x):
+    assert x is not None 
+    return x 
+
+
+def c(*cargs):
+    def composed(*args,**kwargs):
+        res = cargs[-1](*args,**kwargs)
+        for a in cargs[:-1][::-1]:
+            res = a(res)
+        return res
+    
+    return composed 
+
+def rc(*args):
+    return c(*args)()
 
 def subdates(a,b):
     ach=tzawareness(a,b) 
