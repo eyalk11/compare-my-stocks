@@ -94,3 +94,5 @@ mm.py
 src/compare_my_stocks/data/jupyter/.virtual_documents
 src/compare_my_stocks/data/jupyter/memory
 src/compare_my_stocks/data/hist_file.cache_befchange
+compare_my_stocks/.vscode
+.vscode

@@ -6,10 +6,11 @@ print('setup.py is deprecated. Dont use it.')
 minimal_reqs = [
     'dacite~=1.8.0',
     'ruamel.yaml'
-    ,'numpy==1.22.0'
-    ,'pandas==1.3.5',
+    ,'numpy==1.22.4'
+    ,'pandas==1.5.3',
     'django',
     'colorlog'
+    'pydantic',
 ]
 
 data_files = []

@@ -2,25 +2,25 @@
 # Compare My Stocks
 
 ## General 
-Visualize the performance of stocks in your portfolio or that  you are interested in.
-There is maximal control over charts, and a variaty of comparision options. 
+Visualize the performance of the stocks in your portfolio or those you're keenly observing. Gain utmost control over your charts, backed by a broad spectrum of comparison options. For instance, you're empowered to juxtapose an entire sector against a single stock. Moreover, you can efficiently view both realized and unrealized profit charts, which are automatically synced with Interactive Brokers (if you have an account).
 
-This app is basically BYOK. Currently, it uses solely Interactive Brokers for market data. 
 
-So unfortunately, **the app is much less usable for users who don't have Interactive Brokers account** (they can still see the sample data and check it). 
-Though, I might add BYOK source in the future.
+Essentially, this app adopts a **BYOK** approach(**B**ring **Y**our **O**wn **K**eys). While it primarily uses Interactive Brokers for sourcing market data, it also boasts a fresh integration with Polygon.
 
+Moreover, you can personalize your experience further by bringing your own notebook, allowing you to deploy your favorite algorithms for stock analysis.
+
+### Examples 
 You can divide the stocks into sectors, and compare the performance of different sector! 
 
 For instance: 
 
-* **Chart of profit of sectors in your portfolio and of the entire portfolio relative to a certain point in time.** 
+* **Graph of profit of sectors in your portfolio and of the entire portfolio relative to a certain point in time.** 
 
 ![image](https://user-images.githubusercontent.com/72234965/147883101-d565a1b1-eb57-4877-9a2c-706d63b48076.png)
 
 (You won't see your portfolio unless you will upload your transactions)  
 
-* **Chart of specific airlines and the airlines as a group compared with nasdaq:**
+* **Graph of specific airlines and the airlines as a group compared with nasdaq:**
  
 ![image](https://user-images.githubusercontent.com/72234965/149631950-742d1a08-06f7-43ba-a1a3-fa7785f84edf.png)
 
@@ -55,9 +55,6 @@ For instance:
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Adjust Prices and profit relative to a currency. 
 
 &nbsp;&nbsp;&nbsp;&nbsp; ✅ Adjust holdings based on stock splits (using stockprices API). 
-
-&nbsp;&nbsp;&nbsp;&nbsp; ✅ Combine IB transaction data into MyStocksPortfolio (by exporting csv). 
-
 ### **Maximum control over graphs**
 
  &nbsp;&nbsp;&nbsp;&nbsp; ✅ Compare performance of group of stocks vs other stock vs your portfolio! 
@@ -137,10 +134,9 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 
 ### For Developers 
 
- 1. pip install compare-my-stocks[full] 
- 2. consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)
- 3. better to copy  `site-packages\compare_my_stocks\data` to `~/.compare_my_stocks` 
-(Notice that it displays a console with running log) 
+ 1. `pip install compare-my-stocks[full]` 
+ 2. Consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)
+ 3. Better to copy  `site-packages\compare_my_stocks\data` to `~/.compare_my_stocks` 
 
 ### For Users
 
@@ -148,25 +144,40 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
  2. If something goes wrong, you can view console with `compare_my_stocks.exe --console`.  Recommended. There is also log file. 
 
 ### For both 
-Remark: Really recommended steps, but will work basically without it
 
- 3. Inspect  `data/myconfig.yaml` and set it as you wish ( or `~/.compare_my_stocks/myconfig.yaml` ).
+ 3. Inspect  `data/myconfig.yaml` and set it as you wish ( usually it is in `~/.compare_my_stocks/data` ). It has a lot of options. 
 
-    Notice that it is recommended to provide a CSV in MyStocksProtoflio format for every transaction (Type is Buy/Sell):
+    It is recommended to provide a CSV in *MyStocksProtoflio* format for every transaction
     (The app comes with an example) 
  
- 4. Follow the next steps for configuring IB 
+ 4. Choose your favorite input source (IB or Polygon ): 
+
+#### Configuring Interactive Brokers
+[detailed instructions with pictures](https://github.com/eyalk11/compare-my-stocks/wiki/Configurations#configurations-in-trader-workstation)
 
 
-
-## Configuring Interactive Brokers
  
  1. Run Trader Workstation and sign in (could be readonly).
    
  2.  API -> Settings -> Enable ActiveX And Socket Clients
  3.  Make sure PortIB matches the port in there.
- (   [Here with pictures](https://github.com/eyalk11/compare-my-stocks/wiki/Configurations#configurations-in-trader-workstation) )
 
+#### Configuring Polygon 
+ 1. Click "Create API Key" on  https://polygon.io/  
+ 2. Choose a plan 
+ 3. Copy the key to config and select polygon input source: 
+```
+!Config
+  ...
+  Sources: !SourcesConf
+    ...
+    PolySource: !PolyConf
+      Key: "YORKEY"
+  ... 
+  Input: !InputConf
+  ...
+    INPUTSOURCE: !InputSourceType Polygon
+```
 
  
  ## Running Instructions
@@ -176,7 +187,8 @@ Remark: Really recommended steps, but will work basically without it
 
 ## Remarks 
 
-* This app designed to run on 1920x1080.  lower resolution is generally problematic. If looks very  bad , set `TRY_TO_SCALE_DISPLAY` in config to False.
+* This app works best on 1920x1080, but is adaptive to othe resoultions. 
+If it looks very  bad , set `TRY_TO_SCALE_DISPLAY` in config to False.
 
 * Not tested on OS other than windows. 
 
@@ -186,7 +198,6 @@ Remark: Really recommended steps, but will work basically without it
 
 * This app / setup creates the folder `~/.compare_my_stocks` and use it to store logs and data. It has algorithm for resolving the different paths. It also read env variable `COMPARE_STOCK_PATH` .
 
-* If you see `Generated Graph :)` and no graph, try to rescale app. There is some bug there.
 
 ## Legal Words
 
@@ -206,7 +217,7 @@ Please consult the corresponding site's license before using this software, and 
 
 ## Final words
 
-* **Not fully tested, and prerelease. Some features may not work correctly (but most are just fine):) **
+*  Not fully tested, and prerelease. Still has surprisingly low number of bugs :)
    
 * This is being developed in QT with matplotlib amd pandas. I tried to use advanced features of pandas and numpy for fast calculation(sometimes).
 

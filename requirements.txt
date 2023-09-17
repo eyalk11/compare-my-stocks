@@ -29,4 +29,4 @@ superqt~=0.2.5.post1
 toml~=0.10.2
 ibflex @ git+https://github.com/csingley/ibflex.git
 pydantic~= 2.3.0
-
+polygon-api-client ~= 1.12.4
