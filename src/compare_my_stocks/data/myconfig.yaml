@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=myconfig.schema.json
 !Config
 DefaultParams: !DefaultParamsConf
   CACHEUSAGE: !UseCache FORCEUSE
@@ -20,14 +21,6 @@ File: !FileConf
   JSONFILENAME: groups.json
   REVENUEFILE: NOEARNINGS
   SERIALIZEDFILE: serialized.dat
-IBConnection: !IBConnectionConf
-  ADDPROCESS: ibsrv.exe
-  HOSTIB: 127.0.0.1
-  IBSRVPORT: 9091
-  MAXIBCONNECTIONRETRIES: 3
-  PORTIB: 7596
-  REGULAR_ACCOUNT: null
-  REGULAR_USERNAME: null
 Input: !InputConf
   DEFAULTFROMDATE: 2020-01-01 00:00:00+00:00
   DOWNLOADDATAFORPROT: true
@@ -50,7 +43,16 @@ Running: !RunningConf
   STOP_EXCEPTION_IN_DEBUG: true
   VERIFY_SAVING: !VerifySave Ask
   TRY_TO_SCALE_DISPLAY: true
-  
+Sources: !SourcesConf 
+  IBConf: !IBSourceConf
+    ADDPROCESS: ibsrv.exe
+    HOSTIB: 127.0.0.1
+    IBSRVPORT: 9091
+    MAXIBCONNECTIONRETRIES: 3
+    PORTIB: 7596
+    REGULAR_ACCOUNT: null
+    REGULAR_USERNAME: null
+
 SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: 'seeking-alpha.p.rapidapi.com', X_RapidAPI_Key: null}
 StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: 'stock-prices2.p.rapidapi.com', X_RapidAPI_Key: null}
 Symbols: !SymbolsConf

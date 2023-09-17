@@ -43,7 +43,7 @@ def mock_config_to_default_sess():
 
 @pytest.fixture(scope="session")
 def ibsource():
-    x = IBSource(host='127.0.0.1', port=config.IBConnection.PORTIB,proxy=False)
+    x = IBSource(host='127.0.0.1', port=config.Sources.IBSource.PORTIB,proxy=False)
     return x
 
 
@@ -113,7 +113,7 @@ def realeng(additional_process):
 @pytest.fixture
 
 def realenghookinp():
-    config.IBConnection.ADDPROCESS=None
+    config.Sources.IBSource.ADDPROCESS=None
     config.Input.INPUTSOURCE = InputSourceType.Cache
     
     #with mock.patch('input.ibsource.get_ib_source',new_callable=lambda : ibsource):
@@ -182,4 +182,4 @@ def getremibsrv():
 
 
     time.sleep(3)
-    return IBSource(host='127.0.0.1', port=config.IBConnection.PORTIB, proxy=True)
+    return IBSource(host='127.0.0.1', port=config.Sources.IBSource.PORTIB, proxy=True)

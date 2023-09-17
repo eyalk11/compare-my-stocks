@@ -1,11 +1,13 @@
 import dataclasses
 import datetime
 import traceback
-from functools import reduce
+from functools import reduce, partial
 from io import StringIO
 from typing import Dict, List, Union, Set
 import dacite
-from dataclasses import dataclass, field
+from dataclasses import  field
+
+from pydantic import ConfigDict
 
 from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave, TransactionSourceType
 import pytz
@@ -20,6 +22,9 @@ from common.paramaware import paramaware
 RESOLVE_FILES = ['LOGFILE', 'LOGERRORFILE', 'IB_LOGFILE', 'IB_LOGERRORFILE']
 FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
                             "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT','IBSRVREADY','FULLDATA']
+from pydantic.dataclasses import dataclass as pyddataclass
+confdict=ConfigDict(arbitrary_types_allowed=True)
+dataclass=partial(pyddataclass,config=confdict)
 
 @paramaware
 @dataclass
@@ -41,7 +46,10 @@ class IBConf:
     FlexToken: Optional[str] = None
     FlexQuery: Optional[str] = None
     QueryIfOlderThan: datetime.timedelta = datetime.timedelta(days=3)
-
+@paramaware 
+@dataclass 
+class PolyConf: 
+    Key: Optional[str] = None 
 
 @dataclass
 class MyStocksConf:
@@ -91,7 +99,7 @@ class RapidKeyConf:
 
 @paramaware
 @dataclass
-class IBConnectionConf:
+class IBSourceConf:
     HOSTIB: str = '127.0.0.1'
     PORTIB: int = 7596
     IBSRVPORT: int = 9091
@@ -226,7 +234,15 @@ class JupyterConf:
 
 @paramaware
 @dataclass
+class SourcesConf:
+    IBSource: IBSourceConf = field(default_factory=IBSourceConf)
+    PolySource: PolyConf = field(default_factory=PolyConf)
+
+
+@paramaware
+@dataclass
 class Config:
+
     Testing: TestingConf = field(default_factory=TestingConf)
     Running: RunningConf = field(default_factory=RunningConf)
     Earnings: EarningsConf = field(default_factory=EarningsConf)
@@ -236,7 +252,7 @@ class Config:
     Input: InputConf = field(default_factory=InputConf)
     Voila: VoilaConf = field(default_factory=VoilaConf)
     UI: UIConf = field(default_factory=UIConf)
-    IBConnection: IBConnectionConf = field(default_factory=IBConnectionConf)
+    Sources: SourcesConf = field(default_factory=SourcesConf)
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
     SEEKINGALPHAHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
@@ -422,12 +438,14 @@ class ConfigLoader():
         yaml.register_class(common.common.VerifySave)
         yaml.register_class(Config)
         yaml.register_class(IBConf)
+        yaml.register_class(PolyConf)
         yaml.register_class(TransactionHandlersConf)
         yaml.register_class(StockPricesConf)
         yaml.register_class(MyStocksConf)
         yaml.register_class(RapidKeyConf)
         yaml.register_class(UIConf)
-        yaml.register_class(IBConnectionConf)
+        yaml.register_class(SourcesConf)
+        yaml.register_class(IBSourceConf)
         yaml.register_class(FileConf)
         yaml.register_class(JupyterConf)
         # register all classes defined here ends with Conf

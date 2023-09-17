@@ -29,7 +29,7 @@ from ib.remoteprocess import RemoteProcess
 
 def get_ib_source() :
     #ibsource = IBSource()
-    proxy= True if config.IBConnection.ADDPROCESS else False
+    proxy= True if config.Sources.IBSource.ADDPROCESS else False
     if proxy:
         RemoteProcess().wait_for_read()
     ibsource= IBSource(proxy=proxy)
@@ -48,7 +48,7 @@ def make_sure_connected(func):
     return wrapper
 class IBSourceRemGenerator:
     @Pyro5.server.expose
-    def generate(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True):
+    def generate(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True):
 
         ibrem= IBSourceRem(host,port,clientId,readonly)
         self._pyroDaemon.register(ibrem)
@@ -60,7 +60,7 @@ class IBSourceRem:
     #     if self.IB:
     #         self.on_disconnect()
     Retries=0
-    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True):
+    def __init__(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True):
         if clientId is None:
             clientId=random.randrange(1, 900)
         self._connected = False
@@ -73,7 +73,7 @@ class IBSourceRem:
     @classmethod
     def on_disconnect(cls):
         logging.debug(('disconnected'))
-        if cls.Retries>config.IBConnection.MAXIBCONNECTIONRETRIES:
+        if cls.Retries>config.Sources.IBSource.MAXIBCONNECTIONRETRIES:
             logging.error("too many retries")
             return
         IBSourceRem.ConnectedME: IBSourceRem
@@ -241,10 +241,10 @@ class IBSourceRem:
                 yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
 
 class IBSource(InputSource):
-    def __init__(self,host=config.IBConnection.HOSTIB,port=config.IBConnection.PORTIB,clientId=None,readonly=True,proxy=True):
+    def __init__(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True,proxy=True):
         super().__init__()
         if proxy:
-            self._ibremgenerator=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.IBConnection.IBSRVPORT )
+            self._ibremgenerator=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.Sources.IBSource.IBSRVPORT )
             self._ibremgenerator._pyroTimeout = 20
 
             self.ibrem=self._ibremgenerator.generate( host, port, clientId, readonly)

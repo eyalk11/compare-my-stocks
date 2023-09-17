@@ -173,15 +173,15 @@ class MainClass:
 
         #import signal
         #signal.signal(signal.SIGTERM,
-        if config.IBConnection.ADDPROCESS and need_add_process(config):
+        if config.Sources.IBSource.ADDPROCESS and need_add_process(config):
             from ib.remoteprocess import RemoteProcess
             succ=RemoteProcess().run_additional_process()
             for i in range(2):
                 if succ:
                     break 
                 import sys
-                if 'python' in os.path.basename(sys.executable) and config.IBConnection.USE_PYTHON_IF_NOT_RESOLVE:
-                    config.IBConnection.ADDPROCESS= [sys.executable ,'-m compare_my_stocks --ibsrv']
+                if 'python' in os.path.basename(sys.executable) and config.Sources.IBSource.USE_PYTHON_IF_NOT_RESOLVE:
+                    config.Sources.IBSource.ADDPROCESS= [sys.executable ,'-m compare_my_stocks --ibsrv']
                     succ=RemoteProcess().run_additional_process()
             else:
                 config.Input.INPUTSOURCE=InputSourceType.Cache

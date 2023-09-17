@@ -28,3 +28,5 @@ six~=1.16.0
 superqt~=0.2.5.post1
 toml~=0.10.2
 ibflex @ git+https://github.com/csingley/ibflex.git
+pydantic~= 2.3.0
+

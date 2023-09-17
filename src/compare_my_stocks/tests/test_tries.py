@@ -147,6 +147,12 @@ def test_org_histdic(inp):
     assert 1 == 1
 
 
+def test_jsonscheme():
+    from pydantic import TypeAdapter
+    from config.newconfig import Config
+    t=TypeAdapter(Config)
+    t.json_schema()
+
 @pytest.mark.parametrize('stock_name',["TSLA"])
 def test_aa(stock_name: str):
     from collections import defaultdict

@@ -69,8 +69,8 @@ class RemoteProcess:
         except:
             cls.no_ready_file = True
 
-        if type(config.IBConnection.ADDPROCESS)==str:
-            rpath= os.path.abspath(config.IBConnection.ADDPROCESS)
+        if type(config.Sources.IBSource.ADDPROCESS)==str:
+            rpath= os.path.abspath(config.Sources.IBSource.ADDPROCESS)
             if not os.path.exists(rpath):
                 logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
                 return False
@@ -78,7 +78,7 @@ class RemoteProcess:
                 logging.info(f"IBSRV path reosolved to {rpath}")
             v=[rpath]
         else:
-            v=  config.IBConnection.ADDPROCESS
+            v=  config.Sources.IBSource.ADDPROCESS
 
         v = ["start", "/wait"] + v
         if config.Running.START_IBSRV_IN_CONSOLE:
