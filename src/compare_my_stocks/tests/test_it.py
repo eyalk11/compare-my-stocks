@@ -119,9 +119,14 @@ def test_ibsrv(getremibsrv):
 from common.common import Types, UniteType, UseCache
 from engine.parameters import Parameters
 
-
+def test_basic_poly(polysource):
+    x = polysource
+    basic(x)
 def test_basic(ibsource):
     x = ibsource
+    basic(x)
+def basic(x):
+
 
     ls = x.get_matching_symbols('CRWD')
 

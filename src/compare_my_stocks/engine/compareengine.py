@@ -34,6 +34,8 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
                 return get_ib_source()  # IBSource()
             elif input_type == InputSourceType.InvestPy:
                 return InvestPySource()
+            elif input_type == InputSourceType.Polygon:
+                return get_polysource()
 
 
     def __init__(self, axes=None):

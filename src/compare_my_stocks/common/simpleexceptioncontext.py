@@ -83,7 +83,7 @@ class SimpleExceptionContext:
         return True
 
 
-def simple_exception_handling(err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[]):
+def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[]):
     def decorated(func):
         def internal(*args,**kwargs):
             no_exception = False
@@ -92,7 +92,7 @@ def simple_exception_handling(err_description=None,return_succ=None,never_throw=
                 ret= func(*args,**kwargs)
                 no_exception = True
 
-            if not no_exception and return_succ:
+            if not no_exception and return_succ!='undef':
                 return return_succ
             return ret
 

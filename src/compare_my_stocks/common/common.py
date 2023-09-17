@@ -162,6 +162,7 @@ class InputSourceType(Flag):
     Cache=0
     IB=auto()
     InvestPy=auto()
+    Polygon=auto()
 
 
 def neverthrow(f,*args,default=None,**kwargs):

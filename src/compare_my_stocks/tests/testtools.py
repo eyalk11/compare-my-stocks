@@ -18,6 +18,7 @@ from ib.remoteprocess import RemoteProcess
 from input.ibsource import IBSource
 from input.inputdata import InputDataImpl
 from input.inputprocessor import InputProcessor
+from input.polygon import PolySource
 from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
@@ -80,7 +81,26 @@ def inpb(ibsource):
     tmpinp.process_params.use_cache=UseCache.FORCEUSE
     tmpinp.save_data = Mock(return_value=None)
     return tmpinp
+@pytest.fixture
+def polysource():
+    return PolySource()
 
+@pytest.fixture
+def inp_poly(polysource):
+    eng=MagicMock()
+    eng.params = Parameters(
+        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
+        show_graph=False)
+    input_source = polysource
+    config.TransactionHandlers.SaveCaches=False
+    tr=TransactionHandlerManager(None)
+    tmpinp = InputProcessor(eng, tr,input_source)
+    tmpinp.data= InputDataImpl()
+    tr._inp=tmpinp
+    tmpinp.process_params= copy(eng.params)
+    tmpinp.process_params.use_cache=UseCache.FORCEUSE
+    tmpinp.save_data = Mock(return_value=None)
+    return tmpinp
 
 @pytest.fixture(scope="session")
 def additional_process():
