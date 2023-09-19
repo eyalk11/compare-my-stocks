@@ -39,21 +39,6 @@ class RemoteProcess:
             time.sleep(config.Running.SLEEP_FOR_IBSRV_TO_START)
 
         logging.info("IBSourceRem is ready")
-        #     return
-        #
-        # if not cls.proc:
-        #     logging.error('init process before read')
-        #     return None
-        # cls.proc.stdout.flush()
-        # logging.info("Waiting for IBSourceRem to be ready")
-        # l=cls.proc.stdout.readline()
-        # if "Ready" in l:
-        #     logging.info("IBSourceRem is ready")
-        #     return True
-        # else:
-        #     logging.warn("IBSourceRem might not be ready")
-        #
-        # logging.debug(l)
     @staticmethod
     def launch_without_console(command):
         """Launches 'command' windowless and waits until finished"""
@@ -69,8 +54,8 @@ class RemoteProcess:
         except:
             cls.no_ready_file = True
 
-        if type(config.Sources.IBSource.ADDPROCESS)==str:
-            rpath= os.path.abspath(config.Sources.IBSource.ADDPROCESS)
+        if type(config.Sources.IBSource.AddProcess)==str:
+            rpath= os.path.abspath(config.Sources.IBSource.AddProcess)
             if not os.path.exists(rpath):
                 logging.error(f"IBSRV path reosolved to {rpath} which doesn't exists")
                 return False
@@ -78,7 +63,7 @@ class RemoteProcess:
                 logging.info(f"IBSRV path reosolved to {rpath}")
             v=[rpath]
         else:
-            v=  config.Sources.IBSource.ADDPROCESS
+            v=  config.Sources.IBSource.AddProcess
 
         if os.name != "nt":
             logging.warn("Additional process is only tested on windows. Run ibsrv manually (--ibsrv). ")
@@ -102,5 +87,5 @@ class RemoteProcess:
         return True
          
 
-        # os.spawnle(os.P_NOWAIT,'python',[config.ADDPROCESS])
+        # os.spawnle(os.P_NOWAIT,'python',[config.AddProcess])
         time.sleep(1)

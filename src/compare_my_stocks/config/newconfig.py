@@ -81,15 +81,15 @@ class TransactionHandlersConf:
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
-    IGNORECONF: Dict = field(default_factory=lambda: {})
-    COMBINESTRATEGY: CombineStrategy = CombineStrategy.PREFERSTOCKS
+    IgnoreConf: Dict = field(default_factory=lambda: {})
+    CombineStrategy: CombineStrategy = CombineStrategy.PREFERSTOCKS
     IncludeNormalizedOnSave: bool = True
-    MAXPERCDIFFIBSTOCKWARN: float = 0.2 #ignored currently
-    FIXBUYSELLDIFFDAYS: int = 3
-    BOTHSYMBOLS: List = field(default_factory=lambda: [])
-    SUPRESS_COMMON : bool = False
-    COMBINEDATEDIFF : int = 20
-    COMBINEAMOUNTPERC : int  = 10
+    MaxPercDiffIbStockWarn: float = 0.2 #ignored currently
+    FixBuySellDiffDays: int = 3
+    BothSymbols: List = field(default_factory=lambda: [])
+    Supress_common : bool = False
+    CombineDateDiff : int = 20
+    CombineAmountPerc : int  = 10
 
 
 @dataclass
@@ -100,32 +100,32 @@ class RapidKeyConf:
 @paramaware
 @dataclass
 class IBSourceConf:
-    HOSTIB: str = '127.0.0.1'
-    PORTIB: int = 7596
-    IBSRVPORT: int = 9091
-    ADDPROCESS: Optional[Union[str, List]] = 'ibsrv.exe'
-    MAXIBCONNECTIONRETRIES: int = 3
-    REGULAR_ACCOUNT: Optional[str] = None
-    REGULAR_USERNAME: Optional[str] =None
+    HostIb: str = '127.0.0.1'
+    PortIb: int = 7596
+    IbSrvPort: int = 9091
+    AddProcess: Optional[Union[str, List]] = 'ibsrv.exe'
+    MaxIbConnectionRetries: int = 3
+    Regular_account: Optional[str] = None
+    Regular_username: Optional[str] =None
     USE_PYTHON_IF_NOT_RESOLVE: bool = True
 @paramaware
 @dataclass
 class UIConf:
-    ADDITIONALOPTIONS: dict = field(default_factory=lambda: {})
+    AdditionalOptions: dict = field(default_factory=lambda: {})
 
     USEWX: int = 0
     USEWEB: int = 0
     USEQT: int = 1
     MINCOLFORCOLUMS: int = 20
     DEF_FIG_SIZE: tuple = (13.2 * 0.5, 6 * 0.5)
-    SIMPLEMODE: int = 0
+    SimpleMode: int = 0
     CIRCLE_SIZE_PERCENTAGE: float = 0.05
     CIRCLE_SIZE :int = 5*72
 
 @paramaware
 @dataclass
 class TestingConf:
-    ADDPROCESS: Optional[Union[str, List]] = field(default_factory=lambda: ["python", "ibsrv.py"])
+    AddProcess: Optional[Union[str, List]] = field(default_factory=lambda: ["python", "ibsrv.py"])
 
 
 @paramaware

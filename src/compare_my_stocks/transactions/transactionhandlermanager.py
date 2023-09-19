@@ -124,7 +124,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     def try_fix_dic(self,cur_action : Tuple[datetime,BuyDictItem],last_action :  Tuple[datetime,BuyDictItem],curhold):
         if last_action is None:
             return
-        if (last_action[0]-cur_action[0]).days < config.TransactionHandlers.FIXBUYSELLDIFFDAYS and  curhold-cur_action[1].Qty+last_action[1].Qty>=0:
+        if (last_action[0]-cur_action[0]).days < config.TransactionHandlers.FixBuySellDiffDays and  curhold-cur_action[1].Qty+last_action[1].Qty>=0:
 
             self._buydic[cur_action[0]]= last_action[1]._replace(Notes=last_action[1].Notes+"| Orig time: "+ str(last_action[0]))
             self._buydic[last_action[0]] = cur_action[1]._replace(
@@ -146,18 +146,18 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             num_of_updates=0 
             
             for s, v in secondinst.items():
-                if CombineStrategy.PREFERSTOCKS == config.TransactionHandlers.COMBINESTRATEGY:
+                if CombineStrategy.PREFERSTOCKS == config.TransactionHandlers.CombineStrategy:
                     if config.TransactionHandlers.JustFromTheEndOfMyStock:
                         if s.date() < maxmaxdate:
                             num_of_duplicates+=1 
                             continue
 
                 if (mindate.get(v.Symbol) and s.date() >= mindate[v.Symbol] and s.date() <= maxdate[v.Symbol]):
-                    if v.Symbol not in config.TransactionHandlers.BOTHSYMBOLS and config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERIB:
+                    if v.Symbol not in config.TransactionHandlers.BothSymbols and config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERIB:
                         num_of_duplicates +=1
                         log.debug(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
                         continue
-                if v.Symbol in config.TransactionHandlers.IGNORECONF and s > config.TransactionHandlers.IGNORECONF[v.Symbol]:
+                if v.Symbol in config.TransactionHandlers.IgnoreConf and s > config.TransactionHandlers.IgnoreConf[v.Symbol]:
                     num_of_duplicates +=1 
                     log.debug(("ignoring trans: %s %s because of conf  %s" % (s, v,"real" if real else "simul" )))
                     continue
@@ -167,8 +167,8 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                 for l in forsym:
                     paid = v[0] * v[1]
 
-                    if abs((l[0] - s.date()).days) < config.TransactionHandlers.COMBINEDATEDIFF and abs(float(l[1]) - paid) < (
-                            (l[1] + paid) / 2 * config.TransactionHandlers.COMBINEAMOUNTPERC / 100):
+                    if abs((l[0] - s.date()).days) < config.TransactionHandlers.CombineDateDiff and abs(float(l[1]) - paid) < (
+                            (l[1] + paid) / 2 * config.TransactionHandlers.CombineAmountPerc / 100):
                         logging.debug(("ignoring trans: %s %s because of\n %s %s %s" % (s, v, l[0], l[2:],"real" if real else "simul" )))
                         num_of_duplicates +=1 
                         break
@@ -199,14 +199,14 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             return sum( abs(v[1]) for v in dicforsym  if v[0]>=mindate), sum( 1 for v in dicforsym  if v[0]>=mindate)
 
 
-        second,first= ((self._stock.buydic,self._ib.buydic) if config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERIB else (self._ib.buydic, self._stock.buydic))
+        second,first= ((self._stock.buydic,self._ib.buydic) if config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERIB else (self._ib.buydic, self._stock.buydic))
         firstcopy = OrderedDict(sorted(first.items()))
         secondcopy= OrderedDict(sorted(second.items()))
         mindate=min(list(secondcopy.keys()))
         self._buydic={}
         num_of_duplicates=0
 
-        if config.TransactionHandlers.COMBINESTRATEGY == CombineStrategy.PREFERSTOCKS:
+        if config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERSTOCKS:
             ls =list(filter( lambda va: "IB:" in va[1].Notes , firstcopy.items()))
 
             for (s,v) in list(ls):
@@ -230,7 +230,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
         # for s,mindate in mindate.items():
         #     perc= np.linalg.norm( np.array( get_vars(datesymfirst,mindate)) - np.array(get_vars(datesymbstocks,mindate)))/  np.linalg.norm( np.array( get_vars(datesymfirst,mindate)))
-        #     if abs(perc-1)>config.TransactionHandlers.MAXPERCDIFFIBSTOCKWARN:
+        #     if abs(perc-1)>config.TransactionHandlers.MaxPercDiffIbStockWarn:
         #         logging.debug((f"warning: {s} is suspicous IB: {  get_vars(datesymfirst,mindate) } STOCK: { get_vars(datesymfirst,mindate)} date: {mindate} "))
 
         update_dic(firstcopy,secondcopy, self._buydic,True,num_of_duplicates )

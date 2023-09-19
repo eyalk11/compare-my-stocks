@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QSplashScreen
 #nothing here uses config. important
 
 from common.common import Types, UniteType, need_add_process, InputSourceType
+
 from common.loghandler import init_log
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 
@@ -21,11 +22,11 @@ import psutil, os
 
 
 class MainClass:
-    def __init__(self, USEWX=None, USEWEB=None, USEQT=None, SIMPLEMODE=None):
+    def __init__(self, USEWX=None, USEWEB=None, USEQT=None, SimpleMode=None):
         self.USEWX = USEWX
         self.USEWEB = USEWEB
         self.USEQT = USEQT
-        self.SIMPLEMODE = SIMPLEMODE
+        self.SimpleMode = SimpleMode
 
         self.config= None
 
@@ -42,7 +43,7 @@ class MainClass:
             matplotlib.use('TKAgg')
 
     def initialize_graph_and_ib(self, axes=None):
-        if self.SIMPLEMODE:
+        if self.SimpleMode:
             self.selectmode()
         from engine.compareengine import CompareEngine
         gg = CompareEngine(axes)
@@ -102,6 +103,7 @@ class MainClass:
                     if ('explorer.exe' != parent.lower()):
                         logging.info("Not hiding window because parent is {}".format(parent))
                         return False
+                    logging.debug('parent is explorer.exe, hiding')
                     return True
                 logging.info('Not hiding because of exception resolving parent process')
                 return False
@@ -143,9 +145,7 @@ class MainClass:
         # config calls init_log again with the right parameters.
         logging.getLogger().setLevel(logging.INFO if not debug else logging.DEBUG)
 
-        from common.common import Types, UniteType, need_add_process, InputSourceType
 
-        from common.loghandler import init_log
         init_log()
 
 
@@ -155,8 +155,8 @@ class MainClass:
         self.config = config
 
 
-        self.USEWX, self.USEWEB, self.USEQT, self.SIMPLEMODE \
-        = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SIMPLEMODE
+        self.USEWX, self.USEWEB, self.USEQT, self.SimpleMode \
+        = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SimpleMode
         config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
         config.Running.DEBUG = config.Running.DEBUG or debug
 
@@ -175,7 +175,7 @@ class MainClass:
 
         #import signal
         #signal.signal(signal.SIGTERM,
-        if config.Sources.IBSource.ADDPROCESS and need_add_process(config):
+        if config.Sources.IBSource.AddProcess and need_add_process(config):
             from ib.remoteprocess import RemoteProcess
             succ=RemoteProcess().run_additional_process()
             for i in range(2):
@@ -183,7 +183,7 @@ class MainClass:
                     break 
                 import sys
                 if 'python' in os.path.basename(sys.executable) and config.Sources.IBSource.USE_PYTHON_IF_NOT_RESOLVE:
-                    config.Sources.IBSource.ADDPROCESS= [sys.executable ,'-m compare_my_stocks --ibsrv']
+                    config.Sources.IBSource.AddProcess= [sys.executable ,'-m compare_my_stocks --ibsrv']
                     succ=RemoteProcess().run_additional_process()
             else:
                 config.Input.INPUTSOURCE=InputSourceType.Cache
@@ -217,7 +217,7 @@ class MainClass:
             # util.useQt()
             # util.patchAsyncio()
 
-        if not self.SIMPLEMODE:
+        if not self.SimpleMode:
             from .gui.mainwindow import MainWindow
             mainwindow = MainWindow()
 
@@ -225,7 +225,7 @@ class MainClass:
         from engine.parameters import Parameters
 
 
-        gg = self.initialize_graph_and_ib(mainwindow.axes if not self.SIMPLEMODE else None)
+        gg = self.initialize_graph_and_ib(mainwindow.axes if not self.SimpleMode else None)
 
         gg.gen_graph(Parameters(
             type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=config.DefaultParams.DefaultGroups, use_cache=config.DefaultParams.CACHEUSAGE,
@@ -233,7 +233,7 @@ class MainClass:
         #those parameters sets the default UI controls. Probably should be in config, though most of it is.
         # I do some assumptions on it later.
 
-        if self.SIMPLEMODE:
+        if self.SimpleMode:
             from matplotlib import pyplot as plt
             plt.draw()  # no app , bitches
         elif self.USEQT:

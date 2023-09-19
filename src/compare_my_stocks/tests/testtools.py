@@ -133,7 +133,7 @@ def realeng(additional_process):
 @pytest.fixture
 
 def realenghookinp():
-    config.Sources.IBSource.ADDPROCESS=None
+    config.Sources.IBSource.AddProcess=None
     config.Input.INPUTSOURCE = InputSourceType.Cache
     
     #with mock.patch('input.ibsource.get_ib_source',new_callable=lambda : ibsource):
@@ -164,11 +164,11 @@ def generate_config(useinp):
             #The idea is that the file is not in the repo, and it would be for my computer only (without changing original conf/ example conf)
             #currently :
             # testingconf.py
-            # ADDPROCESS = [process]
+            # AddProcess = [process]
             from config import testingconf
-            c.IBConnection.ADDPROCESS =testingconf.ADDPROCESS
+            c.IBConnection.AddProcess =testingconf.AddProcess
         except:
-            c.IBConnection.ADDPROCESS=c.Testing.ADDPROCESS
+            c.IBConnection.AddProcess=c.Testing.AddProcess
     else:
         c= Config()
         c.Running.TZINFO=datetime.timezone(datetime.timedelta(hours=-3),'GMT3')

@@ -29,7 +29,7 @@ from ib.remoteprocess import RemoteProcess
 
 def get_ib_source() :
     #ibsource = IBSource()
-    proxy= True if config.Sources.IBSource.ADDPROCESS else False
+    proxy= True if config.Sources.IBSource.AddProcess else False
     if proxy:
         RemoteProcess().wait_for_read()
     ibsource= IBSource(proxy=proxy)
@@ -73,7 +73,7 @@ class IBSourceRem:
     @classmethod
     def on_disconnect(cls):
         logging.debug(('disconnected'))
-        if cls.Retries>config.Sources.IBSource.MAXIBCONNECTIONRETRIES:
+        if cls.Retries>config.Sources.IBSource.MaxIbConnectionRetries:
             logging.error("too many retries")
             return
         IBSourceRem.ConnectedME: IBSourceRem

@@ -245,7 +245,7 @@
                     "title": "Ibsrvport",
                     "type": "integer"
                 },
-                "ADDPROCESS": {
+                "AddProcess": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -259,11 +259,11 @@
                         }
                     ],
                     "default": "ibsrv.exe",
-                    "title": "Addprocess"
+                    "title": "AddProcess"
                 },
-                "MAXIBCONNECTIONRETRIES": {
+                "MaxIbConnectionRetries": {
                     "default": 3,
-                    "title": "Maxibconnectionretries",
+                    "title": "MaxIbConnectionRetries",
                     "type": "integer"
                 },
                 "REGULAR_ACCOUNT": {
@@ -300,8 +300,8 @@
                 "HOSTIB",
                 "PORTIB",
                 "IBSRVPORT",
-                "ADDPROCESS",
-                "MAXIBCONNECTIONRETRIES",
+                "AddProcess",
+                "MaxIbConnectionRetries",
                 "REGULAR_ACCOUNT",
                 "REGULAR_USERNAME",
                 "USE_PYTHON_IF_NOT_RESOLVE"
@@ -849,7 +849,7 @@
         },
         "TestingConf": {
             "properties": {
-                "ADDPROCESS": {
+                "AddProcess": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -862,11 +862,11 @@
                             "type": "null"
                         }
                     ],
-                    "title": "Addprocess"
+                    "title": "AddProcess"
                 }
             },
             "required": [
-                "ADDPROCESS"
+                "AddProcess"
             ],
             "title": "TestingConf",
             "type": "object"
@@ -876,7 +876,7 @@
             "properties": {
                 "JustFromTheEndOfMyStock": {
                     "default": false,
-                    "title": "Justfromtheendofmystock",
+                    "title": "JustFromTheEndOfMyStock",
                     "type": "boolean"
                 },
                 "TRANSACTIONSOURCE": {
@@ -901,12 +901,12 @@
                 },
                 "ReadjustJustIB": {
                     "default": false,
-                    "title": "Readjustjustib",
+                    "title": "ReadjustJustIB",
                     "type": "boolean"
                 },
                 "DontAdjustSplitsMyStock": {
                     "default": false,
-                    "title": "Dontadjustsplitsmystock",
+                    "title": "DontAdjustSplitsMyStock",
                     "type": "boolean"
                 },
                 "DontReadjust": {
@@ -928,11 +928,11 @@
                 "MyStocks": {
                     "$ref": "#/$defs/MyStocksConf"
                 },
-                "IGNORECONF": {
-                    "title": "Ignoreconf",
+                "IgnoreConf": {
+                    "title": "IgnoreConf",
                     "type": "object"
                 },
-                "COMBINESTRATEGY": {
+                "CombineStrategy": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/CombineStrategy"
@@ -942,22 +942,22 @@
                 },
                 "IncludeNormalizedOnSave": {
                     "default": true,
-                    "title": "Includenormalizedonsave",
+                    "title": "IncludeNormalizedOnSave",
                     "type": "boolean"
                 },
-                "MAXPERCDIFFIBSTOCKWARN": {
+                "MaxPercDiffIbStockWarn": {
                     "default": 0.2,
-                    "title": "Maxpercdiffibstockwarn",
+                    "title": "MaxPercDiffIbStockWarn",
                     "type": "number"
                 },
-                "FIXBUYSELLDIFFDAYS": {
+                "FixBuySellDiffDays": {
                     "default": 3,
-                    "title": "Fixbuyselldiffdays",
+                    "title": "FixBuySellDiffDays",
                     "type": "integer"
                 },
-                "BOTHSYMBOLS": {
+                "BothSymbols": {
                     "items": {},
-                    "title": "Bothsymbols",
+                    "title": "BothSymbols",
                     "type": "array"
                 },
                 "SUPRESS_COMMON": {
@@ -965,14 +965,14 @@
                     "title": "Supress Common",
                     "type": "boolean"
                 },
-                "COMBINEDATEDIFF": {
+                "CombineDateDiff": {
                     "default": 20,
-                    "title": "Combinedatediff",
+                    "title": "CombineDateDiff",
                     "type": "integer"
                 },
-                "COMBINEAMOUNTPERC": {
+                "CombineAmountPerc": {
                     "default": 10,
-                    "title": "Combineamountperc",
+                    "title": "CombineAmountPerc",
                     "type": "integer"
                 }
             },
@@ -987,15 +987,15 @@
                 "StockPrices",
                 "IB",
                 "MyStocks",
-                "IGNORECONF",
-                "COMBINESTRATEGY",
+                "IgnoreConf",
+                "CombineStrategy",
                 "IncludeNormalizedOnSave",
-                "MAXPERCDIFFIBSTOCKWARN",
-                "FIXBUYSELLDIFFDAYS",
-                "BOTHSYMBOLS",
+                "MaxPercDiffIbStockWarn",
+                "FixBuySellDiffDays",
+                "BothSymbols",
                 "SUPRESS_COMMON",
-                "COMBINEDATEDIFF",
-                "COMBINEAMOUNTPERC"
+                "CombineDateDiff",
+                "CombineAmountPerc"
             ],
             "title": "TransactionHandlersConf",
             "type": "object"
@@ -1045,9 +1045,9 @@
                     "title": "Def Fig Size",
                     "type": "array"
                 },
-                "SIMPLEMODE": {
+                "SimpleMode": {
                     "default": 0,
-                    "title": "Simplemode",
+                    "title": "SimpleMode",
                     "type": "integer"
                 },
                 "CIRCLE_SIZE_PERCENTAGE": {
@@ -1068,7 +1068,7 @@
                 "USEQT",
                 "MINCOLFORCOLUMS",
                 "DEF_FIG_SIZE",
-                "SIMPLEMODE",
+                "SimpleMode",
                 "CIRCLE_SIZE_PERCENTAGE",
                 "CIRCLE_SIZE"
             ],

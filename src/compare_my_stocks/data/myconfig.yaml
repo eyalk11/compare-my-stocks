@@ -45,10 +45,10 @@ Running: !RunningConf
   TRY_TO_SCALE_DISPLAY: true
 Sources: !SourcesConf 
   IBSource: !IBSourceConf
-    ADDPROCESS: ibsrv.exe
+    AddProcess: ibsrv.exe
     HOSTIB: 127.0.0.1
     IBSRVPORT: 9091
-    MAXIBCONNECTIONRETRIES: 3
+    MaxIbConnectionRetries: 3
     PORTIB: 7596
     REGULAR_ACCOUNT: null
     REGULAR_USERNAME: null
@@ -90,8 +90,8 @@ Symbols: !SymbolsConf
   - LSE
 TransactionHandlers: !TransactionHandlersConf
   TRANSACTIONSOURCE:  !TransactionSourceType Both 
-  BOTHSYMBOLS: []
-  COMBINESTRATEGY: !CombineStrategy PREFERSTOCKS
+  BothSymbols: []
+  CombineStrategy: !CombineStrategy PREFERSTOCKS
   IB: !IBConf
     CacheSpan: !!python/object/apply:datetime.timedelta [0, 18000, 0]
     DoQuery: true
@@ -100,8 +100,8 @@ TransactionHandlers: !TransactionHandlersConf
     FlexToken: null #YOURTOKEN
     TryToQueryAnyway: false
     Use: !UseCache USEIFAVALIABLE
-  IGNORECONF: {}
-  MAXPERCDIFFIBSTOCKWARN: 0.2
+  IgnoreConf: {}
+  MaxPercDiffIbStockWarn: 0.2
   MyStocks: !MyStocksConf
     File: buydicnk.cache
     PortofolioName: My Portfolio
