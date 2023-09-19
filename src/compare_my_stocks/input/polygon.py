@@ -3,11 +3,12 @@ import logging
 import datetime
 from dataclasses import asdict
 
+import polygon
 from memoization import cached
 from polygon.rest.models import TickerDetails
 
 from common.common import c, lmap
-from common.simpleexceptioncontext import simple_exception_handling
+from common.simpleexceptioncontext import simple_exception_handling, excp_handler
 from config import config
 from input.inputsource import InputSource
 import pandas as pd 
@@ -17,21 +18,28 @@ def get_polysource():
     return PolySource() 
 #BadResponse standard errorr 
 class PolySource(InputSource):
-    def __init__(self):
+    def __init__(self,notify=None):
         from polygon import RESTClient
         self.client = RESTClient(api_key=config.Sources.PolySource.Key)
         self.lock = threading.Lock()
+        self.notify=notify
 
-
+    def excphandler(self,exception):
+        logging.error(f"bad response poly: {exception}")
+        self.notify(exception["status"])
+    @excp_handler(polygon.exceptions.BadResponse,handler= excphandler)
     def get_current_currency(self, pair):
         return self.client.get_last_forex_quote(pair[0],to=pair[1])
 
 
     @simple_exception_handling(err_description='error in resolve symbol',return_succ=None,never_throw=True)
+    @excp_handler(polygon.exceptions.BadResponse, handler=excphandler)
     @cached
     def resolve_symbol(self, sym): 
         return c(self.convert_sym_dic,self.client.get_ticker_details)(sym)
 
+    @simple_exception_handling(err_description='error in matching symbols')
+    @excp_handler(polygon.exceptions.BadResponse, handler=excphandler)
     def get_matching_symbols(self, sym, results=10):
         ls=lmap(c(self.client.get_ticker_details,lambda x:x.ticker) ,self.client.list_tickers(search=sym))
         ls=lmap(self.convert_sym_dic, ls)
@@ -62,6 +70,7 @@ class PolySource(InputSource):
 
 
     @simple_exception_handling(err_description='error in get_symbol_history',return_succ=(None,[]),never_throw=True)
+    @excp_handler(polygon.exceptions.BadResponse, handler=excphandler)
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
         if not(type(sym) is str):
             if hasattr(sym,'ticker') or sym.get('ticker') is not None:

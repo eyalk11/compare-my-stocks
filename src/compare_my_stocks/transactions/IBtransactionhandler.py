@@ -3,7 +3,7 @@ import collections
 import pickle
 from datetime import datetime, timedelta
 
-from common.common import UseCache
+from common.common import UseCache, ifnn
 from common.simpleexceptioncontext import SimpleExceptionContext
 from config import config
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
@@ -80,7 +80,11 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             logging.info(f'using ib cache. Cache date is {self._cache_date}')
             newres=[]
             self.need_to_save=False
-        toquery = self.TryToQueryAnyway or (self._cache_date >= datetime.now() - self.QueryIfOlderThan) 
+        try:
+            toquery = self.TryToQueryAnyway or (ifnn(self._cache_date,lambda: self._cache_date >= datetime.now() - self.QueryIfOlderThan,lambda: True))
+        except Exception as e:
+            logging.debug((f"error in populate_buydic {e}"))
+            toquery=False
 
 
         if not usecache or toquery:

@@ -6,25 +6,26 @@ $continue = [System.Windows.MessageBox]::Show($message, $caption, 'YesNo');
 
 return  ($continue -eq 'Yes')
 }
-function installpack ()
+function installpack ($path)
 {
+    if ($path -eq $null) { $path = "C:\Users\User\AppData\Local\Programs\Python\Python310\python.exe" }
     Push-Location $PSScriptRoot
     $whl= gci -Filter "*.whl" | Select-Object -First 1
-     &"$env:USERPROFILE\AppData\Local\Programs\Python\Python39\python.exe" -m pip install "$($whl.FullName)[jupyter]"
+    &$path -m pip install "$($whl.FullName)[jupyter]"
     Pop-Location
 }
 function Installpy 
 {
      param($message) 
-     if (-not $(confirmit $message "Python 3.9.6"))
+     if (-not $(confirmit $message "Python 3.10"))
      {return $false; } 
      
-     Write-Host "Installing Python 3.9.6"
+     Write-Host "Installing Python 3.10"
     Push-Location $env:TEMP 
     mkdir -p installtmp
     Push-Location installtmp
-    Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.9.6/python-3.9.6-amd64.exe"  -OutFile "python-3.9.6.exe"
-    ./python-3.9.6.exe /quiet InstallAllUsers=0 PrependPath=1
+    Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.10.0/python-3.10.0rc2-amd64.exe"  -OutFile "pythonsetup.exe"
+    ./pythonsetup.exe /quiet InstallAllUsers=0 PrependPath=1
     Pop-Location
     rm installtmp -Recurse -Force
     Pop-Location
@@ -40,18 +41,22 @@ function main
 
     if ($err)
     {
-        $continue= Installpy "Python is not installed. Should it be installed(version 3.9.6)?" 
+        $continue= Installpy "Python is not installed. Should it be installed(version 3.10)?" 
     }
     else
     {
         $ver = &"$($cmd.path)" --version 
-    if ($ver -notlike "*3.9.6*")
+    if ($ver -notlike "*3.10*")
     {
-    $continue= Installpy " Python version is not 3.9.6 but $($ver). The compiled version of the app requires python 3.9.6 to work properly. Should it be installed?"
+    $continue= Installpy " Python version is not 3.10 but $($ver). The compiled version of the app requires python 3.10 to work properly. Should it be installed?"
+    }
+    else 
+    {
+        $path=$cmd.Source
     }
 
     }
-    if ($continue ) { installpack }
+    if ($continue ) { installpack $path }
 
 }
 try 

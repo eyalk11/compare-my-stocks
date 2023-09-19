@@ -80,6 +80,12 @@ class RemoteProcess:
         else:
             v=  config.Sources.IBSource.ADDPROCESS
 
+        if os.name != "nt":
+            logging.warn("Additional process is only tested on windows. Run ibsrv manually (--ibsrv). ")
+            cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
+            return True
+
+
         v = ["start", "/wait"] + v
         if config.Running.START_IBSRV_IN_CONSOLE:
             logging.debug("STARTCONS " + str(v))

@@ -83,6 +83,8 @@ class MainClass:
             logging.info("Not hiding window because it is not windows (not implemented)")
             return
         def check_conditions():
+            if not os.name== 'nt':
+                return False #not implemented
             if os.environ.get('PYCHARM_HOSTED') == '1':
                 return False
             if force:

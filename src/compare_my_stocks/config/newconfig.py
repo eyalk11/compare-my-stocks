@@ -311,12 +311,12 @@ def resolvefile(filename,use_alternative=False):
 # from pyhocon import ConfigParser
 # ConfigParser.resolve_substitutions(partially_resolving_config, accept_unresolved=True)
 
-# yaml.dump(c,open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\config.yaml','wt'))
 class ConfigLoader():
     logging_initialized = False
     config: Config = None
     @classmethod
     def generate_config(cls):
+        #never should be called. 
         cls.main()
         yaml= cls.get_yaml()
         c=Config()
@@ -325,7 +325,7 @@ class ConfigLoader():
         yaml.dump(c, st)
         st.seek(0)
         c.Symbols=cls.config.Symbols
-        with open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\config.yaml', 'wt') as fil:
+        with open(r'config.yaml', 'wt') as fil:
              for k in st:
                  if "_changed_keys" in k:
                      continue
@@ -475,7 +475,6 @@ class ConfigLoader():
             logging.error(f"Validating conf failed {e}")
             raise e
 
-# dataconf.dump(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\data\myconfig.yaml',c,'yaml')
 # import dataclasses
 # with open('config2.toml', 'w') as f:
 #    toml.dump(c, f)

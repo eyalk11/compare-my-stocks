@@ -1,5 +1,6 @@
 import logging
 import os
+from functools import partial
 
 from Pyro5.errors import get_pyro_traceback
 
@@ -65,7 +66,7 @@ class SimpleExceptionContext:
         e=exc_value
         # TmpHook.GetExceptionHook().emit(e)
         if exc_type in self.err_to_ignore and not self.never_throw:
-           return False
+           return False #throw
         logf = logging.debug if self.debug else logging.error
         tmpst = format_traceback_str(exc_type, exc_value, traceback , detailed=self.detailed)
         strng = "# if you see this in your traceback, you should probably inspect the remote traceback as well"
@@ -80,22 +81,49 @@ class SimpleExceptionContext:
         else:
             logf('%s %s ' % (e.__class__ ,str(e))  )
         if self.always_throw:
-           return False
+           return False #throw
         return True
 
+def excp_handler(exc_type,handler=lambda x: None):
+    def decorated(func):
+        if hasattr(func,'errors_to_handle'):
+            func.errors_to_handle+= [exc_type]
+        else:
+            func.errors_to_handle=[exc_type]
 
-def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[]):
+        def internal(*args,**kwargs):
+            try:
+                return func(*args,**kwargs)
+            except exc_type as e:
+                handler(e)
+        return internal
+    return decorated
+
+def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None):
     def decorated(func):
         def internal(*args,**kwargs):
+            nonlocal err_to_ignore
             no_exception = False
             ret=None
-            with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore):
-                ret= func(*args,**kwargs)
-                no_exception = True
+            if hasattr(func,'errors_to_handle'):
+                err_to_ignore+=func.errors_to_handle
+            try:
+                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback):
+                    ret= func(*args,**kwargs)
+                    no_exception = True
+            except Exception as e:
+                if hasattr(func, 'errors_to_handle'):
+                    if e.__class__ in func.errors_to_handle:
+                        logf = logging.debug if debug else logging.error
+                        logf(err_description) # a bit of an hack
+                        #excp handler can't know about description ...
+                raise
 
             if not no_exception and return_succ!='undef':
                 return return_succ
             return ret
 
         return internal
+
+
     return decorated

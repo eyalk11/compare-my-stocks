@@ -24,9 +24,9 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
     minMaxChanged = MySignal(tuple)
     namesChanged = MySignal(int)
 
-    @staticmethod
+
     @simple_exception_handling(err_description='Input source initialization failed. ',never_throw=True)
-    def get_input_source(input_type  : InputSourceType = None):
+    def get_input_source(self,input_type  : InputSourceType = None):
         if input_type is None:
             input_type =config.Input.INPUTSOURCE
             if input_type is None:
@@ -36,7 +36,9 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             elif input_type == InputSourceType.InvestPy:
                 return InvestPySource()
             elif input_type == InputSourceType.Polygon:
-                return get_polysource()
+                g= get_polysource()
+                g.notify = self.statusChanges.emit
+                return g
 
 
     def __init__(self, axes=None):

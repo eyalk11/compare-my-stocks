@@ -316,6 +316,7 @@ class InputProcessor(InputProcessorInterface):
                     logging.error(str(e))
         if gok:
             self.save_data()
+
             
         
 
@@ -323,8 +324,8 @@ class InputProcessor(InputProcessorInterface):
 
         if not partial_symbols_update:
             self._data.init_input()
-        else:
-            self.filter_input(partial_symbols_update)
+        #else:
+        #    self.filter_input(partial_symbols_update) #seems to do nothing. Will leave it here for now
         query_source = True
         if self.process_params.use_cache != UseCache.DONT and not partial_symbols_update:
             query_source = self._data.load_cache(process_params=self.process_params)
@@ -332,6 +333,8 @@ class InputProcessor(InputProcessorInterface):
         items= self._transaction_handler.buydic.items()
         if self._buy_filter:
             items = filter(self._buy_filter,items)
+        if partial_symbols_update:
+            items = filter(lambda x: x[1].Symbol in partial_symbols_update,items)
 
 
         #items= map(lambda x: (x[0],x[1]._replace(Symbol=config.Symbols.REPLACE_SYM_IN_INPUT.get(x[1].Symbol,x[1].Symbol)))  ,items)
@@ -358,7 +361,7 @@ class InputProcessor(InputProcessorInterface):
 
 
 
-        _ , cur_action = buyoperations.popitem(False) if len(buyoperations)!=0 else None
+        _ , cur_action = buyoperations.popitem(False) if len(buyoperations)!=0 else (1,None)
 
 
         if self.process_params.transactions_fromdate == None:
@@ -843,7 +846,7 @@ class InputProcessor(InputProcessorInterface):
 
 
 
-        get_for(dic) 
+
 
     @staticmethod
     def get_range_gap(dates,fromdate,todate):
@@ -879,7 +882,7 @@ class InputProcessor(InputProcessorInterface):
             yield af,  todate
     def _save_data(self):
         try:
-            self._proccessing_mutex.lock()
+            self._proccessing_mutex.lock() #only protects adjust. TODO: new mutex for save
             self._data.save_full_data()
         finally:
             self._proccessing_mutex.unlock()

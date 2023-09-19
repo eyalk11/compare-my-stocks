@@ -22,7 +22,7 @@ File: !FileConf
   REVENUEFILE: NOEARNINGS
   SERIALIZEDFILE: serialized.dat
 Input: !InputConf
-  DEFAULTFROMDATE: 2020-01-01 00:00:00+00:00
+  DEFAULTFROMDATE: 2022-01-01 00:00:00+00:00
   DOWNLOADDATAFORPROT: true
   IGNORE_ADJUST: false 
   INPUTSOURCE: !InputSourceType IB
@@ -44,7 +44,7 @@ Running: !RunningConf
   VERIFY_SAVING: !VerifySave Ask
   TRY_TO_SCALE_DISPLAY: true
 Sources: !SourcesConf 
-  IBConf: !IBSourceConf
+  IBSource: !IBSourceConf
     ADDPROCESS: ibsrv.exe
     HOSTIB: 127.0.0.1
     IBSRVPORT: 9091
