@@ -108,18 +108,18 @@ class InputProcessor(InputProcessorInterface):
         pass
 
     @property
-    def inputsource(self) -> InputSourceInterface:
-        return self._inputsource
+    def InputSource(self) -> InputSourceInterface:
+        return self._InputSource
 
     @property
     def transaction_handler(self) -> TransactionHandlerManager:
         return self._transaction_handler
 
-    def __init__(self, symb, transaction_handler, input_source=None):
+    def __init__(self, symb, transaction_handler, InputSource=None):
         self._force_upd_all_range = None
 
-        self._inputsource: InputSource = input_source
-        if self._inputsource is None:
+        self._InputSource: InputSource = InputSource
+        if self._InputSource is None:
             logging.warn("not using any source")
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
@@ -147,7 +147,7 @@ class InputProcessor(InputProcessorInterface):
         return self.data is not None
     @cached
     def trivial_currency(self,sym):
-        return (self._data.get_currency_for_sym(sym) in [config.Symbols.BASECUR, 'unk'])
+        return (self._data.get_currency_for_sym(sym) in [config.Symbols.Basecur, 'unk'])
 
 
     def resolve_currency(self, sym, l, hist):
@@ -160,9 +160,9 @@ class InputProcessor(InputProcessorInterface):
 
         if currency == 'unk':
             logging.debug((f'resolving currency for {sym}'))
-            currency = config.Symbols.STOCK_CURRENCY.get(sym, 'unk')
+            currency = config.Symbols.StockCurrency.get(sym, 'unk')
         if currency == 'unk':
-            currency = config.Symbols.EXCHANGE_CURRENCY.get(l.get('exchange', 'unk'), 'unk')
+            currency = config.Symbols.ExchangeCurrency.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             logging.debug((f'unk currency for {sym}'))
         return currency
@@ -204,7 +204,7 @@ class InputProcessor(InputProcessorInterface):
     def get_currency_hist(self, currency, fromdate, enddate,minimal=False,queried: Optional[RefVar]=None,cache_only=False):
         fromdate=localize_it(conv_date(fromdate,premissive=False))
         enddate=localize_it(conv_date(enddate))
-        pair = ( currency,config.Symbols.BASECUR)
+        pair = ( currency,config.Symbols.Basecur)
         def get_good_keys():
             zz = self._data.currency_hist[currency].isna().any(axis=1)
 
@@ -239,7 +239,7 @@ class InputProcessor(InputProcessorInterface):
 
             for (mindate, maxdate) in ls:
                 try:
-                    tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
+                    tmpdf= self._InputSource.get_currency_history(pair, mindate, maxdate)
                 except AssertionError:
                     raise ValueError("Bad currency")
                 didquery=True
@@ -293,12 +293,13 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_buy_operations_with_adjusted(self,items):
+        logging.debug("st get_buy")
         self._data._no_adjusted_for = set()
         gok=False
         for t,v in items:
             v: BuyDictItem
             curr=self._data.get_currency_for_sym(v.Symbol)
-            if curr in set(['unk', config.Symbols.BASECUR]):
+            if curr in set(['unk', config.Symbols.Basecur]):
                 self._data._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
                 yield BuyOp(date=localize_it(t),currency=None,buydic=v)
             else:
@@ -316,6 +317,7 @@ class InputProcessor(InputProcessorInterface):
                     logging.error(str(e))
         if gok:
             self.save_data()
+        logging.debug("end get_buy")
 
             
         
@@ -337,7 +339,7 @@ class InputProcessor(InputProcessorInterface):
             items = filter(lambda x: x[1].Symbol in partial_symbols_update,items)
 
 
-        #items= map(lambda x: (x[0],x[1]._replace(Symbol=config.Symbols.REPLACE_SYM_IN_INPUT.get(x[1].Symbol,x[1].Symbol)))  ,items)
+        #items= map(lambda x: (x[0],x[1]._replace(Symbol=config.Symbols.ReplaceSymInInput.get(x[1].Symbol,x[1].Symbol)))  ,items)
 
 
 
@@ -346,9 +348,9 @@ class InputProcessor(InputProcessorInterface):
         
         
 
-        if self._transaction_handler._stockprices:
-            self._transaction_handler._stockprices.filter_bad()
-            splits = self._transaction_handler._stockprices.buydic
+        if self._transaction_handler._StockPrices:
+            self._transaction_handler._StockPrices.filter_bad()
+            splits = self._transaction_handler._StockPrices.buydic
         else:
             splits = {}
 
@@ -366,7 +368,7 @@ class InputProcessor(InputProcessorInterface):
 
         if self.process_params.transactions_fromdate == None:
             if not cur_action:
-                self.process_params.transactions_fromdate = config.Input.DEFAULTFROMDATE
+                self.process_params.transactions_fromdate = config.Input.DefaultFromDate
                 logging.warn(('Trasactions are empty.Strarting from default date. '))
             else:
                 self.process_params.transactions_fromdate = cur_action[0] #start from first buy
@@ -400,7 +402,7 @@ class InputProcessor(InputProcessorInterface):
             logging.log(TRACELEVEL,('entered'))
             self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
             logging.log(TRACELEVEL,('fin convert'))
-            if config.Input.IGNORE_ADJUST:
+            if config.Input.IgnoreAdjust:
                 self.adjusted_panel=self._data._reg_panel.copy()
             else:
                 if not self.adjust_for_currency():
@@ -513,7 +515,7 @@ class InputProcessor(InputProcessorInterface):
                     orgcost=x.Cost
                     x=x._replace(Qty=x.Qty / cursplit, Cost=x.Cost * cursplit)
                     logging.warn(log_conv(('readjusting transaction mystock' , x, 'price',_cur_stock_price[stock][0]  ,'by split', cursplit, 'before cost ', orgcost ,  'date:', cur_action[0] )))
-                    refnum= orgcost if config.Input.PRICES_ARE_ADJUSTED_TO_TODAY else x.Cost
+                    refnum= orgcost if config.Input.PricesAreAdjustedToToday else x.Cost
                     if _cur_stock_price[stock][0] and  abs(refnum/_cur_stock_price[stock][0] -1)>0.3:
                         logging.warn("Very different price")
 
@@ -891,13 +893,13 @@ class InputProcessor(InputProcessorInterface):
         if not config.Input.SaveData:
             return
         self._data.save_data()
-        if config.Input.FULLCACHEUSAGE != UseCache.DONT or config.Input.AlwaysStoreFullCache:
+        if config.Input.FullCacheUsage != UseCache.DONT or config.Input.AlwaysStoreFullCache:
             self._save_data_proc.command.emit(TaskParams(params=tuple()))
 
 
 
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):
-        if self._inputsource is None:
+        if self._InputSource is None:
             return False
 
 
@@ -926,7 +928,7 @@ class InputProcessor(InputProcessorInterface):
 
             sym_corrected = self.process_params.resolve_hack.get(sym, None)
             if not sym_corrected:
-                sym_corrected = config.Symbols.TRANSLATEDIC.get(sym, sym)
+                sym_corrected = config.Symbols.Translatedic.get(sym, sym)
 
 
             if not self._force_upd_all_range and sym in self._data._hist_by_date:
@@ -958,12 +960,12 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
-        if self._inputsource is None:
+        if self._InputSource is None:
             return 0
         logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
-        #self._inputsource.ownership()
-        l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
-                                                       iscrypto= (str(sym_corrected) in config.Symbols.CRYPTO))  # should be rounded
+        #self._InputSource.ownership()
+        l, hist = self._InputSource.get_symbol_history(sym_corrected, mindate, maxdate,
+                                                       iscrypto= (str(sym_corrected) in config.Symbols.Crypto))  # should be rounded
 
         self._data.symbol_info[sym] = (l if l else {}) #just for debug I think
         if (cont := self._data.symbol_info[sym].get('contract')):
@@ -985,7 +987,7 @@ class InputProcessor(InputProcessorInterface):
         else:
             currency= self._data.get_currency_for_sym(sym)
 
-        if currency != config.Symbols.BASECUR and currency != 'unk':
+        if currency != config.Symbols.Basecur and currency != 'unk':
             adjusted =  self.get_adjusted_df_for_currency(currency, maxdate, mindate, hist, sym)
         else:
             adjusted=None
@@ -1053,12 +1055,12 @@ class InputProcessor(InputProcessorInterface):
         self._data._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
-    def return_df(df, cur,commonstock_df,name):
+    def return_df(df, cur,CommonStock_df,name):
         cur.sort_index(axis=0, inplace=True)
         cur=cur.reindex(sorted(list(df.index)),method='pad')
-        commonstock_df.sort_index(axis=0,inplace=True)
-        commonstock_df=commonstock_df.reindex(df.index,method='pad')
-        eps= cur.divide(commonstock_df)
+        CommonStock_df.sort_index(axis=0,inplace=True)
+        CommonStock_df=CommonStock_df.reindex(df.index,method='pad')
+        eps= cur.divide(CommonStock_df)
         cur= df[cur.columns].divide(eps) #pr ps / eps = price / earnings
         cur.columns = pd.MultiIndex.from_product([[name], list(cur.columns)], names=['Name', 'Symbols'])
         return cur
@@ -1068,27 +1070,27 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_relevant_currency(self,x):
-        if self._inputsource is None:
+        if self._InputSource is None:
             return
         if x not in self._relevant_currencies_rates:
-            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.Symbols.BASECUR, x))
+            self._relevant_currencies_rates[x] = self._InputSource.get_current_currency((config.Symbols.Basecur, x))
         return  self._relevant_currencies_rates[x]
 
     @simple_exception_handling("adjusting for currency", return_succ=0)
     def adjust_for_currency(self):
         a=1 #updates adjusted panel
-        cursymdic={ config.Symbols.TRANSLATE_CURRENCY.get(curr:=v.get('currency', 'unk'),curr) :k for k,v in self._data.symbol_info.items() if not (v is None)}
+        cursymdic={ config.Symbols.TranslateCurrency.get(curr:=v.get('currency', 'unk'),curr) :k for k,v in self._data.symbol_info.items() if not (v is None)}
 
         relevant_currencies = set(cursymdic.keys()) - \
-                              set(['unk', config.Symbols.BASECUR])
+                              set(['unk', config.Symbols.Basecur])
 
-        if self._relevant_currencies_time is not None and (datetime.datetime.now() - self._relevant_currencies_time) < config.Input.MAX_RELEVANT_CURRENCY_TIME:
+        if self._relevant_currencies_time is not None and (datetime.datetime.now() - self._relevant_currencies_time) < config.Input.MaxRelevantCurrencyTime:
             logging.debug('Using cached relevant currencies {}'.format(self._relevant_currencies_time))
 
         upd= False
-        if self._inputsource is not None:
+        if self._InputSource is not None:
             for x in relevant_currencies:
-                self._relevant_currencies_rates[x] = ifnotnan(self._inputsource.get_current_currency((config.Symbols.BASECUR, x)),lambda t:1/t)
+                self._relevant_currencies_rates[x] = ifnotnan(self._InputSource.get_current_currency((config.Symbols.Basecur, x)),lambda t:1/t)
                 upd = upd or (self._relevant_currencies_rates[x] is not None)
 
 
@@ -1103,7 +1105,7 @@ class InputProcessor(InputProcessorInterface):
 
                 with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False,never_throw=True):
                     m= max(list(self._data._alldates_adjusted[sym].keys())) #can fail if empty
-                    if (subdates(datetime.datetime.now(),matplotlib.dates.num2date(m))) < config.Input.MAX_RELEVANT_CURRENCY_TIME_HUER:
+                    if (subdates(datetime.datetime.now(),matplotlib.dates.num2date(m))) < config.Input.MaxRelevantCurrencyTimeHeur:
                         logging.debug(f'Using heuristic for currency {x} {sym}')
                         self._relevant_currencies_rates[x]=self._data._alldates_adjusted[sym][m]/self._data._alldates[sym][m]
 
@@ -1117,7 +1119,7 @@ class InputProcessor(InputProcessorInterface):
         dic={k: self._relevant_currencies_rates.get(curr) for k in self._data.symbol_info.keys()
              if (curr:=self._data.get_currency_for_sym(k) ) in self._relevant_currencies_rates \
              and self._relevant_currencies_rates[curr] is not None}
-        #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self._data.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.BASECUR  and (v['currency'] in self._relevant_currencies_rates))}
+        #dic={k:self._relevant_currencies_rates[v['currency']] for k,v in self._data.symbol_info.items() if ifnn(v,lambda : v['currency']!=config.Symbols.Basecur  and (v['currency'] in self._relevant_currencies_rates))}
         if len(dic)==0:
             return False
         self._data._adjusted_panel=self.build_adjust_panel(dic)
@@ -1231,7 +1233,7 @@ class InputProcessor(InputProcessorInterface):
             if not partial_symbol_update:
                 self.used_unitetype = self.process_params.unite_by_group
                 required = set(self._eng.required_syms(True, True))
-                if config.Input.DOWNLOADDATAFORPROT:
+                if config.Input.DownloadDataForProt:
                     self._data._symbols_wanted = self._transaction_handler.buysymbols.union(required)  # there are symbols to check...
                 else:
                     self._data._symbols_wanted = required.copy()

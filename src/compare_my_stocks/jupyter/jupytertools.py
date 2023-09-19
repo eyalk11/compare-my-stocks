@@ -35,8 +35,8 @@ def unite_if_needed(x,data,query_func=query_symbol):
 
 
 def load_data() -> Serialized:
-    if os.path.exists(config.File.DATAFILEPTR):
-        filename =open(config.File.DATAFILEPTR,'rt').read()
+    if os.path.exists(config.File.DataFilePtr):
+        filename =open(config.File.DataFilePtr,'rt').read()
         if os.path.exists(filename):
             data: Serialized = pickle.load(open(filename, 'rb'))
             return data

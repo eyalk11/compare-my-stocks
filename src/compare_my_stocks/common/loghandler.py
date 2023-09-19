@@ -91,12 +91,12 @@ class MyFilter(object):
         return logRecord.levelno <= self.__level
 def init_log_default(config):
     if 'IBSRV' in __builtins__ and __builtins__['IBSRV']:
-        logfile = config.Running.IB_LOGFILE
-        logerrorfile = config.Running.IB_LOGERRORFILE
+        logfile = config.Running.IBLogFile
+        logerrorfile = config.Running.IBLogErrorFile
     else:
-        logfile = config.Running.LOGFILE
-        logerrorfile = config.Running.LOGERRORFILE
-    debug = config.Running.DEBUG if not dont_print() else False
+        logfile = config.Running.LogFile
+        logerrorfile = config.Running.LogErrorFile
+    debug = config.Running.Debug if not dont_print() else False
     init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug)
 
 def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):

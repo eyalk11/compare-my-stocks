@@ -17,8 +17,8 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
 
     def load_existing_graphs(self):
         try:
-            # gg=Deserializer(open(config.File.GRAPHFN,'rt'))
-            gg = json.load(open(config.File.GRAPHFN, 'rt'))  # ,object_hook=Deserializer
+            # gg=Deserializer(open(config.File.GraphFN,'rt'))
+            gg = json.load(open(config.File.GraphFN, 'rt'))  # ,object_hook=Deserializer
             self.graphs = {k: Parameters.load_from_json_dict(v) for k, v in gg.items()}
             self.update_graph_list()
         except:
@@ -43,7 +43,7 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
         if upd:
             self.lastgraphtext = text
 
-        open(config.File.GRAPHFN, 'wt').write(json.dumps(self.graphs, cls=EnhancedJSONEncoder))
+        open(config.File.GraphFN, 'wt').write(json.dumps(self.graphs, cls=EnhancedJSONEncoder))
         self.update_graph_list()
 
     def load_graph(self, text=None):
@@ -70,10 +70,10 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
             logging.debug(('failed loading graph'))
 
     def save_last_graph(self):
-        if config.Running.LASTGRAPHNAME:
-            self.internal_save(config.Running.LASTGRAPHNAME, upd=False)
+        if config.Running.LastGraphName:
+            self.internal_save(config.Running.LastGraphName, upd=False)
 
     def load_last_if_needed(self):
-        if config.Running.LOADLASTATBEGIN:
-            self.load_graph(config.Running.LASTGRAPHNAME)
-        return config.Running.LOADLASTATBEGIN
+        if config.Running.LoadLastAtBegin:
+            self.load_graph(config.Running.LastGraphName)
+        return config.Running.LoadLastAtBegin

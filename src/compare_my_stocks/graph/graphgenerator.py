@@ -35,7 +35,7 @@ from PySide6.QtCore import QMutex, QRecursiveMutex
 import numpy
 from config import config
 
-USEQT = config.UI.USEQT
+UseQT = config.UI.UseQT
 from common.common import Types, lmap, selfifnn, ifnn, timeit
 from common.simpleexceptioncontext import simple_exception_handling
 
@@ -244,8 +244,8 @@ class GraphGenerator:
 
             # Create a scatter plot
 
-            sizes = ((np.array(total) / typical) * (fig_height * 72)  * config.UI.CIRCLE_SIZE_PERCENTAGE)**2  # 5% of y-range
-            #sizes= np.fmax(sizes,np.array([typical/3 * (fig_height * 72)  * config.UI.CIRCLE_SIZE_PERCENTAGE ] * len(sizes)))
+            sizes = ((np.array(total) / typical) * (fig_height * 72)  * config.UI.CircleSizePercentage)**2  # 5% of y-range
+            #sizes= np.fmax(sizes,np.array([typical/3 * (fig_height * 72)  * config.UI.CircleSizePercentage ] * len(sizes)))
 
             #
             # r = next(allcolors)
@@ -381,7 +381,7 @@ class GraphGenerator:
                 lines.append(h)
                 line_labels.append(l)
             elif isinstance(h, matplotlib.collections.PathCollection):
-                #h.set_sizes([config.UI.CIRCLE_SIZE])
+                #h.set_sizes([config.UI.CircleSize])
                 collections.append(h)
                 collection_labels.append(l)
 
@@ -420,7 +420,7 @@ class GraphGenerator:
             handle.set_paths([path])
 
 
-        additional_options = config.UI.ADDITIONALOPTIONS
+        additional_options = config.UI.AdditionalOptions
         self.generation_mutex.lock()
         logging.log(TRACELEVEL, ('generation locked'))
 
@@ -442,7 +442,7 @@ class GraphGenerator:
             dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
 
             if just_upd or self.first_time:
-                if USEQT:
+                if UseQT:
                     self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
 
             if ar is None:
@@ -489,10 +489,10 @@ class GraphGenerator:
             handles, labels = self.order_labels(ar)
             self.handles_labels = { l: h for h, l in zip(handles, labels)}
             # Put a legend to the right of the current aris
-            if len(cols) >= config.UI.MINCOLFORCOLUMS:
+            if len(cols) >= config.UI.MinColForColumns:
 
-                lgnd=ar.legend(handles,labels, loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MINCOLFORCOLUMS,
-                          handleheight=2.4, labelspacing=0.05 , handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
+                lgnd=ar.legend(handles, labels, loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MinColForColumns,
+                               handleheight=2.4, labelspacing=0.05, handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
             else:
                 lgnd=ar.legend(handles,labels, loc='center left', bbox_to_anchor=self.B, handleheight=2.4, labelspacing=0.05 , handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
             self.blobs_legends = {l._label: l for l in ar.get_legend_handles_labels()[0] if
@@ -646,7 +646,7 @@ class GraphGenerator:
                 return
 
             self.update_limit(ar, fig, origline.figure, ar.lines)
-                # if USEQT:
+                # if UseQT:
                 #    fig.canvas.draw()  # draw
         # self._ax=
 
@@ -665,5 +665,5 @@ class GraphGenerator:
             else:
                 legline.set_alpha(1)
                 origline.set_visible(1)
-        if USEQT:
+        if UseQT:
             fig.canvas.draw()  # draw

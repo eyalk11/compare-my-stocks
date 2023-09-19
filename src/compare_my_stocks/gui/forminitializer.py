@@ -109,7 +109,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
 
 
         self.window.home_currency_combo.clear()
-        self.window.home_currency_combo.addItems(list(config.Symbols.DEFAULTCURR), )
+        self.window.home_currency_combo.addItems(list(config.Symbols.DefaultCurr), )
 
 
         if not initial and self.graphObj.params.compare_with:

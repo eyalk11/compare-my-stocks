@@ -103,7 +103,7 @@ def index_of(val, in_list):
 from enum import Flag, auto, Enum
 
 @to_yaml
-class CombineStrategy(int,Flag):
+class CombineStrategyEnum(int, Flag):
     PREFERSTOCKS=auto()
     PREFERIB=auto()
 
@@ -305,7 +305,7 @@ class EnhancedJSONEncoder(DjangoJSONEncoder):
 
 
 def need_add_process(config):
-    return config.Input.INPUTSOURCE== InputSourceType.IB
+    return config.Input.InputSource== InputSourceType.IB
 
 def log_conv(*tup):
     return '\t'.join([str(x) for x in tup ])

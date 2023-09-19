@@ -1,32 +1,32 @@
 # yaml-language-server: $schema=myconfig.schema.json
 !Config
 DefaultParams: !DefaultParamsConf
-  CACHEUSAGE: !UseCache FORCEUSE
+  CacheUsage: !UseCache FORCEUSE
   DefaultGroups: []
   EXT:
     - QQQ
 Earnings: !EarningsConf
-  SKIP_EARNINGS: 1
-  TRYSTORAGEFOREARNINGS: 1
+  SkipEarnings: 1
+  TryStorageForEarnings: 1
 File: !FileConf
-  COMMONSTOCK: NOEARNINGS
-  DATAFILEPTR: DATA_FILE
-  DEFAULTNOTEBOOK: jupyter\defaultnotebook.ipynb
-  EARNINGSTORAGE: earnings.dat
-  EXPORTEDPORT: exported.csv
-  GRAPHFN: graphs.json
-  HIST_F: hist_file.cache
-  HIST_F_BACKUP: hist_file.cache.back
-  INCOMEFILE: NOEARNINGS
-  JSONFILENAME: groups.json
-  REVENUEFILE: NOEARNINGS
-  SERIALIZEDFILE: serialized.dat
+  CommonStock: NOEARNINGS
+  DataFilePtr: DATA_FILE
+  DefaultNotebook: jupyter\DefaultNotebook.ipynb
+  EarningStorage: earnings.dat
+  ExportedPort: exported.csv
+  GraphFN: graphs.json
+  HistF: HistFile.cache
+  HistF_BACKUP: HistFile.cache.back
+  IncomeFile: NOEARNINGS
+  JsonFilename: groups.json
+  RevenueFile: NOEARNINGS
+  SerializedFile: serialized.dat
 Input: !InputConf
-  DEFAULTFROMDATE: 2022-01-01 00:00:00+00:00
-  DOWNLOADDATAFORPROT: true
-  IGNORE_ADJUST: false 
-  INPUTSOURCE: !InputSourceType IB
-  MAXCACHETIMESPAN: !!python/object/apply:datetime.timedelta [1, 0, 0]
+  DefaultFromDate: 2022-01-01 00:00:00+00:00
+  DownloadDataForProt: true
+  IgnoreAdjust: false 
+  InputSource: !InputSourceType IB
+  MaxCacheTimeSpan: !!python/object/apply:datetime.timedelta [1, 0, 0]
   TZINFO: !!python/object/apply:datetime.timezone
     - !!python/object/apply:datetime.timedelta
       - -1
@@ -34,62 +34,62 @@ Input: !InputConf
       - 0
     - GMT3
 Running: !RunningConf
-  CHECKRELOADINTERVAL: 30
+  CheckReloadInterval: 30
   DEBUG: 1
-  LASTGRAPHNAME: Last
-  LOADLASTATBEGIN: true
+  LastGraphName: Last
+  LoadLastAtBegin: true
   LOGERRORFILE: error.log
   LOGFILE: log.txt
-  STOP_EXCEPTION_IN_DEBUG: true
-  VERIFY_SAVING: !VerifySave Ask
-  TRY_TO_SCALE_DISPLAY: true
+  StopExceptionInDebug: true
+  VerifySaving: !VerifySave Ask
+  TryToScaleDisplay: true
 Sources: !SourcesConf 
   IBSource: !IBSourceConf
     AddProcess: ibsrv.exe
-    HOSTIB: 127.0.0.1
-    IBSRVPORT: 9091
-    MaxIbConnectionRetries: 3
-    PORTIB: 7596
-    REGULAR_ACCOUNT: null
-    REGULAR_USERNAME: null
+    HostIB: 127.0.0.1
+    IBSrvPort: 9091
+    MaxIBConnectionRetries: 3
+    PortIB: 7596
+    RegularAccount: null
+    RegularUsername: null
 
-SEEKINGALPHAHeaders: !RapidKeyConf {X_RapidAPI_Host: 'seeking-alpha.p.rapidapi.com', X_RapidAPI_Key: null}
-StockPricesHeaders: !RapidKeyConf {X_RapidAPI_Host: 'stock-prices2.p.rapidapi.com', X_RapidAPI_Key: null}
+SeekingAlphaHeaders: !RapidKeyConf {XRapidApiHost: 'seeking-alpha.p.rapidapi.com', XRapidApiKey: null}
+StockPricesHeaders: !RapidKeyConf {XRapidApiHost: 'stock-prices2.p.rapidapi.com', XRapidApiKey: null}
 Symbols: !SymbolsConf
-  BASECUR: USD
+  Basecur: USD
   CRYPTO: !!set {}
-  DEFAULTCURR:
+  DefaultCurr:
     - USD
     - EUR
     - GBP
     - ILS
-  EXCHANGES:
+  Exchanges:
     - NYSE
     - nasdaq
     - xetra
     - NYSE
     - London
     - OTC Markets
-  EXCHANGE_CURRENCY:
+  ExchangeCurrency:
     London: GBP
     Xetra: EUR
-  IGNORED_SYMBOLS: []
-  STOCK_CURRENCY: {}
-  TRANSLATEDIC: 
+  IgnoredSymbols: []
+  StockCurrency: {}
+  Translatedic: 
     ADA-USD: cardano
     VETHG.DE: VETH
     VTBC.DE: VBTC1
     VUKE.L: VUKE
 
-  TRANSLATE_EXCHANGES: {}
-  VALIDEXCHANGES: 
+  TranslateExchanges: {}
+  ValidExchanges: 
   - NYSE
   - NASDAQ
   - ISLAND
   - XERTA
   - LSE
 TransactionHandlers: !TransactionHandlersConf
-  TRANSACTIONSOURCE:  !TransactionSourceType Both 
+  TransactionSource:  !TransactionSourceType Both 
   BothSymbols: []
   CombineStrategy: !CombineStrategy PREFERSTOCKS
   IB: !IBConf
@@ -107,16 +107,16 @@ TransactionHandlers: !TransactionHandlersConf
     PortofolioName: My Portfolio
     SrcFile: example_mystock.csv
     Use: !UseCache USEIFAVALIABLE
-  SUPRESS_COMMON: false
+  SupressCommon: false
   StockPrices: !StockPricesConf
     CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
     File: stocksplit.cache
     Use: !UseCache USEIFAVALIABLE
 UI: !UIConf
-  ADDITIONALOPTIONS: {}
-  DEF_FIG_SIZE: !!python/tuple [6.6, 3.0]
+  AdditionalOptions: {}
+  DefFigSize: !!python/tuple [6.6, 3.0]
 Voila: !VoilaConf
-  AUTO_RESOVLE_VOILA_PYTHON: true
-  DONT_RUN_NOTEBOOK: false
-  MAX_VOILA_WAIT: 9 
-  VOILA_PYTHON_PROCESS_PATH: null
+  AutoResovleVoilaPython: true
+  DontRunNotebook: false
+  MaxVoilaWait: 9 
+  VoilaPythonProcessPath: null

@@ -22,10 +22,10 @@ import psutil, os
 
 
 class MainClass:
-    def __init__(self, USEWX=None, USEWEB=None, USEQT=None, SimpleMode=None):
-        self.USEWX = USEWX
-        self.USEWEB = USEWEB
-        self.USEQT = USEQT
+    def __init__(self, UseWX=None, UseWEB=None, UseQT=None, SimpleMode=None):
+        self.UseWX = UseWX
+        self.UseWEB = UseWEB
+        self.UseQT = UseQT
         self.SimpleMode = SimpleMode
 
         self.config= None
@@ -33,11 +33,11 @@ class MainClass:
     def selectmode(self):
         import matplotlib
         matplotlib.interactive(True)
-        if self.USEWX:
+        if self.UseWX:
             matplotlib.use('WxAgg')
-        elif self.USEWEB:
+        elif self.UseWEB:
             matplotlib.use('WebAgg')
-        elif self.USEQT:
+        elif self.UseQT:
             matplotlib.use('QtAgg')
         else:
             matplotlib.use('TKAgg')
@@ -90,7 +90,7 @@ class MainClass:
                 return False
             if force:
                 return True
-            if not self.config.Running.DISPLAY_CONSOLE:
+            if not self.config.Running.DisplayConsole:
                 if 'python' in os.path.basename(sys.executable):
                     logging.info("Not hiding window because it is python")
                     return False
@@ -155,10 +155,10 @@ class MainClass:
         self.config = config
 
 
-        self.USEWX, self.USEWEB, self.USEQT, self.SimpleMode \
-        = config.UI.USEWX, config.UI.USEWEB, config.UI.USEQT, config.UI.SimpleMode
-        config.Running.START_IBSRV_IN_CONSOLE = config.Running.START_IBSRV_IN_CONSOLE or ibconsole
-        config.Running.DEBUG = config.Running.DEBUG or debug
+        self.UseWX, self.UseWEB, self.UseQT, self.SimpleMode \
+        = config.UI.UseWX, config.UI.UseWEB, config.UI.UseQT, config.UI.SimpleMode
+        config.Running.StartIbsrvInConsole = config.Running.StartIbsrvInConsole or ibconsole
+        config.Running.Debug = config.Running.Debug or debug
 
         hiding=False
         if not console:
@@ -182,16 +182,16 @@ class MainClass:
                 if succ:
                     break 
                 import sys
-                if 'python' in os.path.basename(sys.executable) and config.Sources.IBSource.USE_PYTHON_IF_NOT_RESOLVE:
+                if 'python' in os.path.basename(sys.executable) and config.Sources.IBSource.UsePythonIfNotResolve:
                     config.Sources.IBSource.AddProcess= [sys.executable ,'-m compare_my_stocks --ibsrv']
                     succ=RemoteProcess().run_additional_process()
             else:
-                config.Input.INPUTSOURCE=InputSourceType.Cache
+                config.Input.InputSource=InputSourceType.Cache
                 logging.warn("Failed to start IBSrv. using cache instead")
 
         self.pd_ignore_warning()
 
-        if self.USEQT:
+        if self.UseQT:
             from PySide6.QtWidgets import QApplication
             from PySide6 import QtCore
             app = QApplication([])
@@ -200,7 +200,7 @@ class MainClass:
 
 
             import os
-            if config.Running.TRY_TO_SCALE_DISPLAY:
+            if config.Running.TryToScaleDisplay:
                 os.environ['QT_SCALE_FACTOR']='%s' % self.get_scale_factor()
                 logging.debug("QT_SCALE_FACTOR is %s" % os.environ['QT_SCALE_FACTOR'])
 
@@ -214,7 +214,7 @@ class MainClass:
             app.processEvents()
             app.aboutToQuit.connect(self.killallchilds)
             # from ib_insync import util
-            # util.useQt()
+            # util.UseQT()
             # util.patchAsyncio()
 
         if not self.SimpleMode:
@@ -228,7 +228,7 @@ class MainClass:
         gg = self.initialize_graph_and_ib(mainwindow.axes if not self.SimpleMode else None)
 
         gg.gen_graph(Parameters(
-            type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=config.DefaultParams.DefaultGroups, use_cache=config.DefaultParams.CACHEUSAGE,
+            type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=config.DefaultParams.DefaultGroups, use_cache=config.DefaultParams.CacheUsage,
             show_graph=False))
         #those parameters sets the default UI controls. Probably should be in config, though most of it is.
         # I do some assumptions on it later.
@@ -236,7 +236,7 @@ class MainClass:
         if self.SimpleMode:
             from matplotlib import pyplot as plt
             plt.draw()  # no app , bitches
-        elif self.USEQT:
+        elif self.UseQT:
             mainwindow.run(gg)
             #import QCore
             app.aboutToQuit.connect(partial(mainwindow.closeEvent,0))

@@ -26,7 +26,7 @@ class SymbolsInterface(ABC):
 
     @property
     @abstractmethod
-    def inputsource(self) -> InputSourceInterface:
+    def InputSource(self) -> InputSourceInterface:
         ...
 
     @abstractmethod

@@ -71,7 +71,7 @@ class MainWindow(FormInitializer,QMainWindow):
         self.setCentralWidget(self.wind)
 
         self.setWindowIcon(QtGui.QIcon(iconpath))
-        self.setWindowTitle(config.Running.TITLE)
+        self.setWindowTitle(config.Running.Title)
         if os.name == 'nt':
             # This is needed to display the app icon on the taskbar on Windows 7
             import ctypes
@@ -95,11 +95,11 @@ class MainWindow(FormInitializer,QMainWindow):
             self.update_graph(1)
 
         if  os.environ.get('PYCHARM_HOSTED') == '1':
-            if config.Running.CHECKRELOADINTERVAL ==0:
+            if config.Running.CheckReloadInterval ==0:
                 return
             logging.debug("checking and reloading")
             timer = QTimer(self)
-            timer.setInterval(1000* config.Running.CHECKRELOADINTERVAL)
+            timer.setInterval(1000* config.Running.CheckReloadInterval)
             timer.timeout.connect(self.check_reload)
             timer.start()
 

@@ -25,8 +25,10 @@ class PolySource(InputSource):
         self.notify=notify
 
     def excphandler(self,exception):
+        import json
+        exception=json.loads(str(exception))
         logging.error(f"bad response poly: {exception}")
-        self.notify(exception["status"])
+        self.notify("bad response poly: {}".format(exception["status"] if "error" not in exception else exception["error"]))
     @excp_handler(polygon.exceptions.BadResponse,handler= excphandler)
     def get_current_currency(self, pair):
         return self.client.get_last_forex_quote(pair[0],to=pair[1])
@@ -37,6 +39,8 @@ class PolySource(InputSource):
     @cached
     def resolve_symbol(self, sym): 
         return c(self.convert_sym_dic,self.client.get_ticker_details)(sym)
+
+
 
     @simple_exception_handling(err_description='error in matching symbols')
     @excp_handler(polygon.exceptions.BadResponse, handler=excphandler)

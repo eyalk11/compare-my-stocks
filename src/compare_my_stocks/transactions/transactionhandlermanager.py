@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from common.common import CombineStrategy, localize_it, TransactionSourceType, lmap
+from common.common import CombineStrategyEnum, localize_it, TransactionSourceType, lmap
 from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.symbolsinterface import SymbolsInterface
@@ -29,7 +29,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._buydicforexport={}
         self._handlers= (self._ib, self._stock) = tuple(self.get_handlers())
         self._buysymbols=set()
-        self._stockprices = StockPrices(self, self.buysymbols)
+        self._StockPrices = StockPrices(self, self.buysymbols)
 
     def log_buydict_stats(self):
         pass
@@ -74,10 +74,10 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._buydic= { (pytz.UTC.localize(x,True) if x.tzinfo is None else x )  : y  for x,y in self._buydic.items()  }
 
         #replace the following assigment  with a property
-        #self._stockprices._tickers=self.buysymbols
-        self._stockprices._tickers = self.buysymbols
+        #self._StockPrices._tickers=self.buysymbols
+        self._StockPrices._tickers = self.buysymbols
 
-        self._stockprices.process_transactions()
+        self._StockPrices.process_transactions()
 
     @simple_exception_handling("error in combine transactions")
     def combine_transactions(self):
@@ -146,14 +146,14 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             num_of_updates=0 
             
             for s, v in secondinst.items():
-                if CombineStrategy.PREFERSTOCKS == config.TransactionHandlers.CombineStrategy:
+                if CombineStrategyEnum.PREFERSTOCKS == config.TransactionHandlers.CombineStrategy:
                     if config.TransactionHandlers.JustFromTheEndOfMyStock:
                         if s.date() < maxmaxdate:
                             num_of_duplicates+=1 
                             continue
 
                 if (mindate.get(v.Symbol) and s.date() >= mindate[v.Symbol] and s.date() <= maxdate[v.Symbol]):
-                    if v.Symbol not in config.TransactionHandlers.BothSymbols and config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERIB:
+                    if v.Symbol not in config.TransactionHandlers.BothSymbols and config.TransactionHandlers.CombineStrategy == CombineStrategyEnum.PREFERIB:
                         num_of_duplicates +=1
                         log.debug(("ignoring trans: %s %s because in less prefered source %s" % (s, v,"real" if real else "simul" )))
                         continue
@@ -161,7 +161,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                     num_of_duplicates +=1 
                     log.debug(("ignoring trans: %s %s because of conf  %s" % (s, v,"real" if real else "simul" )))
                     continue
-                if 'IB:' in v.Notes and CombineStrategy.PREFERSTOCKS and real:
+                if 'IB:' in v.Notes and CombineStrategyEnum.PREFERSTOCKS and real:
                     logging.warning(("trans: %s %s is of note ib" %(s,v)))
                 forsym = datesymfirst[v.Symbol]
                 for l in forsym:
@@ -199,14 +199,14 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             return sum( abs(v[1]) for v in dicforsym  if v[0]>=mindate), sum( 1 for v in dicforsym  if v[0]>=mindate)
 
 
-        second,first= ((self._stock.buydic,self._ib.buydic) if config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERIB else (self._ib.buydic, self._stock.buydic))
+        second,first= ((self._stock.buydic,self._ib.buydic) if config.TransactionHandlers.CombineStrategy == CombineStrategyEnum.PREFERIB else (self._ib.buydic, self._stock.buydic))
         firstcopy = OrderedDict(sorted(first.items()))
         secondcopy= OrderedDict(sorted(second.items()))
         mindate=min(list(secondcopy.keys()))
         self._buydic={}
         num_of_duplicates=0
 
-        if config.TransactionHandlers.CombineStrategy == CombineStrategy.PREFERSTOCKS:
+        if config.TransactionHandlers.CombineStrategy == CombineStrategyEnum.PREFERSTOCKS:
             ls =list(filter( lambda va: "IB:" in va[1].Notes , firstcopy.items()))
 
             for (s,v) in list(ls):
@@ -240,7 +240,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
     def get_handlers(self):
         for x, fun in zip([TransactionSourceType.IB, TransactionSourceType.MyStock], [get_ib_handler, get_stock_handler]):
-            if ((config.TransactionHandlers.TRANSACTIONSOURCE & x) == x):
+            if ((config.TransactionHandlers.TransactionSource & x) == x):
                 handler: TransactionHandlerInterface = fun(self)
                 yield handler
             else:
@@ -249,17 +249,17 @@ class TransactionHandlerManager(TransactionHandlerInterface):
     @simple_exception_handling("Error in export_portfolio")
     def export_portfolio(self):
         if config.TransactionHandlers.IncludeNormalizedOnSave:
-            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT,normailze_to_cur=False)
-            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT+"normailzed",normailze_to_cur=True)
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.ExportedPort,normailze_to_cur=False)
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.ExportedPort+"normailzed",normailze_to_cur=True)
         else:
-            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.EXPORTEDPORT,
+            self._stock.save_transaction_table(buydict=self._buydic, file=config.File.ExportedPort,
                                                normailze_to_cur=False)
 
         dt=self._inp._current_status
         dfIB,dfMYSTOCK=  self._inp.complete_status()
         dt : pd.DataFrame
         dt=dt.join(dfIB,on="stock",rsuffix="_IB").join(dfMYSTOCK,on="stock",rsuffix="_MY")
-        dt.to_csv(config.File.EXPORTEDPORT+".state.csv")
+        dt.to_csv(config.File.ExportedPort+".state.csv")
 
     def update_buydic(self,key,val):
         self._buydic[key]=val

@@ -89,7 +89,7 @@ class InputSource(InputSourceInterface):
             logging.debug((f'multiple same exchange {sym}, picking {l}'))
 
         if exchok:
-            logging.debug((f'one exchange is good based on valid exchanges for {sym}, picking {l}'))
+            logging.debug((f'one exchange is good based on valid Exchanges for {sym}, picking {l}'))
             return l
         elif symok:
             logging.debug((f'not right exchange {sym}, picking {l}'))
@@ -99,24 +99,24 @@ class InputSource(InputSourceInterface):
 
     @cached(max_size=2000,thread_safe=True)
     def get_best_matches(self, sym, results=10, strict=True):
-        def fix_valid_exchanges(l):
+        def fix_valid_Exchanges(l):
             def upd(v):
                 l['exchange'] = v
                 l['contract'].exchange = l['exchange']
             #we choose here best exchange so we are surely picking the best possible score for entry
-            if not ('validExchanges' in l)  or  l['contract'].exchange:
+            if not ('validexchanges' in l)  or  l['contract'].exchange:
                 return l
             if l['exchange']:
 
                 logging.debug(('strange exch'))
-            orgls=l['validExchanges'].split(',')
+            orgls=l['validexchanges'].split(',')
             if len(orgls)==0:
                 if not l['exchange'] and 'primaryExchange' in l:
                     upd(l['primaryExchange'])
                 return l
 
-            ls=list(set(orgls).intersection(set(config.Symbols.VALIDEXCHANGES)))
-            ls.sort(key=lambda x: config.Symbols.VALIDEXCHANGES.index(x))
+            ls=list(set(orgls).intersection(set(config.Symbols.ValidExchanges)))
+            ls.sort(key=lambda x: config.Symbols.ValidExchanges.index(x))
             if len(ls)==0:
                 logging.debug((f'couldnt find exchange (for a candidate) {l["symbol"]} , picking {orgls[0]}'))
                 upd(orgls[0])
@@ -144,30 +144,18 @@ class InputSource(InputSourceInterface):
                 return [],0,0
 
 
-        exchanges=config.Symbols.EXCHANGES if config.Input.INPUTSOURCE==InputSourceType.InvestPy else config.Symbols.VALIDEXCHANGES
-        exchanges=lmap(lambda x:x.lower(),exchanges)
+        Exchanges=config.Symbols.Exchanges if config.Input.InputSource==InputSourceType.InvestPy else config.Symbols.ValidExchanges
+        Exchanges=lmap(lambda x:x.lower(),Exchanges)
 
-        ls= list(map(fix_valid_exchanges,ls))
-        matched = [l for l in ls if l['symbol'].lower() == sym.lower() and  l.get('exchange','').lower() in exchanges]
-        matched.sort(key=lambda x: exchanges.index(x.get('exchange','').lower()))
-        matchednex = [l for l in ls if l['symbol'].lower() == sym.lower() and l.get('exchange','').lower() not in exchanges]
+        ls= list(map(fix_valid_Exchanges,ls))
+        matched = [l for l in ls if l['symbol'].lower() == sym.lower() and  l.get('exchange','').lower() in Exchanges]
+        matched.sort(key=lambda x: Exchanges.index(x.get('exchange','').lower()))
+        matchednex = [l for l in ls if l['symbol'].lower() == sym.lower() and l.get('exchange','').lower() not in Exchanges]
         if len(matched)>=1 or len(matchednex)>=1:
             return matched + matchednex,len(matched),len(matchednex) #+ set(ls)-set(matched+matchednex),1
         else:
             return ls,len(matched),len(matchednex)
 
-
-    def get_all_symbols(self):
-        if self._allsymbols:
-            return self._allsymbols
-        names = set()
-        for res in config.RESOURCES:
-            resource = open(os.path.join(config.RESDIR, res), 'rt')
-            resource = pd.read_csv(resource)
-            if 'name' in resource:
-                names.add(resource['name'])
-        self._allsymbols = names
-        return names
 
 
 

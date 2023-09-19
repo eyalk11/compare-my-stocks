@@ -26,7 +26,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         self.Use=None
         self.CacheSpan=None
         self.__dict__.update(dataclasses.asdict(getattr(config.TransactionHandlers,self.NAME)))
-        ok,path = resolvefile(self.File,config.Running.USE_ALTERANTIVE_LOCATION)
+        ok,path = resolvefile(self.File,config.Running.UseAlterantiveLocation)
         if not ok:
             logging.info((f'Cache not found for {self.NAME}'))
         else:
@@ -48,7 +48,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         return self._buydic
 
     def get_portfolio_stocks(self):  # TODO:: to fix
-        return self._buysymbols #[config.Symbols.TRANSLATEDIC.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
+        return self._buysymbols #[config.Symbols.Translatedic.get(s,s) for s in  self._buysymbols] #get_options_from_groups(self.Groups)
 
 
 
@@ -112,7 +112,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
         pass
 
     def translate_symbol(self,symbol):
-        return config.Symbols.REPLACE_SYM_IN_INPUT.get(symbol,symbol)
+        return config.Symbols.ReplaceSymInInput.get(symbol,symbol)
 
     def process_transactions(self):
 

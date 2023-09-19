@@ -87,7 +87,7 @@ class DoLongProcessSlots(QObject):
         #     loop = asyncio.new_event_loop()
         #     asyncio.set_event_loop(loop)
         #     from ib_insync import IB,util
-        #     util.useQt('PySide6')
+        #     util.UseQT('PySide6')
 
         realtask = simple_exception_handling(err_description="excpetion in real task",never_throw=True)(partial(self._task, *taskparams.params))
         self.started = True

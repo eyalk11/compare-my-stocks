@@ -112,21 +112,21 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
     @simple_exception_handling("Generation task")
     def generation_task(self):
         self.window.voila_widget :QtVoila
-        self.window.voila_widget.max_voila_wait=config.Voila.MAX_VOILA_WAIT
+        self.window.voila_widget.max_voila_wait=config.Voila.MaxVoilaWait
 
         self.window.voila_widget: QtVoila
         self.in_generation=True
         if not self.generate_temp():
             return
-        self.window.voila_widget.external_notebook = config.File.DEFAULTNOTEBOOK
+        self.window.voila_widget.external_notebook = config.File.DefaultNotebook
         if self.window.voila_widget.python_process_path is None:
-            self.window.voila_widget.python_process_path = config.Voila.VOILA_PYTHON_PROCESS_PATH
+            self.window.voila_widget.python_process_path = config.Voila.VoilaPythonProcessPath
             self.wont_run = not self.resolve_voila(self.window.voila_widget)
         if self.wont_run:
             return
-        open(config.File.DATAFILEPTR,'wt').write(self.file_name)
+        open(config.File.DataFilePtr,'wt').write(self.file_name)
         if self.voila_run==State.UNINITALIZED:
-            if not config.Voila.DONT_RUN_NOTEBOOK:
+            if not config.Voila.DontRunNotebook:
                 self.voila_run = State.LOADING
                 self.window.voila_widget.run_voila()
         elif self.voila_run==State.RUNNING:
@@ -153,7 +153,7 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
     @simple_exception_handling("launch notebook")
     def launch_notebook(self,filename=None):
         if filename==None:
-            filename=config.File.DEFAULTNOTEBOOK
+            filename=config.File.DefaultNotebook
 
         from notebook.notebookapp import list_running_servers
         pids = {x['pid']:x for x in list_running_servers()}

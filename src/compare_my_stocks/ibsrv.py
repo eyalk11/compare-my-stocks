@@ -12,9 +12,9 @@ except:
 from config import config
 from ib.timeoutreg import thingy_class_to_dict, thingy_dict_to_class
 from input.ibsource import IBSourceRem, IBSourceRemGenerator
+#does registeration 
 from ib import timeoutreg
 
-from Pyro5.api import register_class_to_dict, register_dict_to_class
 
 
 
@@ -33,15 +33,15 @@ class MyDeamon(Pyro5.server.Daemon):
 #Pyro5.server.config.SERIALIZER='marshal'
 Pyro5.server.config.SERVERTYPE="multiplex"
 Pyro5.server.config.DETAILED_TRACEBACK=True
-daemon = MyDeamon(host="localhost",port=config.Sources.IBSource.IBSRVPORT)                # make a Pyro daemon
+daemon = MyDeamon(host="localhost",port=config.Sources.IBSource.IBSrvPort)                # make a Pyro daemon
 uri = daemon.register(IBSourceRemGenerator,objectId="aaa")   # register the greeting maker as a Pyro object
 
 
 
 print("Ready. Object uri =", uri)      # print the uri so we can use it in the client later
-logging.debug("writing ",config.File.IBSRVREADY)
+logging.debug("writing ",config.File.IbSrvReady)
 try:
-    open(config.File.IBSRVREADY,'wt').write('ready')
+    open(config.File.IbSrvReady,'wt').write('ready')
 except:
     logging.debug("Could not write ready file")
 logging.info("IBSRV Started")

@@ -23,7 +23,7 @@ class Parameters:
     valuerange : List[float] = ( (-1)* numpy.inf, numpy.inf)
     numrange : List[int] = (None,None)
     type : Types =Types.VALUE
-    _ext : list =field(default_factory=config.DefaultParams.EXT.copy)
+    _ext : list =field(default_factory=config.DefaultParams.Ext.copy)
     ext: dataclasses.InitVar[list] = field(default_factory=list) #same as reference stock
     increase_fig: bool =1
     _fromdate : datetime=None
@@ -35,7 +35,7 @@ class Parameters:
     compare_with: str =None
     portfolio: str  = None #The portfolio to read from transaction table in MyStocks
     use_cache : UseCache =UseCache.USEIFAVALIABLE
-    def_fig_size : tuple = config.UI.DEF_FIG_SIZE
+    def_fig_size : tuple = config.UI.DefFigSize
     unite_by_group : UniteType =UniteType.NONE
     show_graph : bool =False
     use_groups: bool =True

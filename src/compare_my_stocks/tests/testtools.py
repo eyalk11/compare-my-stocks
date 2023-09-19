@@ -43,21 +43,21 @@ def mock_config_to_default_sess():
 
 
 @pytest.fixture(scope="session")
-def ibsource():
-    x = IBSource(host='127.0.0.1', port=config.Sources.IBSource.PORTIB,proxy=False)
+def IBSource():
+    x = IBSource(host='127.0.0.1', port=config.Sources.IBSource.PortIB,proxy=False)
     return x
 
 
 @pytest.fixture(scope="session")
 @pytest.mark.usefixtures("mock_config_to_default_sess")
-def inp(ibsource):
+def inp(IBSource):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    input_source = ibsource
+    InputSource = IBSource
     tr=TransactionHandlerManager(None)
-    tmpinp = InputProcessor(eng, tr,input_source)
+    tmpinp = InputProcessor(eng, tr,InputSource)
     tmpinp.data= InputDataImpl()
     tr._inp=tmpinp
     tmpinp.process_params= copy(eng.params)
@@ -66,15 +66,15 @@ def inp(ibsource):
     return tmpinp
 
 @pytest.fixture
-def inpb(ibsource):
+def inpb(IBSource):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    input_source = ibsource
+    InputSource = IBSource
     config.TransactionHandlers.SaveCaches=False
     tr=TransactionHandlerManager(None)
-    tmpinp = InputProcessor(eng, tr,input_source)
+    tmpinp = InputProcessor(eng, tr,InputSource)
     tmpinp.data= InputDataImpl()
     tr._inp=tmpinp
     tmpinp.process_params= copy(eng.params)
@@ -82,19 +82,19 @@ def inpb(ibsource):
     tmpinp.save_data = Mock(return_value=None)
     return tmpinp
 @pytest.fixture
-def polysource():
+def PolySource():
     return PolySource()
 
 @pytest.fixture
-def inp_poly(polysource):
+def inp_poly(PolySource):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    input_source = polysource
+    InputSource = PolySource
     config.TransactionHandlers.SaveCaches=False
     tr=TransactionHandlerManager(None)
-    tmpinp = InputProcessor(eng, tr,input_source)
+    tmpinp = InputProcessor(eng, tr,InputSource)
     tmpinp.data= InputDataImpl()
     tr._inp=tmpinp
     tmpinp.process_params= copy(eng.params)
@@ -114,7 +114,7 @@ def realeng(additional_process):
     eng.transaction_handler.save_cache = Mock(return_value=None)
     eng.transaction_handler._ib.save_cache =Mock(return_value=None)
     eng.transaction_handler._stock.save_cache =Mock(return_value=None)
-    eng.transaction_handler._stockprices.save_cache =Mock(return_value=None)
+    eng.transaction_handler._StockPrices.save_cache =Mock(return_value=None)
 
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
@@ -128,20 +128,20 @@ def realeng(additional_process):
 
 
 
-#patch get_ib_source to return ibsource instead of None
+#patch get_ibsource to return IBSource instead of None
 
 @pytest.fixture
 
 def realenghookinp():
     config.Sources.IBSource.AddProcess=None
-    config.Input.INPUTSOURCE = InputSourceType.Cache
+    config.Input.InputSource = InputSourceType.Cache
     
-    #with mock.patch('input.ibsource.get_ib_source',new_callable=lambda : ibsource):
+    #with mock.patch('input.ibsource.get_ibsource',new_callable=lambda : IBSource):
     eng= CompareEngine(None)
     eng.transaction_handler.save_cache = Mock(return_value=None)
     eng.transaction_handler._ib.save_cache =Mock(return_value=None)
     eng.transaction_handler._stock.save_cache =Mock(return_value=None)
-    eng.transaction_handler._stockprices.save_cache =Mock(return_value=None)
+    eng.transaction_handler._StockPrices.save_cache =Mock(return_value=None)
 
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
@@ -166,7 +166,7 @@ def generate_config(useinp):
             # testingconf.py
             # AddProcess = [process]
             from config import testingconf
-            c.IBConnection.AddProcess =testingconf.AddProcess
+            c.IBConnection.AddProcess =testingconf.ADDPROCESS
         except:
             c.IBConnection.AddProcess=c.Testing.AddProcess
     else:
@@ -175,18 +175,18 @@ def generate_config(useinp):
         for k,attr in enumerate( FILE_LIST_TO_RES):
             setattr(c,attr,os.path.abspath(f'./tmp/{k}' ))
 
-        c.File.HIST_F=os.path.abspath('./data/hist_file.cache')
-        c.File.JSONFILENAME=os.path.abspath('./data/groups.json')
-        c.File.HIST_F_STOCK=os.path.abspath('./data/hist_file_stock.cache')
+        c.File.HistF=os.path.abspath('./data/HistFile.cache')
+        c.File.JsonFilename=os.path.abspath('./data/groups.json')
+
     c.TransactionHandlers.SaveCaches=False
-    c.File.LOGFILE=None
-    c.File.LOGERRORFILE=None
-    c.Running.IS_TEST=True
-    c.Running.VERIFY_SAVING=VerifySave.DONT
+    c.File.LogFile=None
+    c.File.LogErrorFile=None
+    c.Running.IsTest=True
+    c.Running.VerifySaving=VerifySave.DONT
     if useinp & UseInput.WITHINPUT == UseInput.Nothing :
-        c.Input.INPUTSOURCE=None
+        c.Input.InputSource=None
     else:
-        c.Input.INPUTSOURCE=InputSourceType.IB
+        c.Input.InputSource=InputSourceType.IB
 
 
     return c
@@ -197,9 +197,9 @@ def getremibsrv():
     #if tws.exe process is not running, warn.
     # use process_iter to find the process
     RemoteProcess().run_additional_process()
-    if not checkIfProcessRunning(config.Running.TWS_PROCESS_NAME):
+    if not checkIfProcessRunning(config.Running.TwsProcessName):
          logging.warning("TWS is not running. Please run it before running tests")
 
 
     time.sleep(3)
-    return IBSource(host='127.0.0.1', port=config.Sources.IBSource.PORTIB, proxy=True)
+    return IBSource(host='127.0.0.1', port=config.Sources.IBSource.PortIB, proxy=True)

@@ -120,23 +120,23 @@ class InputDataImpl(InputDataImplInterface):
 
     @classmethod
     def full_data_load(self):
-        if config.Input.FULLCACHEUSAGE == UseCache.DONT:
-            logging.info("Full data cache not loaded because of FULLCACHEUSAGE in config")
+        if config.Input.FullCacheUsage == UseCache.DONT:
+            logging.info("Full data cache not loaded because of FullCacheUsage in config")
             return InputDataImpl()
         try:
-            cache_date, cls = pickle.load(open(config.File.FULLDATA, "rb"))
+            cache_date, cls = pickle.load(open(config.File.FullData, "rb"))
             if (
-                cache_date - datetime.datetime.now() > config.Input.MAXFULLCACHETIMESPAN
-            ) and config.Input.FULLCACHEUSAGE == UseCache.USEIFAVALIABLE:
+                cache_date - datetime.datetime.now() > config.Input.MaxFullCacheTimeSpan
+            ) and config.Input.FullCacheUsage == UseCache.USEIFAVALIABLE:
                 logging.info("Full data cache too old.Not loaded")
                 return InputDataImpl()
 
-            logging.info(f"Loaded and used fulldata cache: {cache_date}")
+            logging.info(f"Loaded and used FullData cache: {cache_date}")
             cls.fullcachedate = cache_date
             return cls
 
         except Exception as e:
-            logging.warn((f"failed to use fulldata  cache {e}"))
+            logging.warn((f"failed to use FullData  cache {e}"))
             return InputDataImpl()
 
     def save_full_data(self):
@@ -147,11 +147,11 @@ class InputDataImpl(InputDataImplInterface):
 
         with SimpleExceptionContext(err_description="save full data", detailed=False):
             pickle.dump(
-                (datetime.datetime.now(), self), open(config.File.FULLDATA, "wb")
+                (datetime.datetime.now(), self), open(config.File.FullData, "wb")
             )
             elapsed_time = time.process_time() - t
             logging.info(
-                f"Saved fulldata cache: {datetime.datetime.now()} Took {elapsed_time}"
+                f"Saved FullData cache: {datetime.datetime.now()} Took {elapsed_time}"
             )
 
             self.fullcachedate = datetime.datetime.now()
@@ -162,7 +162,7 @@ class InputDataImpl(InputDataImplInterface):
             if (
                 minimal
             ):  # Symbol info is needed by TransactionHandler . So we load just this...
-                _, symbinfo, _, _, _ = pickle.load(open(config.File.HIST_F, "rb"))
+                _, symbinfo, _, _, _ = pickle.load(open(config.File.HistF, "rb"))
 
                 self.symbol_info = collections.defaultdict(dict)
                 self.symbol_info.update(symbinfo)
@@ -176,7 +176,7 @@ class InputDataImpl(InputDataImplInterface):
             # not minimal
 
             hist_by_date, _, self._cache_date, self.currency_hist, _ = pickle.load(
-                open(config.File.HIST_F, "rb")
+                open(config.File.HistF, "rb")
             )
 
             if type(self.currency_hist) == dict:  # backward compatability
@@ -184,7 +184,7 @@ class InputDataImpl(InputDataImplInterface):
 
             if (
                 self._cache_date - datetime.datetime.now()
-                < config.Input.MAXCACHETIMESPAN
+                < config.Input.MaxCacheTimeSpan
                 or process_params.use_cache == UseCache.FORCEUSE
             ):
                 logging.info(f"Loaded and used cache: {self._cache_date}")
@@ -238,7 +238,7 @@ class InputDataImpl(InputDataImplInterface):
         currency = self.get_currency_for_sym(sym, real_one=True)
         if currency is None:
             return 1
-        currecncy_factor = config.Symbols.CURRENCY_FACTOR.get(currency, 1.0)
+        currecncy_factor = config.Symbols.CurrencyFactor.get(currency, 1.0)
         return currecncy_factor
 
     def get_currency_for_sym(self, sym, real_one=False):
@@ -246,7 +246,7 @@ class InputDataImpl(InputDataImplInterface):
         cur = self.symbol_info[sym].get("currency")
         if real_one:
             return cur
-        return ifnn(cur, lambda: config.Symbols.TRANSLATE_CURRENCY.get(cur, cur))
+        return ifnn(cur, lambda: config.Symbols.TranslateCurrency.get(cur, cur))
 
     def save_data(self):
         # The difference between the regular cache and fullcache is that fullcache doesn't know how to handle transactions diffs .
@@ -262,11 +262,11 @@ class InputDataImpl(InputDataImplInterface):
 
         if not self.cached_used:
             logging.warn("Cache wasnt used! (possibly first time)")
-            if config.Running.VERIFY_SAVING == VerifySave.DONT:
+            if config.Running.VerifySaving == VerifySave.DONT:
                 logging.warn("Not saving data because not using cache")
                 return
             logging.warn("Saving data without using cache! Can earse data!")
-            if config.Running.VERIFY_SAVING == VerifySave.Ask:
+            if config.Running.VerifySaving == VerifySave.Ask:
                 x = show_message_box()
                 if not x:
                     return
@@ -274,7 +274,7 @@ class InputDataImpl(InputDataImplInterface):
         import shutil
 
         try:
-            shutil.copy(config.File.HIST_F, config.File.HIST_F_BACKUP)
+            shutil.copy(config.File.HistF, config.File.HistF_BACKUP)
         except:
             logging.debug(("error in backuping hist file"))
         try:
@@ -286,7 +286,7 @@ class InputDataImpl(InputDataImplInterface):
                     self.currency_hist.to_dict(),
                     None,
                 ),
-                open(config.File.HIST_F, "wb"),
+                open(config.File.HistF, "wb"),
             )
             logging.debug(("hist saved"))
         except:

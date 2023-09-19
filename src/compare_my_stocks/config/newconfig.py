@@ -9,7 +9,7 @@ from dataclasses import  field
 
 from pydantic import ConfigDict
 
-from common.common import UseCache, InputSourceType, CombineStrategy, VerifySave, TransactionSourceType
+from common.common import UseCache, InputSourceType, CombineStrategyEnum, VerifySave, TransactionSourceType
 import pytz
 import logging
 from common.loghandler import init_log, dont_print, init_log_default
@@ -18,13 +18,16 @@ import sys
 from typing import Optional
 from common.common import log_conv
 from common.paramaware import paramaware
+from common.simpleexceptioncontext import SimpleExceptionContext
 
-RESOLVE_FILES = ['LOGFILE', 'LOGERRORFILE', 'IB_LOGFILE', 'IB_LOGERRORFILE']
-FILE_LIST_TO_RES = ["HIST_F", "HIST_F_BACKUP", "JSONFILENAME", "SERIALIZEDFILE", "REVENUEFILE", "INCOMEFILE",
-                            "COMMONSTOCK", "GRAPHFN", "DEFAULTNOTEBOOK", 'DATAFILEPTR', 'EXPORTEDPORT','IBSRVREADY','FULLDATA']
-from pydantic.dataclasses import dataclass as pyddataclass
-confdict=ConfigDict(arbitrary_types_allowed=True)
-dataclass=partial(pyddataclass,config=confdict)
+RESOLVE_FILES = ['LogFile', 'LogErrorFile', 'IBLogFile', 'IBLogErrorFile']
+FILE_LIST_TO_RES = ["HistF", "HistFBackup", "JsonFilename", "SerializedFile", "RevenueFile", "IncomeFile",
+                            "CommonStock", "GraphFN", "DefaultNotebook", 'DataFilePtr', 'ExportedPort','IbSrvReady','FullData']
+
+#from pydantic.dataclasses import dataclass as pyddataclass
+#confdict=ConfigDict(arbitrary_types_allowed=True)
+#dataclass=partial(pyddataclass,config=confdict)
+from dataclasses import dataclass
 
 @paramaware
 @dataclass
@@ -79,10 +82,10 @@ class TransactionHandlersConf:
     DontReadjust : list = field(default_factory=list)
     SaveCaches: bool = True
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
-    Ib: IBConf = field(default_factory=IBConf)
+    IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
     IgnoreConf: Dict = field(default_factory=lambda: {})
-    CombineStrategy: CombineStrategy = CombineStrategy.PREFERSTOCKS
+    CombineStrategy: CombineStrategyEnum = CombineStrategyEnum.PREFERSTOCKS
     IncludeNormalizedOnSave: bool = True
     MaxPercDiffIbStockWarn: float = 0.2 #ignored currently
     FixBuySellDiffDays: int = 3
@@ -94,17 +97,17 @@ class TransactionHandlersConf:
 
 @dataclass
 class RapidKeyConf:
-    XRapidapiHost: Optional[str] = None
-    XRapidapiKey: Optional[str] = None
+    XRapidApiHost: Optional[str] = None
+    XRapidApiKey: Optional[str] = None
 
 @paramaware
 @dataclass
 class IBSourceConf:
-    HostIb: str = '127.0.0.1'
-    PortIb: int = 7596
-    IbSrvPort: int = 9091
+    HostIB: str = '127.0.0.1'
+    PortIB: int = 7596
+    IBSrvPort: int = 9091
     AddProcess: Optional[Union[str, List]] = 'ibsrv.exe'
-    MaxIbConnectionRetries: int = 3
+    MaxIBConnectionRetries: int = 3
     RegularAccount: Optional[str] = None
     RegularUsername: Optional[str] =None
     UsePythonIfNotResolve: bool = True
@@ -113,10 +116,10 @@ class IBSourceConf:
 class UIConf:
     AdditionalOptions: dict = field(default_factory=lambda: {})
 
-    Usewx: int = 0
-    Useweb: int = 0
-    Useqt: int = 1
-    Mincolforcolums: int = 20
+    UseWX: int = 0
+    UseWEB: int = 0
+    UseQT: int = 1
+    MinColForColumns: int = 20
     DefFigSize: tuple = (13.2 * 0.5, 6 * 0.5)
     SimpleMode: int = 0
     CircleSizePercentage: float = 0.05
@@ -136,16 +139,16 @@ class RunningConf:
     VerifySaving: VerifySave = VerifySave.Ask
     Debug: int = 1
     StartIbsrvInConsole : bool =False
-    Checkreloadinterval: Optional[int] = 30 #reload modules
+    CheckReloadInterval: Optional[int] = 30 #reload modules
     LastGraphName: str = "Last"
     LoadLastAtBegin: bool = True
-    IbLogfile: Optional[str] = "iblog.txt"
-    Logfile: Optional[str] = "log.txt"
+    IBLogFile: Optional[str] = "iblog.txt"
+    LogFile: Optional[str] = "log.txt"
     LogErrorFile: Optional[str] = "error.log"
     UseAlterantiveLocation: Optional[bool] = None #to load data from original location
     TwsProcessName : Optional[str] = "tws.exe"
     SleepForIbsrvToStart: int = 5
-    IbLogerrorfile: Optional[str] = "ibsrv_error.log"
+    IBLogErrorFile: Optional[str] = "ibsrv_error.log"
     DisplayConsole : bool =False
     Title: str = "Compare My Stocks"
     TryToScaleDisplay : bool = True
@@ -153,7 +156,7 @@ class RunningConf:
 @dataclass
 class EarningsConf:
     SkipEarnings: int = 1
-    Trystorageforearnings: int = 1
+    TryStorageForEarnings: int = 1
 @paramaware
 @dataclass
 class DefaultParamsConf:
@@ -165,7 +168,7 @@ class DefaultParamsConf:
 @paramaware
 @dataclass
 class SymbolsConf:
-    Validexchanges: list = field(default_factory=list)
+    ValidExchanges: list = field(default_factory=list)
     TranslateExchanges: dict = field(default_factory=dict)
     ExchangeCurrency: dict = field(default_factory=dict)
     StockCurrency: dict = field(default_factory=dict)
@@ -173,7 +176,7 @@ class SymbolsConf:
     Translatedic: dict = field(default_factory=dict)
     Crypto: set = field(default_factory=set)
     Exchanges: list = field(default_factory=list)
-    Defaultcurr: list = field(default_factory=list) #currency list
+    DefaultCurr: list = field(default_factory=list) #currency list
     Basecur: str = "USD"
     ReplaceSymInInput: dict = field(default_factory=dict)
     TranslateCurrency: dict = field(default_factory=dict)
@@ -184,17 +187,17 @@ class SymbolsConf:
 @paramaware
 @dataclass
 class FileConf:
-    HistF: str = r'hist_file.cache'
-    HistFBackup: str = HIST_F + '.back'
-    DefaultNotebook: str = r'jupyter\defaultnotebook.ipynb'
+    HistF: str = r'HistFile.cache'
+    HistFBackup: str = HistF + '.back'
+    DefaultNotebook: str = r'jupyter\DefaultNotebook.ipynb'
     JsonFilename: str = r'groups.json'
     SerializedFile: str = r'serialized.dat'
     EarningStorage: str = 'earnings.dat'
     RevenueFile: str = 'NOEARNINGS'
     IncomeFile: str = 'NOEARNINGS'
     CommonStock: str = 'NOEARNINGS'
-    DataFileptr: str = 'DATA_FILE'
-    Graphfn: str = 'graphs.json'
+    DataFilePtr: str = 'DATA_FILE'
+    GraphFN: str = 'graphs.json'
     ExportedPort: str = "exported.csv"
     IbSrvReady: str = "ibsrv_ready.txt"
     FullData: str = "fullinpdata.bin"
@@ -207,15 +210,15 @@ class InputConf:
     AdjustUnrelProfitToReflectSplits: bool = True
     MaxCacheTimeSpan: datetime.timedelta = datetime.timedelta(days=20)
     MaxFullCacheTimeSpan: datetime.timedelta = datetime.timedelta(days=1)
-    FullCachEusage: UseCache = UseCache.FORCEUSE 
+    FullCacheUsage: UseCache = UseCache.FORCEUSE
     AlwaysStoreFullCache: bool = False
     InputSource: InputSourceType = InputSourceType.IB
     IgnoreAdjust: int = 1 #DONT_ADJUST_FOR_CURRENT
-    Downloaddataforprot: bool = True
-    Defaultfromdate: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
+    DownloadDataForProt: bool = True
+    DefaultFromDate: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
     TzInfo: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
     MaxRelevantCurrencyTime : datetime.timedelta = datetime.timedelta(minutes=60)
-    MaxRelevantCurrencyTimeHuer: datetime.timedelta = datetime.timedelta(days=5)
+    MaxRelevantCurrencyTimeHeur: datetime.timedelta = datetime.timedelta(days=5)
 
 @paramaware
 @dataclass
@@ -229,8 +232,8 @@ class VoilaConf:
 @dataclass
 class JupyterConf:
     MemoFolder : str = '.\\memory'
-    RapidYfinanaceKey: str = ''
-    RapidYfinanaceHost: str = "yfinance-stock-market-data.p.rapidapi.com"
+    RapidYFinanaceKey: str = ''
+    RapidYFinanaceHost: str = "yfinance-stock-market-data.p.rapidapi.com"
     Expries : int = 24
 
 @paramaware
@@ -252,7 +255,7 @@ class Config:
     File: FileConf = field(default_factory=FileConf)
     Input: InputConf = field(default_factory=InputConf)
     Voila: VoilaConf = field(default_factory=VoilaConf)
-    Ui: UIConf = field(default_factory=UIConf)
+    UI: UIConf = field(default_factory=UIConf)
     Sources: SourcesConf = field(default_factory=SourcesConf)
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
@@ -364,16 +367,17 @@ class ConfigLoader():
             logging.error('No config file, aborting')
             sys.exit(-1)
 
-        try:
+        noexcep=False
+        with SimpleExceptionContext(f"Failed loading config file {config_file}. aborting",always_throw=True):
             cls.config = cls.load_config(config_file)
-        except:
-            logging.error(f"Failed loading config file {config_file}. aborting")
-            import traceback;logging.error(traceback.format_exc())
+            noexcep = True
+        if not noexcep:
             sys.exit(-1)
+
         if use_alternative is not None:
-            cls.config.Running.USE_ALTERANTIVE_LOCATION=use_alternative
+            cls.config.Running.UseAlterantiveLocation=use_alternative
         else:
-            use_alternative = cls.config.Running.USE_ALTERANTIVE_LOCATION
+            use_alternative = cls.config.Running.UseAlterantiveLocation
 
         if not 'SILENT' in __builtins__ and not  any('pytest' in x for x in sys.argv):
             logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
@@ -431,7 +435,7 @@ class ConfigLoader():
         from common.common import TransactionSourceType
 
         yaml.register_class(common.common.UseCache)
-        yaml.register_class(common.common.CombineStrategy)
+        yaml.register_class(common.common.CombineStrategyEnum)
         yaml.register_class(common.common.InputSourceType)
         yaml.register_class(TransactionSourceType)
         # yaml.register_class(datetime.timedelta)

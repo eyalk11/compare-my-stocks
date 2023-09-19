@@ -34,10 +34,10 @@ from input.inputprocessor import InputProcessor
 from transactions.IBtransactionhandler import IBTransactionHandler
 from transactions.parsecsv import return_trades
 import config
-from tests.testtools import inp, realeng, ibsource, inpb, realenghookinp
+from tests.testtools import inp, realeng, IBSource, inpb, realenghookinp
 from transactions.transactioninterface import BuyDictItem
 
-cfg.STOP_EXCEPTION_IN_DEBUG = True
+cfg.StopExceptionInDebug = True
 
 
 def test_fix_histdic(inp):
@@ -69,8 +69,8 @@ def test_var():
     assert not g
 
 
-def test_basic_sym(ibsource):
-    x = ibsource
+def test_basic_sym(IBSource):
+    x = IBSource
     pair = ("ILS", "USD")
     f = pair[1] + pair[0]
     contract = Forex(f)
@@ -136,11 +136,11 @@ def test_normal_histdic(inpb):
             except:
                 pass
 
-    config.config.Running.VERIFY_SAVING = VerifySave.ForceSave
+    config.config.Running.VerifySaving = VerifySave.ForceSave
     tmpinp.save_data()
 
 
-@patch.object(config.config.File, "HIST_F", new="./data/hist_file.cache")
+@patch.object(config.config.File, "HistF", new="./data/HistFile.cache")
 def test_org_histdic(inp):
     tmpinp = inp
     tmpinp.load_cache(False)
@@ -159,7 +159,7 @@ def test_aa(stock_name: str):
 
     save_path = f"c:/users/ekarni/compare-my-stocks/{stock_name}.bin"
 
-    config.config.Input.FULLCACHEUSAGE = UseCache.FORCEUSE
+    config.config.Input.FullCacheUsage = UseCache.FORCEUSE
     dat = InputDataImpl.full_data_load()
     inp=InputProcessor(None,None,None)
     inp.data=dat
@@ -176,7 +176,7 @@ def test_aa(stock_name: str):
                 dat._split_by_stock.pop(k)
             except:
                 pass
-    #dat.symbol_info[stock_name]["currency"] = stock_currency
+    #dat.symbol_info[stock_name]["currency"] = StockCurrency
     s = set(dat.symbol_info)
     for k in s:
         if k != stock_name:
@@ -283,7 +283,7 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
     with patch.object(InputDataImpl, "full_data_load", xx), patch.object(
             InputProcessor, "process_transactions", lambda x: None
     ), patch.object(InputProcessor, "save_data", lambda x: None):
-        config.config.Input.FULLCACHEUSAGE = UseCache.FORCEUSE
+        config.config.Input.FullCacheUsage = UseCache.FORCEUSE
         config.config.TransactionHandlers.TrackStockDict[stock] = dates_set
         inp.transaction_handler._ib.need_to_save = False
         
@@ -294,7 +294,7 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
                 use_groups=False, use_cache=UseCache.DONT, _selected_stocks=[stock]
             )
         )
-        inp.transaction_handler._stockprices.process_transactions()
+        inp.transaction_handler._StockPrices.process_transactions()
         inp.transaction_handler._buydic = collections.OrderedDict(
             buydict
         )

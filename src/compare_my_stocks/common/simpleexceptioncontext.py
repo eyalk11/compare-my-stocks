@@ -33,7 +33,7 @@ class SimpleExceptionContext:
         # Code to be executed when entering the context
         try:
             from config import config
-            bol=config.Running.STOP_EXCEPTION_IN_DEBUG
+            bol=config.Running.StopExceptionInDebug
             if config.Running.IS_TEST:
                 bol = True
             self.config = config
@@ -84,7 +84,7 @@ class SimpleExceptionContext:
            return False #throw
         return True
 
-def excp_handler(exc_type,handler=lambda x: None):
+def excp_handler(exc_type,handler=lambda a,b: None):
     def decorated(func):
         if hasattr(func,'errors_to_handle'):
             func.errors_to_handle+= [exc_type]
@@ -95,7 +95,7 @@ def excp_handler(exc_type,handler=lambda x: None):
             try:
                 return func(*args,**kwargs)
             except exc_type as e:
-                handler(e)
+                handler(args[0],e) #args[0] is self in this case
         return internal
     return decorated
 
@@ -105,15 +105,15 @@ def simple_exception_handling(err_description=None,return_succ='undef',never_thr
             nonlocal err_to_ignore
             no_exception = False
             ret=None
-            if hasattr(func,'errors_to_handle'):
-                err_to_ignore+=func.errors_to_handle
+            if hasattr(decorated,'errors_to_handle'):
+                err_to_ignore+=decorated.errors_to_handle
             try:
                 with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback):
                     ret= func(*args,**kwargs)
                     no_exception = True
             except Exception as e:
-                if hasattr(func, 'errors_to_handle'):
-                    if e.__class__ in func.errors_to_handle:
+                if hasattr(decorated, 'errors_to_handle'):
+                    if e.__class__ in decorated.errors_to_handle:
                         logf = logging.debug if debug else logging.error
                         logf(err_description) # a bit of an hack
                         #excp handler can't know about description ...

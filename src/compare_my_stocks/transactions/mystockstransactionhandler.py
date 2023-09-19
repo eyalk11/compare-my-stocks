@@ -51,9 +51,9 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
 
     def populate_buydic(self):
         try:
-            ok, path = resolvefile(self.SrcFile,use_alternative=config.Running.USE_ALTERANTIVE_LOCATION)
+            ok, path = resolvefile(self.SrcFile,use_alternative=config.Running.UseAlterantiveLocation)
             if not ok:
-                logging.error((f'Srcfile {self.SrcFile} not found for {self.NAME}'))
+                logging.error((f'SrcFile {self.SrcFile} not found for {self.NAME}'))
                 return
             else:
                 logging.info(f"Mystock src file is {self.SrcFile}")
@@ -86,7 +86,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                     prot = self._manager.params.portfolio
 
             if (prot and t[0] != prot) or math.isnan(t[2]):
-                if not config.TransactionHandlers.SUPRESS_COMMON:
+                if not config.TransactionHandlers.SupressCommon:
                     logging.warn(f"skipping over transaction {t}")
                 continue
             dt = str(t[-2]) + ' ' + str(t[-1])
@@ -143,7 +143,7 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             t : datetime.datetime
             syminfo=self._manager.symbol_info.get(z[2])
             if  syminfo:
-                currency=syminfo.get("currency",config.Symbols.BASECUR)
+                currency=syminfo.get("currency",config.Symbols.Basecur)
             else:
                 syminfo={}
             x=self.Row(Id=index,

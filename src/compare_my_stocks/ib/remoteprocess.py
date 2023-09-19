@@ -20,14 +20,14 @@ class RemoteProcess:
     proc=None
 
     def wait_for_read(cls):
-        # if config.Running.START_IBSRV_IN_CONSOLE:
+        # if config.Running.StartIbsrvInConsole:
 
         logging.info("Waiting for IBSourceRem to be ready")
         if not cls.no_ready_file:
-            for k in range (config.Running.SLEEP_FOR_IBSRV_TO_START*10*3):
+            for k in range (config.Running.SleepForIbsrvToStart*10*3):
                 time.sleep(0.1)
                 try:
-                    if open(config.File.IBSRVREADY, 'rt').read() == 'ready':
+                    if open(config.File.IbSrvReady, 'rt').read() == 'ready':
                         break
                 except:
                     pass
@@ -36,7 +36,7 @@ class RemoteProcess:
                 return
 
         else:
-            time.sleep(config.Running.SLEEP_FOR_IBSRV_TO_START)
+            time.sleep(config.Running.SleepForIbsrvToStart)
 
         logging.info("IBSourceRem is ready")
     @staticmethod
@@ -49,7 +49,7 @@ class RemoteProcess:
 
     def run_additional_process(cls):
         try:
-            open(config.File.IBSRVREADY, 'w').write('notstarted')
+            open(config.File.IbSrvReady, 'w').write('notstarted')
             cls.no_ready_file = False
         except:
             cls.no_ready_file = True
@@ -72,7 +72,7 @@ class RemoteProcess:
 
 
         v = ["start", "/wait"] + v
-        if config.Running.START_IBSRV_IN_CONSOLE:
+        if config.Running.StartIbsrvInConsole:
             logging.debug("STARTCONS " + str(v))
             cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
         else:

@@ -97,7 +97,7 @@ class ListsObserver(FormInterface):
         self.generic_add_lists(self.window.refstocks, self.window.orgstocks)
 
     def lookup_symbol(self):
-        self.current_symbol = PickSymbol(self.graphObj.inputsource,self.window.addstock.currentText())
+        self.current_symbol = PickSymbol(self.graphObj.InputSource,self.window.addstock.currentText())
         if self.current_symbol==None:
             return
         #self.last_txt=self.current_symbol.text()

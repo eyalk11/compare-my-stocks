@@ -27,7 +27,7 @@ class VoilaStatus(JupyterCommonHandler):
     # Create a QtVoila instance
         qtvoila = QtVoila()
 
-        qtvoila.max_voila_wait = config.Voila.MAX_VOILA_WAIT
+        qtvoila.max_voila_wait = config.Voila.MaxVoilaWait
         self.resolve_voila(qtvoila)
         for k in dfs:
             qtvoila.add_notebook_cell(dict(), f"#{k.df_name}",cell_type='markdown')

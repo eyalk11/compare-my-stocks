@@ -132,7 +132,7 @@ class DataGenerator(DataGeneratorInterface):
     def get_panel(self, unitetyp):
         unitetypeff = unitetyp
         if self.params.adjust_to_currency and self.params.currency_to_adjust:
-            if self.params.currency_to_adjust != config.Symbols.BASECUR:
+            if self.params.currency_to_adjust != config.Symbols.Basecur:
                 df = self.readjust_for_currency(self.params.currency_to_adjust)
             else:
                 df = self._eng.input_processor.adjusted_panel
@@ -365,8 +365,8 @@ class DataGenerator(DataGeneratorInterface):
         newdf = pandas.concat([newdf, t], axis=1)
         return self.fill_same_currency(ncurrency,newdf)
 
-    def serialize_me(self, filepath=config.File.SERIALIZEDFILE):
-        logging.debug((f'writing serialized file to {config.File.SERIALIZEDFILE}'))
+    def serialize_me(self, filepath=config.File.SerializedFile):
+        logging.debug((f'writing serialized file to {config.File.SerializedFile}'))
         with open(filepath, 'wb') as f:
             import pickle
             pickle.dump(self.serialized_data(), f)

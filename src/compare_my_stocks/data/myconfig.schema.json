@@ -10,7 +10,7 @@
         },
         "DefaultParamsConf": {
             "properties": {
-                "CACHEUSAGE": {
+                "CacheUsage": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/UseCache"
@@ -25,12 +25,12 @@
                 },
                 "DefaultGroups": {
                     "items": {},
-                    "title": "Defaultgroups",
+                    "title": "DefaultGroups",
                     "type": "array"
                 }
             },
             "required": [
-                "CACHEUSAGE",
+                "CacheUsage",
                 "EXT",
                 "DefaultGroups"
             ],
@@ -39,112 +39,112 @@
         },
         "EarningsConf": {
             "properties": {
-                "SKIP_EARNINGS": {
+                "SkipEarnings": {
                     "default": 1,
                     "title": "Skip Earnings",
                     "type": "integer"
                 },
-                "TRYSTORAGEFOREARNINGS": {
+                "TryStorageForEarnings": {
                     "default": 1,
-                    "title": "Trystorageforearnings",
+                    "title": "TryStorageForEarnings",
                     "type": "integer"
                 }
             },
             "required": [
-                "SKIP_EARNINGS",
-                "TRYSTORAGEFOREARNINGS"
+                "SkipEarnings",
+                "TryStorageForEarnings"
             ],
             "title": "EarningsConf",
             "type": "object"
         },
         "FileConf": {
             "properties": {
-                "HIST_F": {
-                    "default": "hist_file.cache",
+                "HistF": {
+                    "default": "HistFile.cache",
                     "title": "Hist F",
                     "type": "string"
                 },
-                "HIST_F_BACKUP": {
-                    "default": "hist_file.cache.back",
+                "HistF_BACKUP": {
+                    "default": "HistFile.cache.back",
                     "title": "Hist F Backup",
                     "type": "string"
                 },
-                "DEFAULTNOTEBOOK": {
-                    "default": "jupyter\\defaultnotebook.ipynb",
-                    "title": "Defaultnotebook",
+                "DefaultNotebook": {
+                    "default": "jupyter\\DefaultNotebook.ipynb",
+                    "title": "DefaultNotebook",
                     "type": "string"
                 },
-                "JSONFILENAME": {
+                "JsonFilename": {
                     "default": "groups.json",
-                    "title": "Jsonfilename",
+                    "title": "JsonFilename",
                     "type": "string"
                 },
-                "SERIALIZEDFILE": {
+                "SerializedFile": {
                     "default": "serialized.dat",
-                    "title": "Serializedfile",
+                    "title": "SerializedFile",
                     "type": "string"
                 },
-                "EARNINGSTORAGE": {
+                "EarningStorage": {
                     "default": "earnings.dat",
-                    "title": "Earningstorage",
+                    "title": "EarningStorage",
                     "type": "string"
                 },
-                "REVENUEFILE": {
+                "RevenueFile": {
                     "default": "NOEARNINGS",
-                    "title": "Revenuefile",
+                    "title": "RevenueFile",
                     "type": "string"
                 },
-                "INCOMEFILE": {
+                "IncomeFile": {
                     "default": "NOEARNINGS",
-                    "title": "Incomefile",
+                    "title": "IncomeFile",
                     "type": "string"
                 },
-                "COMMONSTOCK": {
+                "CommonStock": {
                     "default": "NOEARNINGS",
-                    "title": "Commonstock",
+                    "title": "CommonStock",
                     "type": "string"
                 },
-                "DATAFILEPTR": {
+                "DataFilePtr": {
                     "default": "DATA_FILE",
-                    "title": "Datafileptr",
+                    "title": "DataFilePtr",
                     "type": "string"
                 },
-                "GRAPHFN": {
+                "GraphFN": {
                     "default": "graphs.json",
-                    "title": "Graphfn",
+                    "title": "GraphFN",
                     "type": "string"
                 },
-                "EXPORTEDPORT": {
+                "ExportedPort": {
                     "default": "exported.csv",
-                    "title": "Exportedport",
+                    "title": "ExportedPort",
                     "type": "string"
                 },
-                "IBSRVREADY": {
+                "IbSrvReady": {
                     "default": "ibsrv_ready.txt",
-                    "title": "Ibsrvready",
+                    "title": "IbSrvReady",
                     "type": "string"
                 },
-                "FULLDATA": {
+                "FullData": {
                     "default": "fullinpdata.bin",
-                    "title": "Fulldata",
+                    "title": "FullData",
                     "type": "string"
                 }
             },
             "required": [
-                "HIST_F",
-                "HIST_F_BACKUP",
-                "DEFAULTNOTEBOOK",
-                "JSONFILENAME",
-                "SERIALIZEDFILE",
-                "EARNINGSTORAGE",
-                "REVENUEFILE",
-                "INCOMEFILE",
-                "COMMONSTOCK",
-                "DATAFILEPTR",
-                "GRAPHFN",
-                "EXPORTEDPORT",
-                "IBSRVREADY",
-                "FULLDATA"
+                "HistF",
+                "HistF_BACKUP",
+                "DefaultNotebook",
+                "JsonFilename",
+                "SerializedFile",
+                "EarningStorage",
+                "RevenueFile",
+                "IncomeFile",
+                "CommonStock",
+                "DataFilePtr",
+                "GraphFN",
+                "ExportedPort",
+                "IbSrvReady",
+                "FullData"
             ],
             "title": "FileConf",
             "type": "object"
@@ -176,12 +176,12 @@
                 },
                 "TryToQueryAnyway": {
                     "default": false,
-                    "title": "Trytoqueryanyway",
+                    "title": "TryToQueryAnyway",
                     "type": "boolean"
                 },
                 "DoQuery": {
                     "default": true,
-                    "title": "Doquery",
+                    "title": "DoQuery",
                     "type": "boolean"
                 },
                 "FlexToken": {
@@ -194,7 +194,7 @@
                         }
                     ],
                     "default": null,
-                    "title": "Flextoken"
+                    "title": "FlexToken"
                 },
                 "FlexQuery": {
                     "anyOf": [
@@ -206,12 +206,12 @@
                         }
                     ],
                     "default": null,
-                    "title": "Flexquery"
+                    "title": "FlexQuery"
                 },
                 "QueryIfOlderThan": {
                     "default": "P3D",
                     "format": "duration",
-                    "title": "Queryifolderthan",
+                    "title": "QueryIfOlderThan",
                     "type": "string"
                 }
             },
@@ -230,19 +230,19 @@
         },
         "IBSourceConf": {
             "properties": {
-                "HOSTIB": {
+                "HostIB": {
                     "default": "127.0.0.1",
-                    "title": "Hostib",
+                    "title": "HostIB",
                     "type": "string"
                 },
-                "PORTIB": {
+                "PortIB": {
                     "default": 7596,
-                    "title": "Portib",
+                    "title": "PortIB",
                     "type": "integer"
                 },
-                "IBSRVPORT": {
+                "IBSrvPort": {
                     "default": 9091,
-                    "title": "Ibsrvport",
+                    "title": "IBSrvPort",
                     "type": "integer"
                 },
                 "AddProcess": {
@@ -261,12 +261,12 @@
                     "default": "ibsrv.exe",
                     "title": "AddProcess"
                 },
-                "MaxIbConnectionRetries": {
+                "MaxIBConnectionRetries": {
                     "default": 3,
-                    "title": "MaxIbConnectionRetries",
+                    "title": "MaxIBConnectionRetries",
                     "type": "integer"
                 },
-                "REGULAR_ACCOUNT": {
+                "RegularAccount": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -278,7 +278,7 @@
                     "default": null,
                     "title": "Regular Account"
                 },
-                "REGULAR_USERNAME": {
+                "RegularUsername": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -290,50 +290,50 @@
                     "default": null,
                     "title": "Regular Username"
                 },
-                "USE_PYTHON_IF_NOT_RESOLVE": {
+                "UsePythonIfNotResolve": {
                     "default": true,
                     "title": "Use Python If Not Resolve",
                     "type": "boolean"
                 }
             },
             "required": [
-                "HOSTIB",
-                "PORTIB",
-                "IBSRVPORT",
+                "HostIB",
+                "PortIB",
+                "IBSrvPort",
                 "AddProcess",
-                "MaxIbConnectionRetries",
-                "REGULAR_ACCOUNT",
-                "REGULAR_USERNAME",
-                "USE_PYTHON_IF_NOT_RESOLVE"
+                "MaxIBConnectionRetries",
+                "RegularAccount",
+                "RegularUsername",
+                "UsePythonIfNotResolve"
             ],
             "title": "IBSourceConf",
             "type": "object"
         },
         "InputConf": {
             "properties": {
-                "PRICES_ARE_ADJUSTED_TO_TODAY": {
+                "PricesAreAdjustedToToday": {
                     "default": true,
                     "title": "Prices Are Adjusted To Today",
                     "type": "boolean"
                 },
                 "AdjustUnrelProfitToReflectSplits": {
                     "default": true,
-                    "title": "Adjustunrelprofittoreflectsplits",
+                    "title": "AdjustUnrelProfitToReflectSplits",
                     "type": "boolean"
                 },
-                "MAXCACHETIMESPAN": {
+                "MaxCacheTimeSpan": {
                     "default": "P20D",
                     "format": "duration",
-                    "title": "Maxcachetimespan",
+                    "title": "MaxCacheTimeSpan",
                     "type": "string"
                 },
-                "MAXFULLCACHETIMESPAN": {
+                "MaxFullCacheTimeSpan": {
                     "default": "P1D",
                     "format": "duration",
-                    "title": "Maxfullcachetimespan",
+                    "title": "MaxFullCacheTimeSpan",
                     "type": "string"
                 },
-                "FULLCACHEUSAGE": {
+                "FullCacheUsage": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/UseCache"
@@ -343,10 +343,10 @@
                 },
                 "AlwaysStoreFullCache": {
                     "default": false,
-                    "title": "Alwaysstorefullcache",
+                    "title": "AlwaysStoreFullCache",
                     "type": "boolean"
                 },
-                "INPUTSOURCE": {
+                "InputSource": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/InputSourceType"
@@ -354,33 +354,33 @@
                     ],
                     "default": 1
                 },
-                "IGNORE_ADJUST": {
+                "IgnoreAdjust": {
                     "default": 1,
                     "title": "Ignore Adjust",
                     "type": "integer"
                 },
-                "DOWNLOADDATAFORPROT": {
+                "DownloadDataForProt": {
                     "default": true,
-                    "title": "Downloaddataforprot",
+                    "title": "DownloadDataForProt",
                     "type": "boolean"
                 },
-                "DEFAULTFROMDATE": {
+                "DefaultFromDate": {
                     "default": "2020-01-01T00:00:00Z",
                     "format": "date-time",
-                    "title": "Defaultfromdate",
+                    "title": "DefaultFromDate",
                     "type": "string"
                 },
                 "TZINFO": {
                     "default": null,
                     "title": "Tzinfo"
                 },
-                "MAX_RELEVANT_CURRENCY_TIME": {
+                "MaxRelevantCurrencyTime": {
                     "default": "PT3600S",
                     "format": "duration",
                     "title": "Max Relevant Currency Time",
                     "type": "string"
                 },
-                "MAX_RELEVANT_CURRENCY_TIME_HUER": {
+                "MaxRelevantCurrencyTime_HUER": {
                     "default": "P5D",
                     "format": "duration",
                     "title": "Max Relevant Currency Time Huer",
@@ -388,19 +388,19 @@
                 }
             },
             "required": [
-                "PRICES_ARE_ADJUSTED_TO_TODAY",
+                "PricesAreAdjustedToToday",
                 "AdjustUnrelProfitToReflectSplits",
-                "MAXCACHETIMESPAN",
-                "MAXFULLCACHETIMESPAN",
-                "FULLCACHEUSAGE",
+                "MaxCacheTimeSpan",
+                "MaxFullCacheTimeSpan",
+                "FullCacheUsage",
                 "AlwaysStoreFullCache",
-                "INPUTSOURCE",
-                "IGNORE_ADJUST",
-                "DOWNLOADDATAFORPROT",
-                "DEFAULTFROMDATE",
+                "InputSource",
+                "IgnoreAdjust",
+                "DownloadDataForProt",
+                "DefaultFromDate",
                 "TZINFO",
-                "MAX_RELEVANT_CURRENCY_TIME",
-                "MAX_RELEVANT_CURRENCY_TIME_HUER"
+                "MaxRelevantCurrencyTime",
+                "MaxRelevantCurrencyTime_HUER"
             ],
             "title": "InputConf",
             "type": "object"
@@ -416,32 +416,32 @@
         },
         "JupyterConf": {
             "properties": {
-                "MEMO_FOLDER": {
+                "MemoFolder": {
                     "default": ".\\memory",
                     "title": "Memo Folder",
                     "type": "string"
                 },
-                "RAPID_YFINANACE_KEY": {
+                "RapidYFinanaceKey": {
                     "default": "",
                     "title": "Rapid Yfinanace Key",
                     "type": "string"
                 },
-                "RAPID_YFINANACE_HOST": {
+                "RapidYFinanaceHost": {
                     "default": "yfinance-stock-market-data.p.rapidapi.com",
                     "title": "Rapid Yfinanace Host",
                     "type": "string"
                 },
-                "EXPRIES": {
+                "Expries": {
                     "default": 24,
                     "title": "Expries",
                     "type": "integer"
                 }
             },
             "required": [
-                "MEMO_FOLDER",
-                "RAPID_YFINANACE_KEY",
-                "RAPID_YFINANACE_HOST",
-                "EXPRIES"
+                "MemoFolder",
+                "RapidYFinanaceKey",
+                "RapidYFinanaceHost",
+                "Expries"
             ],
             "title": "JupyterConf",
             "type": "object"
@@ -455,12 +455,12 @@
                 },
                 "SrcFile": {
                     "default": "example_mystock.csv",
-                    "title": "Srcfile",
+                    "title": "SrcFile",
                     "type": "string"
                 },
                 "PortofolioName": {
                     "default": "My Portfolio",
-                    "title": "Portofolioname",
+                    "title": "PortofolioName",
                     "type": "string"
                 },
                 "Use": {
@@ -508,7 +508,7 @@
         },
         "RapidKeyConf": {
             "properties": {
-                "X_RapidAPI_Host": {
+                "XRapidApiHost": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -520,7 +520,7 @@
                     "default": null,
                     "title": "X Rapidapi Host"
                 },
-                "X_RapidAPI_Key": {
+                "XRapidApiKey": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -534,25 +534,25 @@
                 }
             },
             "required": [
-                "X_RapidAPI_Host",
-                "X_RapidAPI_Key"
+                "XRapidApiHost",
+                "XRapidApiKey"
             ],
             "title": "RapidKeyConf",
             "type": "object"
         },
         "RunningConf": {
             "properties": {
-                "IS_TEST": {
+                "IsTest": {
                     "default": false,
                     "title": "Is Test",
                     "type": "boolean"
                 },
-                "STOP_EXCEPTION_IN_DEBUG": {
+                "StopExceptionInDebug": {
                     "default": true,
                     "title": "Stop Exception In Debug",
                     "type": "boolean"
                 },
-                "VERIFY_SAVING": {
+                "VerifySaving": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/VerifySave"
@@ -565,12 +565,12 @@
                     "title": "Debug",
                     "type": "integer"
                 },
-                "START_IBSRV_IN_CONSOLE": {
+                "StartIbsrvInConsole": {
                     "default": false,
                     "title": "Start Ibsrv In Console",
                     "type": "boolean"
                 },
-                "CHECKRELOADINTERVAL": {
+                "CheckReloadInterval": {
                     "anyOf": [
                         {
                             "type": "integer"
@@ -580,16 +580,16 @@
                         }
                     ],
                     "default": 30,
-                    "title": "Checkreloadinterval"
+                    "title": "CheckReloadInterval"
                 },
-                "LASTGRAPHNAME": {
+                "LastGraphName": {
                     "default": "Last",
-                    "title": "Lastgraphname",
+                    "title": "LastGraphName",
                     "type": "string"
                 },
-                "LOADLASTATBEGIN": {
+                "LoadLastAtBegin": {
                     "default": true,
-                    "title": "Loadlastatbegin",
+                    "title": "LoadLastAtBegin",
                     "type": "boolean"
                 },
                 "IB_LOGFILE": {
@@ -628,7 +628,7 @@
                     "default": "error.log",
                     "title": "Logerrorfile"
                 },
-                "USE_ALTERANTIVE_LOCATION": {
+                "UseAlterantiveLocation": {
                     "anyOf": [
                         {
                             "type": "boolean"
@@ -640,7 +640,7 @@
                     "default": null,
                     "title": "Use Alterantive Location"
                 },
-                "TWS_PROCESS_NAME": {
+                "TwsProcessName": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -652,12 +652,12 @@
                     "default": "tws.exe",
                     "title": "Tws Process Name"
                 },
-                "SLEEP_FOR_IBSRV_TO_START": {
+                "SleepForIbsrvToStart": {
                     "default": 5,
                     "title": "Sleep For Ibsrv To Start",
                     "type": "integer"
                 },
-                "IB_LOGERRORFILE": {
+                "IbLogerrorfile": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -669,7 +669,7 @@
                     "default": "ibsrv_error.log",
                     "title": "Ib Logerrorfile"
                 },
-                "DISPLAY_CONSOLE": {
+                "DisplayConsole": {
                     "default": false,
                     "title": "Display Console",
                     "type": "boolean"
@@ -679,31 +679,31 @@
                     "title": "Title",
                     "type": "string"
                 },
-                "TRY_TO_SCALE_DISPLAY": {
+                "TryToScaleDisplay": {
                     "default": true,
                     "title": "Try To Scale Display",
                     "type": "boolean"
                 }
             },
             "required": [
-                "IS_TEST",
-                "STOP_EXCEPTION_IN_DEBUG",
-                "VERIFY_SAVING",
+                "IsTest",
+                "StopExceptionInDebug",
+                "VerifySaving",
                 "DEBUG",
-                "START_IBSRV_IN_CONSOLE",
-                "CHECKRELOADINTERVAL",
-                "LASTGRAPHNAME",
-                "LOADLASTATBEGIN",
+                "StartIbsrvInConsole",
+                "CheckReloadInterval",
+                "LastGraphName",
+                "LoadLastAtBegin",
                 "IB_LOGFILE",
                 "LOGFILE",
                 "LOGERRORFILE",
-                "USE_ALTERANTIVE_LOCATION",
-                "TWS_PROCESS_NAME",
-                "SLEEP_FOR_IBSRV_TO_START",
-                "IB_LOGERRORFILE",
-                "DISPLAY_CONSOLE",
+                "UseAlterantiveLocation",
+                "TwsProcessName",
+                "SleepForIbsrvToStart",
+                "IbLogerrorfile",
+                "DisplayConsole",
                 "TITLE",
-                "TRY_TO_SCALE_DISPLAY"
+                "TryToScaleDisplay"
             ],
             "title": "RunningConf",
             "type": "object"
@@ -769,29 +769,29 @@
         },
         "SymbolsConf": {
             "properties": {
-                "VALIDEXCHANGES": {
+                "ValidExchanges": {
                     "items": {},
-                    "title": "Validexchanges",
+                    "title": "ValidExchanges",
                     "type": "array"
                 },
-                "TRANSLATE_EXCHANGES": {
+                "TranslateExchanges": {
                     "title": "Translate Exchanges",
                     "type": "object"
                 },
-                "EXCHANGE_CURRENCY": {
+                "ExchangeCurrency": {
                     "title": "Exchange Currency",
                     "type": "object"
                 },
-                "STOCK_CURRENCY": {
+                "StockCurrency": {
                     "title": "Stock Currency",
                     "type": "object"
                 },
-                "IGNORED_SYMBOLS": {
+                "IgnoredSymbols": {
                     "items": {},
                     "title": "Ignored Symbols",
                     "type": "array"
                 },
-                "TRANSLATEDIC": {
+                "Translatedic": {
                     "title": "Translatedic",
                     "type": "object"
                 },
@@ -801,48 +801,48 @@
                     "type": "array",
                     "uniqueItems": true
                 },
-                "EXCHANGES": {
+                "Exchanges": {
                     "items": {},
                     "title": "Exchanges",
                     "type": "array"
                 },
-                "DEFAULTCURR": {
+                "DefaultCurr": {
                     "items": {},
-                    "title": "Defaultcurr",
+                    "title": "DefaultCurr",
                     "type": "array"
                 },
-                "BASECUR": {
+                "Basecur": {
                     "default": "USD",
                     "title": "Basecur",
                     "type": "string"
                 },
-                "REPLACE_SYM_IN_INPUT": {
+                "ReplaceSymInInput": {
                     "title": "Replace Sym In Input",
                     "type": "object"
                 },
-                "TRANSLATE_CURRENCY": {
+                "TranslateCurrency": {
                     "title": "Translate Currency",
                     "type": "object"
                 },
-                "CURRENCY_FACTOR": {
+                "CurrencyFactor": {
                     "title": "Currency Factor",
                     "type": "object"
                 }
             },
             "required": [
-                "VALIDEXCHANGES",
-                "TRANSLATE_EXCHANGES",
-                "EXCHANGE_CURRENCY",
-                "STOCK_CURRENCY",
-                "IGNORED_SYMBOLS",
-                "TRANSLATEDIC",
+                "ValidExchanges",
+                "TranslateExchanges",
+                "ExchangeCurrency",
+                "StockCurrency",
+                "IgnoredSymbols",
+                "Translatedic",
                 "CRYPTO",
-                "EXCHANGES",
-                "DEFAULTCURR",
-                "BASECUR",
-                "REPLACE_SYM_IN_INPUT",
-                "TRANSLATE_CURRENCY",
-                "CURRENCY_FACTOR"
+                "Exchanges",
+                "DefaultCurr",
+                "Basecur",
+                "ReplaceSymInInput",
+                "TranslateCurrency",
+                "CurrencyFactor"
             ],
             "title": "SymbolsConf",
             "type": "object"
@@ -879,7 +879,7 @@
                     "title": "JustFromTheEndOfMyStock",
                     "type": "boolean"
                 },
-                "TRANSACTIONSOURCE": {
+                "TransactionSource": {
                     "allOf": [
                         {
                             "$ref": "#/$defs/TransactionSourceType"
@@ -896,7 +896,7 @@
                         "type": "array",
                         "uniqueItems": true
                     },
-                    "title": "Trackstockdict",
+                    "title": "TrackStockDict",
                     "type": "object"
                 },
                 "ReadjustJustIB": {
@@ -911,12 +911,12 @@
                 },
                 "DontReadjust": {
                     "items": {},
-                    "title": "Dontreadjust",
+                    "title": "DontReadjust",
                     "type": "array"
                 },
                 "SaveCaches": {
                     "default": true,
-                    "title": "Savecaches",
+                    "title": "SaveCaches",
                     "type": "boolean"
                 },
                 "StockPrices": {
@@ -960,7 +960,7 @@
                     "title": "BothSymbols",
                     "type": "array"
                 },
-                "SUPRESS_COMMON": {
+                "SupressCommon": {
                     "default": false,
                     "title": "Supress Common",
                     "type": "boolean"
@@ -978,7 +978,7 @@
             },
             "required": [
                 "JustFromTheEndOfMyStock",
-                "TRANSACTIONSOURCE",
+                "TransactionSource",
                 "TrackStockDict",
                 "ReadjustJustIB",
                 "DontAdjustSplitsMyStock",
@@ -993,7 +993,7 @@
                 "MaxPercDiffIbStockWarn",
                 "FixBuySellDiffDays",
                 "BothSymbols",
-                "SUPRESS_COMMON",
+                "SupressCommon",
                 "CombineDateDiff",
                 "CombineAmountPerc"
             ],
@@ -1012,31 +1012,31 @@
         },
         "UIConf": {
             "properties": {
-                "ADDITIONALOPTIONS": {
-                    "title": "Additionaloptions",
+                "AdditionalOptions": {
+                    "title": "AdditionalOptions",
                     "type": "object"
                 },
-                "USEWX": {
+                "UseWX": {
                     "default": 0,
-                    "title": "Usewx",
+                    "title": "UseWX",
                     "type": "integer"
                 },
-                "USEWEB": {
+                "UseWEB": {
                     "default": 0,
-                    "title": "Useweb",
+                    "title": "UseWEB",
                     "type": "integer"
                 },
-                "USEQT": {
+                "UseQT": {
                     "default": 1,
-                    "title": "Useqt",
+                    "title": "UseQT",
                     "type": "integer"
                 },
-                "MINCOLFORCOLUMS": {
+                "MinColForColums": {
                     "default": 20,
-                    "title": "Mincolforcolums",
+                    "title": "MinColForColums",
                     "type": "integer"
                 },
-                "DEF_FIG_SIZE": {
+                "DefFigSize": {
                     "default": [
                         6.6,
                         3.0
@@ -1050,27 +1050,27 @@
                     "title": "SimpleMode",
                     "type": "integer"
                 },
-                "CIRCLE_SIZE_PERCENTAGE": {
+                "CircleSizePercentage": {
                     "default": 0.05,
                     "title": "Circle Size Percentage",
                     "type": "number"
                 },
-                "CIRCLE_SIZE": {
+                "CircleSize": {
                     "default": 360,
                     "title": "Circle Size",
                     "type": "integer"
                 }
             },
             "required": [
-                "ADDITIONALOPTIONS",
-                "USEWX",
-                "USEWEB",
-                "USEQT",
-                "MINCOLFORCOLUMS",
-                "DEF_FIG_SIZE",
+                "AdditionalOptions",
+                "UseWX",
+                "UseWEB",
+                "UseQT",
+                "MinColForColums",
+                "DefFigSize",
                 "SimpleMode",
-                "CIRCLE_SIZE_PERCENTAGE",
-                "CIRCLE_SIZE"
+                "CircleSizePercentage",
+                "CircleSize"
             ],
             "title": "UIConf",
             "type": "object"
@@ -1095,12 +1095,12 @@
         },
         "VoilaConf": {
             "properties": {
-                "DONT_RUN_NOTEBOOK": {
+                "DontRunNotebook": {
                     "default": false,
                     "title": "Dont Run Notebook",
                     "type": "boolean"
                 },
-                "VOILA_PYTHON_PROCESS_PATH": {
+                "VoilaPythonProcessPath": {
                     "anyOf": [
                         {
                             "type": "string"
@@ -1112,22 +1112,22 @@
                     "default": null,
                     "title": "Voila Python Process Path"
                 },
-                "AUTO_RESOVLE_VOILA_PYTHON": {
+                "AutoResovleVoilaPython": {
                     "default": true,
                     "title": "Auto Resovle Voila Python",
                     "type": "boolean"
                 },
-                "MAX_VOILA_WAIT": {
+                "MaxVoilaWait": {
                     "default": 9,
                     "title": "Max Voila Wait",
                     "type": "integer"
                 }
             },
             "required": [
-                "DONT_RUN_NOTEBOOK",
-                "VOILA_PYTHON_PROCESS_PATH",
-                "AUTO_RESOVLE_VOILA_PYTHON",
-                "MAX_VOILA_WAIT"
+                "DontRunNotebook",
+                "VoilaPythonProcessPath",
+                "AutoResovleVoilaPython",
+                "MaxVoilaWait"
             ],
             "title": "VoilaConf",
             "type": "object"
@@ -1170,7 +1170,7 @@
         "StockPricesHeaders": {
             "$ref": "#/$defs/RapidKeyConf"
         },
-        "SEEKINGALPHAHeaders": {
+        "SeekingAlphaHeaders": {
             "$ref": "#/$defs/RapidKeyConf"
         },
         "Jupyter": {
@@ -1190,7 +1190,7 @@
         "Sources",
         "TransactionHandlers",
         "StockPricesHeaders",
-        "SEEKINGALPHAHeaders",
+        "SeekingAlphaHeaders",
         "Jupyter"
     ],
     "title": "Config",

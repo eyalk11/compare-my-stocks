@@ -27,13 +27,7 @@ from ib import timeoutreg #register timeout error. don't remove!
 WRONG_EXCHANGE = 200
 from ib.remoteprocess import RemoteProcess
 
-def get_ib_source() :
-    #ibsource = IBSource()
-    proxy= True if config.Sources.IBSource.AddProcess else False
-    if proxy:
-        RemoteProcess().wait_for_read()
-    ibsource= IBSource(proxy=proxy)
-    return ibsource
+
 
 #class MyIBSourceProxy(Pyro5.api.Proxy):
 
@@ -48,7 +42,7 @@ def make_sure_connected(func):
     return wrapper
 class IBSourceRemGenerator:
     @Pyro5.server.expose
-    def generate(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True):
+    def generate(self,host=config.Sources.IBSource.HostIB,port=config.Sources.IBSource.PortIB,clientId=None,readonly=True):
 
         ibrem= IBSourceRem(host,port,clientId,readonly)
         self._pyroDaemon.register(ibrem)
@@ -60,7 +54,7 @@ class IBSourceRem:
     #     if self.IB:
     #         self.on_disconnect()
     Retries=0
-    def __init__(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True):
+    def __init__(self,host=config.Sources.IBSource.HostIB,port=config.Sources.IBSource.PortIB,clientId=None,readonly=True):
         if clientId is None:
             clientId=random.randrange(1, 900)
         self._connected = False
@@ -73,7 +67,7 @@ class IBSourceRem:
     @classmethod
     def on_disconnect(cls):
         logging.debug(('disconnected'))
-        if cls.Retries>config.Sources.IBSource.MaxIbConnectionRetries:
+        if cls.Retries>config.Sources.IBSource.MaxIBConnectionRetries:
             logging.error("too many retries")
             return
         IBSourceRem.ConnectedME: IBSourceRem
@@ -106,7 +100,7 @@ class IBSourceRem:
 
         logging.debug(('init'))
 
-        #util.useQt('PySide6')
+        #util.UseQT('PySide6')
         util.logToConsole('DEBUG')
         try:
             asyncio.get_event_loop()
@@ -209,9 +203,9 @@ class IBSourceRem:
             #dic = c.contract.__dict__
             dic=asdict(c.contract)
             #if not c.contract:
-            #     c.contract.exchange= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(c.contract.primaryExchange, c.contract.primaryExchange)
+            #     c.contract.exchange= config.Symbols.TRANSLATE_Symbols.Exchanges.get(c.contract.primaryExchange, c.contract.primaryExchange)
             dic['derivativeSecTypes'] = c.derivativeSecTypes
-            #dic['exchange']= config.Symbols.TRANSLATE_Symbols.EXCHANGES.get(c.contract.primaryExchange,c.contract.primaryExchange)
+            #dic['exchange']= config.Symbols.TRANSLATE_Symbols.Exchanges.get(c.contract.primaryExchange,c.contract.primaryExchange)
             dic['contractdic']=asdict(c.contract)
             if c.contract.secType in ['BOND',"FUT","CMDTY","WAR"]:
                 continue
@@ -224,10 +218,10 @@ class IBSourceRem:
     @Pyro5.server.expose
     @make_sure_connected
     def get_contract_details_ext(self, contractdic):
-        INC=["category","subcategory", "longName","validExchanges","marketName","stockType", "lastTradeTime"]
+        INC=["category","subcategory", "longName","validexchanges","marketName","stockType", "lastTradeTime"]
         c=Contract(**contractdic)
         for x in  self.ib.reqContractDetails(c):
-            logging.debug((log_conv(asdict(x),x.validExchanges)))
+            logging.debug((log_conv(asdict(x),x.validexchanges)))
             yield dictfilt(asdict(x),INC)
 
 
@@ -241,10 +235,10 @@ class IBSourceRem:
                 yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
 
 class IBSource(InputSource):
-    def __init__(self,host=config.Sources.IBSource.HOSTIB,port=config.Sources.IBSource.PORTIB,clientId=None,readonly=True,proxy=True):
+    def __init__(self,host=config.Sources.IBSource.HostIB,port=config.Sources.IBSource.PortIB,clientId=None,readonly=True,proxy=True):
         super().__init__()
         if proxy:
-            self._ibremgenerator=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.Sources.IBSource.IBSRVPORT )
+            self._ibremgenerator=Pyro5.api.Proxy('PYRO:aaa@localhost:%s' % config.Sources.IBSource.IBSrvPort )
             self._ibremgenerator._pyroTimeout = 20
 
             self.ibrem=self._ibremgenerator.generate( host, port, clientId, readonly)
@@ -299,7 +293,7 @@ class IBSource(InputSource):
                     logging.debug((f'no detailed description {sym}'))
                     continue
                 x.update(det[0])
-                #x['exchange']=x['validExchanges']
+                #x['exchange']=x['ValidExchanges']
                 #x['contract'].exchange=x['exchange']
                 x.pop('contractdic')
         return contracts
@@ -356,7 +350,7 @@ class IBSource(InputSource):
             cont = asdict(contract) if type(contract) is not dict else contract
             if not cont['exchange']:
                 logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
-                cont['exchange']= config.Symbols.TRANSLATE_EXCHANGES.get(cont['primaryExchange'], cont['primaryExchange'])
+                cont['exchange']= config.Symbols.TranslateExchanges.get(cont['primaryExchange'], cont['primaryExchange'])
 
             try:
                 bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
@@ -384,7 +378,7 @@ class IBSource(InputSource):
         if type(sym)==dict and "_dic" in sym:
             sym=sym['_dic'] #why?
 
-        return type(sym)==dict and 'validExchanges' in sym
+        return type(sym)==dict and 'validexchanges' in sym
 
 
     def query_symbol(self, sym):
@@ -445,3 +439,10 @@ class IBSource(InputSource):
   #       logging.debug(('joined'))
   #       logging.debug((return_dict['x']))
   #       #return ls
+def get_ibsource() :
+    #IBSource = IBSource()
+    proxy= True if config.Sources.IBSource.AddProcess else False
+    if proxy:
+        RemoteProcess().wait_for_read()
+    ibsource= IBSource(proxy=proxy)
+    return ibsource

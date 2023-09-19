@@ -90,9 +90,9 @@ class EarningProcessor(SeekingAlphaApi):
         #super().__init__()
     @staticmethod
     def generate_or_make():
-        if  config.Earnings.SKIP_EARNINGS:
+        if  config.Earnings.SkipEarnings:
             return None
-        if not config.Earnings.TRYSTORAGEFOREARNINGS:
+        if not config.Earnings.TryStorageForEarnings:
             s = EarningProcessor()
         # SeekingAlpha.get_earnings_hist()
         else:
@@ -104,10 +104,10 @@ class EarningProcessor(SeekingAlphaApi):
 
     @staticmethod
     def fromstorage():
-        return pickle.load(open(config.File.EARNINGSTORAGE,'rb'))
+        return pickle.load(open(config.File.EarningStorage,'rb'))
 
     def save(self):
-        pickle.dump(self,open(config.File.EARNINGSTORAGE,'wb'))
+        pickle.dump(self,open(config.File.EarningStorage,'wb'))
 
     def get_earnings(self,tickers,periods=range(-23,3)):
         def appenddf(org,other):

@@ -6,7 +6,7 @@ from common.common import NoDataException, MySignal, Types, UniteType, InputSour
 from common.simpleexceptioncontext import simple_exception_handling
 from engine.compareengineinterface import CompareEngineInterface
 from engine.symbolshandler import SymbolsHandler
-from input.ibsource import get_ib_source
+from input.ibsource import get_ibsource
 from input.inputsource import InputSourceInterface
 from input.investpysource import InvestPySource
 from input.polygon import get_polysource
@@ -26,13 +26,13 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
 
     @simple_exception_handling(err_description='Input source initialization failed. ',never_throw=True)
-    def get_input_source(self,input_type  : InputSourceType = None):
+    def get_InputSource(self,input_type  : InputSourceType = None):
         if input_type is None:
-            input_type =config.Input.INPUTSOURCE
+            input_type =config.Input.InputSource
             if input_type is None:
                 return None
             if input_type == InputSourceType.IB:
-                return get_ib_source()  # IBSource()
+                return get_ibsource()  # IBSource()
             elif input_type == InputSourceType.InvestPy:
                 return InvestPySource()
             elif input_type == InputSourceType.Polygon:
@@ -43,10 +43,10 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
     def __init__(self, axes=None):
         SymbolsHandler.__init__(self)
-        input_source=  self.get_input_source()
+        InputSource=  self.get_InputSource()
 
         self._tr = TransactionHandlerManager(None)
-        self._inp : InputProcessor= InputProcessor(self, self._tr,input_source)
+        self._inp : InputProcessor= InputProcessor(self, self._tr,InputSource)
         self._tr._inp = self._inp  # double redirection.
 
         self._datagen: DataGenerator = DataGenerator(self)
@@ -98,7 +98,7 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             reprocess=1 # process all...
         elif self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
             symbols_needed = set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols - set(
-                config.Symbols.IGNORED_SYMBOLS) #TODO::make bad symbols property
+                config.Symbols.IgnoredSymbols) #TODO::make bad symbols property
 
             if len(symbols_needed) > 0:
                 reprocess = 1
@@ -267,8 +267,8 @@ class CompareEngine(InternalCompareEngine):
         self._datagen.used_unitetype = value
 
     @property
-    def inputsource(self) -> InputSourceInterface:
-        return self._inp.inputsource
+    def InputSource(self) -> InputSourceInterface:
+        return self._inp.InputSource
 
     @property
     def usable_symbols(self):

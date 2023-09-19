@@ -14,7 +14,7 @@ class JupyterCommonHandler:
                                                              'python3.exe']) or config.Voila.VOILA_PYTHON_PROCESS_PATH is not None:
             return True
 
-        if config.Voila.AUTO_RESOVLE_VOILA_PYTHON:
+        if config.Voila.AutoResovleVoilaPython:
             import shutil
             widg.python_process_path=shutil.which('python.exe')
             if widg.python_process_path!= None:

@@ -70,7 +70,7 @@ full_no_ib = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python'
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 [mypy]
-mypy_path = "src/compare_my_stocks"
+mypy_path = "src\\compare_my_stocks"
 [tool.pyright]
 pythonVersion= "3.9.6"
-
+ignore = ["./venv"]
