@@ -71,7 +71,7 @@ class TransactionHandlersConf:
 
     '''
     JustFromTheEndOfMyStock : bool = False
-    TRANSACTIONSOURCE:  TransactionSourceType = TransactionSourceType.Both
+    TransactionSource:  TransactionSourceType = TransactionSourceType.Both
     TrackStockDict : Dict[str,Set[datetime.datetime]] = field(default_factory=dict)
 
     ReadjustJustIB : bool = False
@@ -79,7 +79,7 @@ class TransactionHandlersConf:
     DontReadjust : list = field(default_factory=list)
     SaveCaches: bool = True
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
-    IB: IBConf = field(default_factory=IBConf)
+    Ib: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
     IgnoreConf: Dict = field(default_factory=lambda: {})
     CombineStrategy: CombineStrategy = CombineStrategy.PREFERSTOCKS
@@ -87,15 +87,15 @@ class TransactionHandlersConf:
     MaxPercDiffIbStockWarn: float = 0.2 #ignored currently
     FixBuySellDiffDays: int = 3
     BothSymbols: List = field(default_factory=lambda: [])
-    Supress_common : bool = False
+    SupressCommon : bool = False
     CombineDateDiff : int = 20
     CombineAmountPerc : int  = 10
 
 
 @dataclass
 class RapidKeyConf:
-    X_RapidAPI_Host: Optional[str] = None
-    X_RapidAPI_Key: Optional[str] = None
+    XRapidapiHost: Optional[str] = None
+    XRapidapiKey: Optional[str] = None
 
 @paramaware
 @dataclass
@@ -105,22 +105,22 @@ class IBSourceConf:
     IbSrvPort: int = 9091
     AddProcess: Optional[Union[str, List]] = 'ibsrv.exe'
     MaxIbConnectionRetries: int = 3
-    Regular_account: Optional[str] = None
-    Regular_username: Optional[str] =None
-    USE_PYTHON_IF_NOT_RESOLVE: bool = True
+    RegularAccount: Optional[str] = None
+    RegularUsername: Optional[str] =None
+    UsePythonIfNotResolve: bool = True
 @paramaware
 @dataclass
 class UIConf:
     AdditionalOptions: dict = field(default_factory=lambda: {})
 
-    USEWX: int = 0
-    USEWEB: int = 0
-    USEQT: int = 1
-    MINCOLFORCOLUMS: int = 20
-    DEF_FIG_SIZE: tuple = (13.2 * 0.5, 6 * 0.5)
+    Usewx: int = 0
+    Useweb: int = 0
+    Useqt: int = 1
+    Mincolforcolums: int = 20
+    DefFigSize: tuple = (13.2 * 0.5, 6 * 0.5)
     SimpleMode: int = 0
-    CIRCLE_SIZE_PERCENTAGE: float = 0.05
-    CIRCLE_SIZE :int = 5*72
+    CircleSizePercentage: float = 0.05
+    CircleSize :int = 5*72
 
 @paramaware
 @dataclass
@@ -131,107 +131,107 @@ class TestingConf:
 @paramaware
 @dataclass
 class RunningConf:
-    IS_TEST: bool = False
-    STOP_EXCEPTION_IN_DEBUG: bool = True
-    VERIFY_SAVING: VerifySave = VerifySave.Ask
-    DEBUG: int = 1
-    START_IBSRV_IN_CONSOLE : bool =False
-    CHECKRELOADINTERVAL: Optional[int] = 30 #reload modules
-    LASTGRAPHNAME: str = "Last"
-    LOADLASTATBEGIN: bool = True
-    IB_LOGFILE: Optional[str] = "iblog.txt"
-    LOGFILE: Optional[str] = "log.txt"
-    LOGERRORFILE: Optional[str] = "error.log"
-    USE_ALTERANTIVE_LOCATION: Optional[bool] = None #to load data from original location
-    TWS_PROCESS_NAME : Optional[str] = "tws.exe"
-    SLEEP_FOR_IBSRV_TO_START: int = 5
-    IB_LOGERRORFILE: Optional[str] = "ibsrv_error.log"
-    DISPLAY_CONSOLE : bool =False
-    TITLE: str = "Compare My Stocks"
-    TRY_TO_SCALE_DISPLAY : bool = True
+    IsTest: bool = False
+    StopExceptionInDebug: bool = True
+    VerifySaving: VerifySave = VerifySave.Ask
+    Debug: int = 1
+    StartIbsrvInConsole : bool =False
+    Checkreloadinterval: Optional[int] = 30 #reload modules
+    LastGraphName: str = "Last"
+    LoadLastAtBegin: bool = True
+    IbLogfile: Optional[str] = "iblog.txt"
+    Logfile: Optional[str] = "log.txt"
+    LogErrorFile: Optional[str] = "error.log"
+    UseAlterantiveLocation: Optional[bool] = None #to load data from original location
+    TwsProcessName : Optional[str] = "tws.exe"
+    SleepForIbsrvToStart: int = 5
+    IbLogerrorfile: Optional[str] = "ibsrv_error.log"
+    DisplayConsole : bool =False
+    Title: str = "Compare My Stocks"
+    TryToScaleDisplay : bool = True
 @paramaware
 @dataclass
 class EarningsConf:
-    SKIP_EARNINGS: int = 1
-    TRYSTORAGEFOREARNINGS: int = 1
+    SkipEarnings: int = 1
+    Trystorageforearnings: int = 1
 @paramaware
 @dataclass
 class DefaultParamsConf:
-    CACHEUSAGE: UseCache = UseCache.FORCEUSE
-    EXT: list = field(default_factory=list)
+    CacheUsage: UseCache = UseCache.FORCEUSE
+    Ext: list = field(default_factory=list)
     DefaultGroups: list = field(default_factory=list)
 
 
 @paramaware
 @dataclass
 class SymbolsConf:
-    VALIDEXCHANGES: list = field(default_factory=list)
-    TRANSLATE_EXCHANGES: dict = field(default_factory=dict)
-    EXCHANGE_CURRENCY: dict = field(default_factory=dict)
-    STOCK_CURRENCY: dict = field(default_factory=dict)
-    IGNORED_SYMBOLS: list = field(default_factory=list)
-    TRANSLATEDIC: dict = field(default_factory=dict)
-    CRYPTO: set = field(default_factory=set)
-    EXCHANGES: list = field(default_factory=list)
-    DEFAULTCURR: list = field(default_factory=list) #currency list
-    BASECUR: str = "USD"
-    REPLACE_SYM_IN_INPUT: dict = field(default_factory=dict)
-    TRANSLATE_CURRENCY: dict = field(default_factory=dict)
-    CURRENCY_FACTOR: dict = field(default_factory=dict)
+    Validexchanges: list = field(default_factory=list)
+    TranslateExchanges: dict = field(default_factory=dict)
+    ExchangeCurrency: dict = field(default_factory=dict)
+    StockCurrency: dict = field(default_factory=dict)
+    IgnoredSymbols: list = field(default_factory=list)
+    Translatedic: dict = field(default_factory=dict)
+    Crypto: set = field(default_factory=set)
+    Exchanges: list = field(default_factory=list)
+    Defaultcurr: list = field(default_factory=list) #currency list
+    Basecur: str = "USD"
+    ReplaceSymInInput: dict = field(default_factory=dict)
+    TranslateCurrency: dict = field(default_factory=dict)
+    CurrencyFactor: dict = field(default_factory=dict)
 
 
 
 @paramaware
 @dataclass
 class FileConf:
-    HIST_F: str = r'hist_file.cache'
-    HIST_F_BACKUP: str = HIST_F + '.back'
-    DEFAULTNOTEBOOK: str = r'jupyter\defaultnotebook.ipynb'
-    JSONFILENAME: str = r'groups.json'
-    SERIALIZEDFILE: str = r'serialized.dat'
-    EARNINGSTORAGE: str = 'earnings.dat'
-    REVENUEFILE: str = 'NOEARNINGS'
-    INCOMEFILE: str = 'NOEARNINGS'
-    COMMONSTOCK: str = 'NOEARNINGS'
-    DATAFILEPTR: str = 'DATA_FILE'
-    GRAPHFN: str = 'graphs.json'
-    EXPORTEDPORT: str = "exported.csv"
-    IBSRVREADY: str = "ibsrv_ready.txt"
-    FULLDATA: str = "fullinpdata.bin"
+    HistF: str = r'hist_file.cache'
+    HistFBackup: str = HIST_F + '.back'
+    DefaultNotebook: str = r'jupyter\defaultnotebook.ipynb'
+    JsonFilename: str = r'groups.json'
+    SerializedFile: str = r'serialized.dat'
+    EarningStorage: str = 'earnings.dat'
+    RevenueFile: str = 'NOEARNINGS'
+    IncomeFile: str = 'NOEARNINGS'
+    CommonStock: str = 'NOEARNINGS'
+    DataFileptr: str = 'DATA_FILE'
+    Graphfn: str = 'graphs.json'
+    ExportedPort: str = "exported.csv"
+    IbSrvReady: str = "ibsrv_ready.txt"
+    FullData: str = "fullinpdata.bin"
 
 @paramaware
 @dataclass
 class InputConf:
     SaveData:bool =True 
-    PRICES_ARE_ADJUSTED_TO_TODAY:bool = True
+    PricesAreAdjustedToToday:bool = True
     AdjustUnrelProfitToReflectSplits: bool = True
-    MAXCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=20)
-    MAXFULLCACHETIMESPAN: datetime.timedelta = datetime.timedelta(days=1)
-    FULLCACHEUSAGE: UseCache = UseCache.FORCEUSE 
+    MaxCacheTimeSpan: datetime.timedelta = datetime.timedelta(days=20)
+    MaxFullCacheTimeSpan: datetime.timedelta = datetime.timedelta(days=1)
+    FullCachEusage: UseCache = UseCache.FORCEUSE 
     AlwaysStoreFullCache: bool = False
-    INPUTSOURCE: InputSourceType = InputSourceType.IB
-    IGNORE_ADJUST: int = 1 #DONT_ADJUST_FOR_CURRENT
-    DOWNLOADDATAFORPROT: bool = True
-    DEFAULTFROMDATE: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
-    TZINFO: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
-    MAX_RELEVANT_CURRENCY_TIME : datetime.timedelta = datetime.timedelta(minutes=60)
-    MAX_RELEVANT_CURRENCY_TIME_HUER: datetime.timedelta = datetime.timedelta(days=5)
+    InputSource: InputSourceType = InputSourceType.IB
+    IgnoreAdjust: int = 1 #DONT_ADJUST_FOR_CURRENT
+    Downloaddataforprot: bool = True
+    Defaultfromdate: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
+    TzInfo: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
+    MaxRelevantCurrencyTime : datetime.timedelta = datetime.timedelta(minutes=60)
+    MaxRelevantCurrencyTimeHuer: datetime.timedelta = datetime.timedelta(days=5)
 
 @paramaware
 @dataclass
 class VoilaConf:
-    DONT_RUN_NOTEBOOK: bool = False
-    VOILA_PYTHON_PROCESS_PATH: Optional[str] = None
-    AUTO_RESOVLE_VOILA_PYTHON: bool = True
-    MAX_VOILA_WAIT: int = 9
+    DontRunNotebook: bool = False
+    VoilaPythonProcessPath: Optional[str] = None
+    AutoResovleVoilaPython: bool = True
+    MaxVoilaWait: int = 9
 
 @paramaware
 @dataclass
 class JupyterConf:
-    MEMO_FOLDER : str = '.\\memory'
-    RAPID_YFINANACE_KEY: str = ''
-    RAPID_YFINANACE_HOST: str = "yfinance-stock-market-data.p.rapidapi.com"
-    EXPRIES : int = 24
+    MemoFolder : str = '.\\memory'
+    RapidYfinanaceKey: str = ''
+    RapidYfinanaceHost: str = "yfinance-stock-market-data.p.rapidapi.com"
+    Expries : int = 24
 
 @paramaware
 @dataclass
@@ -252,11 +252,11 @@ class Config:
     File: FileConf = field(default_factory=FileConf)
     Input: InputConf = field(default_factory=InputConf)
     Voila: VoilaConf = field(default_factory=VoilaConf)
-    UI: UIConf = field(default_factory=UIConf)
+    Ui: UIConf = field(default_factory=UIConf)
     Sources: SourcesConf = field(default_factory=SourcesConf)
     TransactionHandlers: TransactionHandlersConf = field(default_factory=TransactionHandlersConf)
     StockPricesHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
-    SEEKINGALPHAHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
+    SeekingAlphaHeaders: RapidKeyConf = field(default_factory=RapidKeyConf)
     Jupyter: JupyterConf = field(default_factory=JupyterConf)
 
 
