@@ -38,6 +38,10 @@ def mock_config_to_default(useinp : UseInput):
 
 
 @pytest.fixture(scope="session")
+def mock_config_to_default_alt():
+    ConfigLoader.config.update_from(generate_config(UseInput.LOADDEFAULTCONFIG),all=True)
+
+@pytest.fixture(scope="session")
 def mock_config_to_default_sess():
     ConfigLoader.config.update_from(generate_config(UseInput.Nothing),all=True)
 
@@ -167,9 +171,9 @@ def generate_config(useinp):
             # testingconf.py
             # AddProcess = [process]
             from config import testingconf
-            c.IBConnection.AddProcess =testingconf.ADDPROCESS
+            c.Sources.IBSource.AddProcess =testingconf.ADDPROCESS
         except:
-            c.IBConnection.AddProcess=c.Testing.AddProcess
+            c.Sources.IBSource.AddProcess=c.Testing.AddProcess
     else:
         c= Config()
         c.Running.TZINFO=datetime.timezone(datetime.timedelta(hours=-3),'GMT3')

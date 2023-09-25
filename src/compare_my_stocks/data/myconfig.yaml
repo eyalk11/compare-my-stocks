@@ -3,7 +3,7 @@
 DefaultParams: !DefaultParamsConf
   CacheUsage: !UseCache FORCEUSE
   DefaultGroups: []
-  EXT:
+  Ext:
     - QQQ
 Earnings: !EarningsConf
   SkipEarnings: 1
@@ -16,7 +16,7 @@ File: !FileConf
   ExportedPort: exported.csv
   GraphFN: graphs.json
   HistF: HistFile.cache
-  HistF_BACKUP: HistFile.cache.back
+  HistFBackup: HistFile.cache.back
   IncomeFile: NOEARNINGS
   JsonFilename: groups.json
   RevenueFile: NOEARNINGS
@@ -27,21 +27,22 @@ Input: !InputConf
   IgnoreAdjust: false 
   InputSource: !InputSourceType IB
   MaxCacheTimeSpan: !!python/object/apply:datetime.timedelta [1, 0, 0]
-  TZINFO: !!python/object/apply:datetime.timezone
+  TzInfo: !!python/object/apply:datetime.timezone
     - !!python/object/apply:datetime.timedelta
       - -1
       - 75600
       - 0
     - GMT3
 Running: !RunningConf
-  CheckReloadInterval: 30
-  DEBUG: 1
-  LastGraphName: Last
   LoadLastAtBegin: true
-  LOGERRORFILE: error.log
-  LOGFILE: log.txt
+  CheckReloadInterval: 3
+  StartIbsrvInConsole: false
+  LastGraphName: Last
+  LogErrorFile: error.log
+  LogFile: log.txt
   StopExceptionInDebug: true
-  VerifySaving: !VerifySave Ask
+  Debug: 1 
+  VerifySaving: !VerifySave "Ask"
   TryToScaleDisplay: true
 Sources: !SourcesConf 
   IBSource: !IBSourceConf
@@ -57,7 +58,7 @@ SeekingAlphaHeaders: !RapidKeyConf {XRapidApiHost: 'seeking-alpha.p.rapidapi.com
 StockPricesHeaders: !RapidKeyConf {XRapidApiHost: 'stock-prices2.p.rapidapi.com', XRapidApiKey: null}
 Symbols: !SymbolsConf
   Basecur: USD
-  CRYPTO: !!set {}
+  Crypto: !!set {}
   DefaultCurr:
     - USD
     - EUR
@@ -91,7 +92,7 @@ Symbols: !SymbolsConf
 TransactionHandlers: !TransactionHandlersConf
   TransactionSource:  !TransactionSourceType Both 
   BothSymbols: []
-  CombineStrategy: !CombineStrategy PREFERSTOCKS
+  CombineStrategy: !CombineStrategyEnum PREFERSTOCKS
   IB: !IBConf
     CacheSpan: !!python/object/apply:datetime.timedelta [0, 18000, 0]
     DoQuery: true

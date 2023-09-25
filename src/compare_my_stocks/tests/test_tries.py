@@ -26,7 +26,7 @@ from numpy import nan
 from pandas import DataFrame, Timestamp
 
 from common.common import dictnfilt, UseCache, VerifySave, InputSourceType
-from config import config as cfg
+#from config import config as cfg
 from engine.parameters import Parameters
 from input.earningsproc import EarningProcessor
 from input.inputdata import InputDataImpl
@@ -37,7 +37,7 @@ import config
 from tests.testtools import inp, realeng, IBSource, inpb, realenghookinp
 from transactions.transactioninterface import BuyDictItem
 
-cfg.StopExceptionInDebug = True
+#cfg.StopExceptionInDebug = True
 
 
 def test_fix_histdic(inp):
@@ -196,9 +196,10 @@ def test_aa(stock_name: str):
     pickle.dump(self, open(save_path, "wb"))
 
     #
-
+from testtools import mock_config_to_default_alt
 
 # @pytest.mark.parametrize("realenghookinp",[r'c:\users\ekarni\compare-my-stocks\testlumi.bin'],indirect=True)
+@pytest.mark.usefixtures("mock_config_to_default_alt")
 def test_realprofit(realenghookinp):
     # dat : InputDataImpl= pickle.load(open(r'c:\users\ekarni\compare-my-stocks\testlumi.bin', 'rb'))
     eng = realenghookinp
