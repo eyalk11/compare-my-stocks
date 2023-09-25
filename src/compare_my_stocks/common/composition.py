@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import itertools
 import typing
+from copy import copy
 
 '''
 Allows for composition with currying 
@@ -52,7 +54,7 @@ class UnsafeType(Flag):
 
 class CInst(Generic[P,T]):
     @singledispatch
-    def __init__(self,func :Callable[P,T],prev :CInst = None, unsafe : UnsafeType  =UnsafeType.NotSafe):
+    def __init__(self,func :Callable,prev :CInst = None, unsafe : UnsafeType  =UnsafeType.NotSafe):
         self.func=func
         self._unsafe= unsafe
         self.prev=prev
@@ -64,7 +66,7 @@ class CInst(Generic[P,T]):
         self._unsafe=unsafe
 
     @singledispatchmethod
-    def __floordiv__(self,other :Callable[Q,P]) -> CInst[Q,T] :
+    def __floordiv__(self,other :Callable) -> CInst[Q,T] :
         return CInst(other,self,self._unsafe | UnsafeType.Currying)
     @__floordiv__.register
     def __floordiv__(self,other: str) -> CInst[Q, T]:
@@ -73,42 +75,78 @@ class CInst(Generic[P,T]):
         else:
             raise "cant do it when safe"
 
-    # def __getattr__(self, item):
-    #     if self.col is not None:
-    #         return getattr(self.col,item)
+    def __iter__(self):
+        if self.col is None:
+            raise ValueError('Can only use iter  on collection')
+
+        return iter(self.col)
+    def __len__(self):
+        if self.col is None:
+            raise ValueError('Can only use len  on collection')
+        return len(self.col)
+    def __getitem__(self, item):
+        if self.col is None:
+            raise ValueError('Can only use getitem  on collection')
+        return self.col[item]
+
+
     def __eq__(self, other):
         if type(other) is CInst:
             return self.func==other.func and self.col==other.col
 
         if self.col is not None:
+
+            if inspect.isgenerator(self.col):
+                xx,yy= itertools.tee(self.col)
+                try:
+                    for t in zip(yy,other):
+                        if t[0]!=t[1]:
+                            return False
+                    return True
+                finally:
+                    self.col=xx
             return self.col==other
         return self.func==other
 
-    def apply(self,origargs,args) -> T:
-        def basic(args):
+    def apply(self, origargs, args,bargs=None,kwargs=None) -> T:
+        def basic(bargs,kwargs):
             if self.prev is None:
-                return self.func(**args)
-            return self.prev.apply(origargs,self.func(**args))
+                return self.func(*bargs,**kwargs)
+            return self.prev.apply(origargs,self.func(*bargs,**kwargs))
         if self.func is None:
             return args
-        if type(args)!=dict:
+
+        if inspect.isfunction(args):
+            b=args
+        elif bargs is None:
             b=self.get_args(args)
-            args=b.arguments
+            if  not inspect.isfunction(b):
+                bargs, kwargs = b.args, b.kwargs
+
+
+        if bargs is None and inspect.isfunction(b):
+            if self.prev is None:
+                return b()
+            return self.prev.apply(origargs,b())
+
 
         if self._unsafe & UnsafeType.Currying != UnsafeType.Currying:
-            if self.prev is None:
-                return self.func(**args)
-            return self.prev.apply(origargs,self.func(**args))
+            return basic(bargs, kwargs)
         else:
             try:
                 sig = signature(self.func)
-                b = sig.bind(**args)
+                b = sig.bind(*bargs, **kwargs)
             except TypeError:
 
-                add_args= dictfilt(dictnfilt(origargs,args),sig.parameters.keys())
-                args.update(add_args)
-                return basic(args)
-            return basic(args)
+                add_args= dictfilt(dictnfilt(origargs,b.arguments),sig.parameters.keys())
+                for a in add_args.keys():
+                    s=sig.parameters[a]
+                    if s.kind == _ParameterKind.POSITIONAL_ONLY: 
+                        bargs = tuple(list(bargs) + [add_args[a]])
+                    kwargs.update({a:add_args[a]})
+
+                return basic(bargs, kwargs)
+            return basic(bargs, kwargs)
 
 
 
@@ -142,7 +180,9 @@ class CInst(Generic[P,T]):
 
     def tmpapply(self, other):
         b = self.get_args(other)
-        return self.apply(b.arguments, b.arguments)
+        if inspect.isfunction(b):
+            return self.apply({}, b)
+        return self.apply(b.arguments,args=None,bargs=b.args ,kwargs=b.kwargs)
 
     @__matmul__.register
     def __matmul__(self,other: typing.Callable) -> T:
@@ -168,6 +208,7 @@ class CInst(Generic[P,T]):
 
 
 
+    @singledispatchmethod
     def __lshift__(self, other : Callable):
         if self.col is None:
             raise ValueError('Can only use << on collection')
@@ -176,17 +217,37 @@ class CInst(Generic[P,T]):
                 yield other(k)
 
         return CInst(gen(), self._unsafe)
+    @__lshift__.register
+    def __lshift__(self, other : str):
+        return self.__lshift__(CInst.conv_str_to_func(other))
 
 
 
 
     def get_args(self, other):
+        try:
+            s = signature(self.func)
+        except ValueError:
+            if (type(other) is tuple):
+                def func():
+                    return self.func(*other)
+            elif type(other) == dict:
+                def func():
+                    return self.func(**other)
+
+            else:
+                def func():
+                    return self.func(other)
+
+            return func
+
         if (type(other) in [tuple, list]):
-            b = signature(self.func).bind_partial(*other)
+            b = s.bind_partial(*other)
         elif (type(other) == dict):
-            b = signature(self.func).bind_partial(**other)
+            b = s.bind_partial(**other)
         else:
-            b = signature(self.func).bind_partial(other)
+            b = s.bind_partial(other)
+
         return b
 
     def __mod__(self, other):
@@ -206,6 +267,7 @@ class CInst(Generic[P,T]):
 
             # We start from regular
             for k, v in sig.parameters.items():
+
                 if inspect.isfunction(v.default):
                     s.add(k)
                     p = signature(v.default).parameters
@@ -214,7 +276,9 @@ class CInst(Generic[P,T]):
                     nother.pop(k)
                 elif k in lambda_dic: 
                     nother.pop(k)
-                    
+                    newparams[k] = v
+                else:
+                    newparams[k] = v
             origparams = {k: v for k, v in sig.parameters.items() if k not in s}
             newparams.update(origparams)
 
@@ -230,8 +294,8 @@ class CInst(Generic[P,T]):
 
             newsig = sig.replace(parameters=newparams.values())
 
-            def newfunc(*args, **kwargs):
-                b = newsig.bind(*args, **kwargs)
+            def newfunc(*aargs,**kwargs):
+                b = newsig.bind(*aargs,**kwargs)
                 b.apply_defaults()
                 ntobind = {}
 
@@ -262,7 +326,7 @@ class CInst(Generic[P,T]):
 
         else:
             fn=partial(self.func, other)
-        return CInst(fn,self,unsafe=self._unsafe)
+        return CInst(fn,self.prev,unsafe=self._unsafe)
 
 
 
