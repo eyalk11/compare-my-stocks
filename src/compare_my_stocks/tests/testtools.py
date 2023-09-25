@@ -132,6 +132,7 @@ def realeng(additional_process):
 
 @pytest.fixture
 
+@pytest.mark.usefixtures("mock_config_to_default_sess")
 def realenghookinp():
     config.Sources.IBSource.AddProcess=None
     config.Input.InputSource = InputSourceType.Cache

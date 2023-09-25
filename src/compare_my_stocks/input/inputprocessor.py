@@ -1,4 +1,5 @@
 from common.common import c, ass
+from common.composition import C
 from memoization import cached
 
 from common.refvar import RefVar
@@ -142,6 +143,8 @@ class InputProcessor(InputProcessorInterface):
 
         self._save_data_proc=DoLongProcessSlots(self._save_data)
         self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
+        #self.currency_on_date = C/ self.get_currency_on_certain_time % { 'sym':  self._data.get_currency_for_sym }
+
     @property
     def initialized(self):
         return self.data is not None
