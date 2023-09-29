@@ -4,8 +4,10 @@ import itertools
 import typing
 from copy import copy
 
+from typing_extensions import ParamSpec
+
 '''
-Allows for composition with currying 
+Allows for composition with currying
 In[38]: C /  list / map % (lambda x: x*2) @  range(1,5)
 Out[38]: [2, 4, 6, 8]
 In [109]: C / list/ zip &  C / list  @ range(5) ^ [4,8,9,10,11]
@@ -14,27 +16,27 @@ So, / is composition , % is partial (nice trick) and @ is applying.
 
 & is partial but in lower precedence .
 ^ is applying with lower precedence
-// is applying with currying. Which means is carries the arguments to the next function, if needed.  
+// is applying with currying. Which means is carries the arguments to the next function, if needed.
 Partial supports function assigment which means you can do:
  def f(a,b,c):
-    return (a,b,c) 
- f % {'b': "->b*a*2"} @ (1,3) 
+    return (a,b,c)
+ f % {'b': "->b*a*2"} @ (1,3)
  or f (lambda b: b*2}
- 
+
  Which only apply the lambda on the relvant part of the eq .
- Use UnsafeType.Safe or disable UnsafeType.WithFuncs so that it would use vanila partial.      
- Notice that using -> syntax is really unsafe . 
- 
- 
- C / [1,2,3,4] @ func -> func(1,2,3,4) 
-C / [1,2,3,4]  << func -> [func(1) , func(2) , ] 
+ Use UnsafeType.Safe or disable UnsafeType.WithFuncs so that it would use vanila partial.
+ Notice that using -> syntax is really unsafe .
+
+
+ C / [1,2,3,4] @ func -> func(1,2,3,4)
+C / [1,2,3,4]  << func -> [func(1) , func(2) , ]
 '''
-from typing import Callable, Generic, ParamSpec, TypeVar
+from typing import Callable, Generic, TypeVar
 from enum import Enum, Flag
 
 import inspect
 from functools import partial
-from multimethod import overload		 as singledispatchmethod, overload	 as singledispatch
+from multimethod import overload as singledispatchmethod, overload as singledispatch
 
 from inspect import _ParameterKind, signature
 
@@ -61,7 +63,7 @@ class CInst(Generic[P,T]):
         self.origargs=None
         self.col=None
     @__init__.register
-    def __init(self,other: typing.Collection | typing.Generator,unsafe : UnsafeType  =UnsafeType.NotSafe):
+    def __init(self,other: typing.Union[typing.Collection , typing.Generator],unsafe : UnsafeType  =UnsafeType.NotSafe):
         self.col=other
         self._unsafe=unsafe
 
@@ -141,7 +143,7 @@ class CInst(Generic[P,T]):
                 add_args= dictfilt(dictnfilt(origargs,b.arguments),sig.parameters.keys())
                 for a in add_args.keys():
                     s=sig.parameters[a]
-                    if s.kind == _ParameterKind.POSITIONAL_ONLY: 
+                    if s.kind == _ParameterKind.POSITIONAL_ONLY:
                         bargs = tuple(list(bargs) + [add_args[a]])
                     kwargs.update({a:add_args[a]})
 
@@ -259,7 +261,7 @@ class CInst(Generic[P,T]):
             mapped_to_func = {}
             nother = other.copy()
             s = set()
-            lambda_dic = dict() 
+            lambda_dic = dict()
             if self._unsafe & UnsafeType.Safe == UnsafeType.NotSafe:
                 for k,v in other.items():
                     if type(v)==str and v.startswith('->'):
@@ -274,7 +276,7 @@ class CInst(Generic[P,T]):
                     newparams.update(p.items())
                     mapped_to_func[k] = (v.default, set([k for k in p]))
                     nother.pop(k)
-                elif k in lambda_dic: 
+                elif k in lambda_dic:
                     nother.pop(k)
                     newparams[k] = v
                 else:

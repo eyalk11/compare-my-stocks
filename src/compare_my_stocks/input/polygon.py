@@ -131,6 +131,9 @@ class PolySource(InputSource):
 
     @simple_exception_handling(err_description='error in get_symbol_history',return_succ=None,never_throw=True)
     def get_currency_history(self, pair, startdate, enddate):
-       raise NotImplementedError()  
+       raise NotImplementedError()
+
+    def get_all_symbols(self):
+        raise NotImplementedError()
 
 

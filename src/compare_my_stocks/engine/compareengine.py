@@ -18,17 +18,18 @@ from engine.parameters import Parameters
 from transactions.transactionhandlermanager import TransactionHandlerManager
 
 
-class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
+class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
     statusChanges = MySignal(str)
     finishedGeneration = MySignal(int)
     minMaxChanged = MySignal(tuple)
     namesChanged = MySignal(int)
 
-
-    @simple_exception_handling(err_description='Input source initialization failed. ',never_throw=True)
-    def get_InputSource(self,input_type  : InputSourceType = None):
+    @simple_exception_handling(
+        err_description="Input source initialization failed. ", never_throw=True
+    )
+    def get_InputSource(self, input_type: InputSourceType = None):
         if input_type is None:
-            input_type =config.Input.InputSource
+            input_type = config.Input.InputSource
             if input_type is None:
                 return None
             if input_type == InputSourceType.IB:
@@ -36,17 +37,16 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
             elif input_type == InputSourceType.InvestPy:
                 return InvestPySource()
             elif input_type == InputSourceType.Polygon:
-                g= get_polysource()
+                g = get_polysource()
                 g.notify = self.statusChanges.emit
                 return g
 
-
     def __init__(self, axes=None):
         SymbolsHandler.__init__(self)
-        InputSource=  self.get_InputSource()
+        InputSource = self.get_InputSource()
 
         self._tr = TransactionHandlerManager(None)
-        self._inp : InputProcessor= InputProcessor(self, self._tr,InputSource)
+        self._inp: InputProcessor = InputProcessor(self, self._tr, InputSource)
         self._tr._inp = self._inp  # double redirection.
 
         self._datagen: DataGenerator = DataGenerator(self)
@@ -58,25 +58,40 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         self.read_groups_from_file()
         self._datagenlock = threading.Lock()
 
-    def  required_syms(self, include_ext=True, want_portfolio_if_needed=False, want_unite_symbols=False,only_unite=False):
-        #the want it all is in the case of populating dict
-        used_type = self.used_type if self.used_type is not None  else self.params.type
-        used_unitetype= self.used_unitetype if self.used_unitetype is not None  else self.params.unite_by_group
+    def required_syms(
+        self,
+        include_ext=True,
+        want_portfolio_if_needed=False,
+        want_unite_symbols=False,
+        only_unite=False,
+    ):
+        # the want it all is in the case of populating dict
+        used_type = self.used_type if self.used_type is not None else self.params.type
+        used_unitetype = (
+            self.used_unitetype
+            if self.used_unitetype is not None
+            else self.params.unite_by_group
+        )
         selected = set()
-        if want_unite_symbols and (used_type & Types.COMPARE and self.params.compare_with): #notice that based on params type and not real type
+        if want_unite_symbols and (
+            used_type & Types.COMPARE and self.params.compare_with
+        ):  # notice that based on params type and not real type
             selected.update(set([self.params.compare_with]))
 
-
-        if want_portfolio_if_needed and (self.params.unite_by_group & UniteType.ADDPROT):
-            selected=set(self.transaction_handler.get_portfolio_stocks())
+        if want_portfolio_if_needed and (
+            self.params.unite_by_group & UniteType.ADDPROT
+        ):
+            selected = set(self.transaction_handler.get_portfolio_stocks())
 
         if self.to_use_ext and include_ext:
             selected.update(set(self.params.ext))
 
         if (used_unitetype & ~UniteType.ADDTOTALS) and want_unite_symbols:
-            if only_unite: #it is a bit of cheating but we don't need to specify require data symbols in that case
+            if (
+                only_unite
+            ):  # it is a bit of cheating but we don't need to specify require data symbols in that case
                 return selected
-        if  self.params.use_groups:
+        if self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))
         else:
             return selected.union(self.params.selected_stocks)
@@ -90,19 +105,25 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         self.params._baseclass = self
 
         self.to_use_ext = self.params.use_ext
-        #Any reason it is here?
+        # Any reason it is here?
         self.used_unitetype = self.params.unite_by_group
         requried_syms = self.required_syms(True, True)
         if not self._inp.initialized:
             symbols_needed = set()
-            reprocess=1 # process all...
-        elif self._inp.usable_symbols and (not (set(requried_syms) <= self._inp.usable_symbols)):
-            symbols_needed = set(requried_syms) - self._inp.usable_symbols - self._inp._bad_symbols - set(
-                config.Symbols.IgnoredSymbols) #TODO::make bad symbols property
+            reprocess = 1  # process all...
+        elif self._inp.usable_symbols and (
+            not (set(requried_syms) <= self._inp.usable_symbols)
+        ):
+            symbols_needed = (
+                set(requried_syms)
+                - self._inp.usable_symbols
+                - self._inp._bad_symbols
+                - set(config.Symbols.IgnoredSymbols)
+            )  # TODO::make bad symbols property
 
             if len(symbols_needed) > 0:
                 reprocess = 1
-                logging.debug((f'should add stocks {symbols_needed}'))
+                logging.debug((f"should add stocks {symbols_needed}"))
             else:
                 reprocess = 0
         else:
@@ -111,80 +132,99 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
         if reprocess:
             self._inp.process(symbols_needed)
             adjust_date = True
-        if hasattr(self.params,'adjust_date'):
-            adjust_date = adjust_date or  self.params.adjust_date
+        if hasattr(self.params, "adjust_date"):
+            adjust_date = adjust_date or self.params.adjust_date
         else:
-            self.params.adjust_date=0
+            self.params.adjust_date = 0
         with self._datagenlock:
-            res= self.call_data_generator()
-            if res==2:
+            res = self.call_data_generator()
+            if res == 2:
                 adjust_date = True
-
-
 
         if res:
             df = self._datagen.df
             type = self._datagen.type
             before_act = self._datagen.df_before_act
-            self.call_graph_generator(df, just_upd,type,before_act , adjust_date= adjust_date , additional_df=self._datagen.additional_dfs_fixed) 
+            self.call_graph_generator(
+                df,
+                just_upd,
+                type,
+                before_act,
+                adjust_date=adjust_date,
+                additional_df=self._datagen.additional_dfs_fixed,
+            )
 
     @simple_exception_handling(err_description="Exception in generation")
-    def call_data_generator(self,auto_reprocess=True):
-        b=0
+    def call_data_generator(self, auto_reprocess=True):
+        b = 0
         for tries in range(2):
             if not self._datagen.verify_conditions():
-                self.statusChanges.emit('Graph Invalid! Check parameters')
+                self.statusChanges.emit("Graph Invalid! Check parameters")
                 return False
             try:
                 self._datagen.generate_data()
-                return 1+b
+                return 1 + b
             except NoDataException:
                 if auto_reprocess:
                     logging.debug("No data first try. reprocessing")
                     self._inp.process(self.required_syms(True, True))
-                    b=1
+                    b = 1
                     continue
                 else:
-                    self.statusChanges.emit('No Data For Graph!')
-                    logging.debug(('no data'))
+                    self.statusChanges.emit("No Data For Graph!")
+                    logging.debug(("no data"))
                     return False
             except Exception as e:
-                self.statusChanges.emit(f'Exception in generation: {e}')
+                self.statusChanges.emit(f"Exception in generation: {e}")
                 raise
 
-    def call_graph_generator(self, df, just_upd, type,orig_data,adjust_date=False,additional_df=None):
+    def call_graph_generator(
+        self, df, just_upd, type, orig_data, adjust_date=False, additional_df=None
+    ):
         if df.empty:
-            self.statusChanges.emit(f'No Data For Graph!')
+            self.statusChanges.emit(f"No Data For Graph!")
             return
-        def upd(msg,err=False):
+
+        def upd(msg, err=False):
             self.statusChanges.emit(msg)
-            self._inp.failed_to_get_new_data=None #reset it
+            self._inp.failed_to_get_new_data = None  # reset it
             if err:
                 logging.error(msg)
             else:
                 logging.info(msg)
 
         plot_data = {}
-        if ((Types.PRECENTAGE | Types.DIFF | Types.COMPARE)  & type) == 0 and self.params.unite_by_group & (UniteType.SUM | UniteType.AVG)==0:
+        if (
+            (Types.PRECENTAGE | Types.DIFF | Types.COMPARE) & type
+        ) == 0 and self.params.unite_by_group & (UniteType.SUM | UniteType.AVG) == 0:
             try:
-                plot_data= self._tr.get_data_for_graph(list(df.columns),df.index[0],df.index[-1])
+                plot_data = self._tr.get_data_for_graph(
+                    list(df.columns), df.index[0], df.index[-1]
+                )
             except:
                 logging.error("failed to get transaction data for graph")
 
-
-
-
         try:
-            self._generator.gen_actual_graph(list(df.columns), df, self.params.isline, self.params.starthidden,
-                                             just_upd, type,orig_data,adjust_date=adjust_date,plot_data=plot_data,additional_df=additional_df)
+            self._generator.gen_actual_graph(
+                list(df.columns),
+                df,
+                self.params.isline,
+                self.params.starthidden,
+                just_upd,
+                type,
+                orig_data,
+                adjust_date=adjust_date,
+                plot_data=plot_data,
+                additional_df=additional_df,
+            )
             if self._inp.failed_to_get_new_data:
                 upd(f"Generated Graph with old data  (  Query failed :() ")
             else:
                 upd("Generated Graph :)")
-            self.params.is_forced=False
+            self.params.is_forced = False
             self.finishedGeneration.emit(1)
         except TypeError as e:
-            upd(f"failed generating graph {e}",err=True)
+            upd(f"failed generating graph {e}", err=True)
             raise
 
     # makes the entire graph from the default attributes.
@@ -196,9 +236,9 @@ class InternalCompareEngine(SymbolsHandler,CompareEngineInterface):
 
 
 class CompareEngine(InternalCompareEngine):
-    '''
+    """
     Here we just add the proxy methods.
-    '''
+    """
 
     def serialized_data(self):
         return self._datagen.serialized_data()
@@ -257,6 +297,7 @@ class CompareEngine(InternalCompareEngine):
     @property
     def used_type(self):
         return self._datagen.used_type
+
     @property
     def used_unitetype(self):
         """doc"""
@@ -277,16 +318,16 @@ class CompareEngine(InternalCompareEngine):
     @property
     def visible_columns(self):
         return self._generator.get_visible_cols()
+
     @property
     def final_columns(self):
         return self._datagen.finalcols
 
-    def show_hide(self,val):
+    def show_hide(self, val):
         return self._generator.show_hide(val)
 
-    def process(self, *args,**kwargs):
-        return self._inp.process(*args,**kwargs)
+    def process(self, *args, **kwargs):
+        return self._inp.process(*args, **kwargs)
 
     def get_portfolio_stocks(self):
         return self.transaction_handler.get_portfolio_stocks()
-

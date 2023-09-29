@@ -117,6 +117,7 @@ class InputProcessor(InputProcessorInterface):
         return self._transaction_handler
 
     def __init__(self, symb, transaction_handler, InputSource=None):
+        self.to_save_data = False 
         self._force_upd_all_range = None
 
         self._InputSource: InputSource = InputSource
@@ -142,8 +143,9 @@ class InputProcessor(InputProcessorInterface):
         self.failed_to_get_new_data=None
 
         self._save_data_proc=DoLongProcessSlots(self._save_data)
-        self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
-        #self.currency_on_date = C/ self.get_currency_on_certain_time % { 'sym':  self._data.get_currency_for_sym }
+        # self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
+        self.currency_on_date = C// self.get_currency_on_certain_time % { 'curr':  (lambda sym : self._data.get_currency_for_sym(sym)) } #@ (lambda t,sym,cache_only: (t,sym,cache_only))
+        a=1
 
     @property
     def initialized(self):
@@ -249,7 +251,7 @@ class InputProcessor(InputProcessorInterface):
                 logging.debug("get currency history %s %s %s %s" % (pair, mindate, maxdate,len(selfifnn(tmpdf,[]))))
                 if tmpdf is not None:
                     self.update_currency_hist(currency,tmpdf)
-                    self.save_data()
+                    self.save_data_at_end()
             if not currency in self._data.currency_hist:
                 raise ValueError("cant get currency to adjust")
         if queried is not None:
@@ -275,7 +277,7 @@ class InputProcessor(InputProcessorInterface):
             df= self.get_currency_hist(curr, t - datetime.timedelta(days=i),
                                        t + datetime.timedelta(days=i),
                                        minimal=True,queried=queried, cache_only=cache_only)  #To do : account for base currency different than USD, such as EUR.ILS
-            if len(df)==0:
+            if df is None or len(df)==0:
                 continue
             else:
                 #df.where(lambda x: df.index == t).dropna().iloc[0]
@@ -291,6 +293,10 @@ class InputProcessor(InputProcessorInterface):
         else:
            logging.error(f"no currency {curr} {t}")
            return (None,False)
+
+    def save_data_at_end(self):
+        self.to_save_data=True 
+
             
 
 
@@ -319,13 +325,14 @@ class InputProcessor(InputProcessorInterface):
                 except KeyError as e:
                     logging.error(str(e))
         if gok:
-            self.save_data()
+            self.save_data_at_end()
         logging.debug("end get_buy")
 
             
         
 
     def process_history(self, partial_symbols_update=set()):
+        self.to_save_data=False # unless we get new data 
 
         if not partial_symbols_update:
             self._data.init_input()
@@ -388,7 +395,7 @@ class InputProcessor(InputProcessorInterface):
         if query_source:
             succ=self.get_data_from_source(partial_symbols_update,fromdate,todate)
             if succ:
-                self.save_data()
+                self.save_data_at_end()
         else:
             succ=True
         self.failed_to_get_new_data = succ == False
@@ -411,6 +418,9 @@ class InputProcessor(InputProcessorInterface):
                 if not self.adjust_for_currency():
                     self.adjusted_panel = self._data._reg_panel.copy()
             logging.log(TRACELEVEL,('last'))
+            if self.to_save_data:
+                self.save_data() 
+
         finally:
             self._proccessing_mutex.unlock()
             logging.log(TRACELEVEL,('exit proc lock'))
@@ -894,7 +904,9 @@ class InputProcessor(InputProcessorInterface):
     
     def save_data(self):
         if not config.Input.SaveData:
+            logging.debug('not saving data because of config')
             return
+        logging.debug('saving data')
         self._data.save_data()
         if config.Input.FullCacheUsage != UseCache.DONT or config.Input.AlwaysStoreFullCache:
             self._save_data_proc.command.emit(TaskParams(params=tuple()))
@@ -978,7 +990,7 @@ class InputProcessor(InputProcessorInterface):
         elif len(hist)==0:
                 raise SymbolError("empty history")
         else:
-            logging.debug(f"got history for {sym}")
+            logging.debug(f"got history for {sym} {hist.index.min()} {hist.index.max()}")
 
 
         if l is None:
@@ -1002,6 +1014,8 @@ class InputProcessor(InputProcessorInterface):
 
         self._data._usable_symbols.add(sym)
         for date, dic in hist.items():
+            from pandas import Timestamp 
+            date=Timestamp(date.date())
             if not date in self._data._hist_by_date:
                 self._data._hist_by_date[date] = {}
 
@@ -1247,7 +1261,7 @@ class InputProcessor(InputProcessorInterface):
             t = time.process_time()
             ret= self.process_history(partial_symbol_update)
             if firsttime:
-                self._data.save_data()
+                self.save_data()
         # do some stuff
         elapsed_time = time.process_time() - t
         logging.debug(('elasped : %s' % elapsed_time))
