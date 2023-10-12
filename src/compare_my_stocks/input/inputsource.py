@@ -68,6 +68,7 @@ class InputSource(InputSourceInterface):
         return True
 
     @simple_exception_handling(err_description='error in resolving symbol', never_throw=True)
+    @cached(ttl=config.Symbols.CacheTTL)
     def resolve_symbol(self,sym):
         if self.can_handle_dict(sym) : #and (isinstance(sym, AbstractSymbol)  and sym.dic!=None) or type(sym)==dict
             if type(sym)==dict:
@@ -104,12 +105,12 @@ class InputSource(InputSourceInterface):
                 l['exchange'] = v
                 l['contract'].exchange = l['exchange']
             #we choose here best exchange so we are surely picking the best possible score for entry
-            if not ('validexchanges' in l)  or  l['contract'].exchange:
+            if not ('validExchanges' in l)  or  l['contract'].exchange:
                 return l
             if l['exchange']:
 
                 logging.debug(('strange exch'))
-            orgls=l['validexchanges'].split(',')
+            orgls=l['validExchanges'].split(',')
             if len(orgls)==0:
                 if not l['exchange'] and 'primaryExchange' in l:
                     upd(l['primaryExchange'])

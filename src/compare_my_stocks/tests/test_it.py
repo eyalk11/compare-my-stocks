@@ -122,9 +122,9 @@ from engine.parameters import Parameters
 def test_basic_poly(PolySource):
     x = PolySource
     basic(x)
-def test_basic(IBSource):
-    x = IBSource
-    basic(x)
+def test_basic(IBSourceSess):
+    x = IBSourceSess
+    basicb(x)
 def basic(x):
 
 
@@ -135,8 +135,21 @@ def basic(x):
         x.get_symbol_history(ls[0], datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now()))
     assert len(l) > 0
     assert True #len(ls)>0
+def basicb(x):
 
 
+    ls = x.get_matching_symbols('BYDDY')
+
+    ls = list(ls)
+    l = list(
+        x.get_symbol_history(ls[0], datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now()))
+    assert len(l) > 0
+    assert True #len(ls)>0
+
+
+def test_inp_cur(inp):
+    inp =inp
+    inp.get_currency_on_certain_time('GBP', datetime.datetime.now() - datetime.timedelta(days=3))
 def my_diff_func(self, xa, xb, ya, yb):
     diffy = abs(ya - yb)
     diffx = abs(xa - xb)

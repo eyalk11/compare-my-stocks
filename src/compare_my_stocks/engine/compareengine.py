@@ -43,10 +43,10 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
 
     def __init__(self, axes=None):
         SymbolsHandler.__init__(self)
-        InputSource = self.get_InputSource()
+        input_source = self.get_InputSource()
 
         self._tr = TransactionHandlerManager(None)
-        self._inp: InputProcessor = InputProcessor(self, self._tr, InputSource)
+        self._inp: InputProcessor = InputProcessor(self, self._tr, input_source)
         self._tr._inp = self._inp  # double redirection.
 
         self._datagen: DataGenerator = DataGenerator(self)

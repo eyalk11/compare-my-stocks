@@ -1,15 +1,13 @@
 import logging
-# importing libraries
-import operator
+import operator  # importing libraries
 
-from PySide6.QtCore import SIGNAL, QAbstractTableModel
+from PySide6.QtCore import QAbstractTableModel, SIGNAL
 from PySide6.QtGui import QStandardItemModel, Qt
 from PySide6.QtWidgets import *
 import sys
 
-# creating a class
-# that inherits the QDialog class
 from common.common import print_formatted_traceback
+from compare_my_stocks.common.simpleexceptioncontext import SimpleExceptionContext
 from input.inputsource import InputSource, InputSourceInterface
 
 
@@ -119,7 +117,8 @@ class Window(QDialog):
 
     def edited(self):
         sym=self.symbolName.text()
-        try:
+        noexception=False 
+        with SimpleExceptionContext(err_description="Error getting best matches for symbol {}".format(sym),never_throw=True):
             for i in range(2):
                 results,_,_=self._inpsource.get_best_matches(sym.strip(), strict=False)
                 if len(results) == 0:
@@ -128,14 +127,11 @@ class Window(QDialog):
                     break
             else:
                 self.choices.setModel(None)
+            noexception=True 
 
-
-        except:
-            print_formatted_traceback()
-            return
-
-        table_model = MyTableModel(self,results)
-        self.choices.setModel(table_model)
+        if noexception:
+            table_model = MyTableModel(self,results)
+            self.choices.setModel(table_model)
     # get info method called when form is accepted
     def getInfo(self):
 

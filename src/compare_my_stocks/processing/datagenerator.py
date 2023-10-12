@@ -72,7 +72,7 @@ class DataGenerator(DataGeneratorInterface):
 
         if self.used_type & Types.COMPARE:
             if not compare_with in df:
-                logging.debug(('too bad, no compare'))
+                logging.warn(('too bad, no data for reference symbol. not comparing'))
                 self.used_type = self.used_type & ~Types.COMPARE
 
                 # ind=first_index_of(compit_arr,np.isnan)

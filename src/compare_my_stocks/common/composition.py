@@ -4,7 +4,7 @@ import itertools
 import typing
 from copy import copy
 
-from typing_extensions import ParamSpec
+from typing import ParamSpec
 
 '''
 Allows for composition with currying
@@ -29,7 +29,15 @@ Partial supports function assigment which means you can do:
 
 
  C / [1,2,3,4] @ func -> func(1,2,3,4)
+
 C / [1,2,3,4]  << func -> [func(1) , func(2) , ]
+C / [1,2,3,4]  / func -> (col ->  func(self.col))
+
+ 
+ C / [1,2,3,4] ^ func -> internally apply func [1,2,3,4]
+ 
+
+
 '''
 from typing import Callable, Generic, TypeVar
 from enum import Enum, Flag
@@ -47,12 +55,18 @@ T = TypeVar('T')
 P = ParamSpec('P')
 Q = ParamSpec('Q')
 U = TypeVar('U')
+
 class UnsafeType(Flag):
     NotSafe= 0
     Safe= 1
     WithFuncs=2
     Currying=4
 #from functools import singledispatch
+
+class Exp:
+    pass 
+class ExpList(Exp):
+    pass 
 
 class CInst(Generic[P,T]):
     @singledispatch
@@ -70,6 +84,7 @@ class CInst(Generic[P,T]):
     @singledispatchmethod
     def __floordiv__(self,other :Callable) -> CInst[Q,T] :
         return CInst(other,self,self._unsafe | UnsafeType.Currying)
+
     @__floordiv__.register
     def __floordiv__(self,other: str) -> CInst[Q, T]:
         if self._unsafe & UnsafeType.Safe == UnsafeType.NotSafe:
@@ -145,15 +160,25 @@ class CInst(Generic[P,T]):
                     s=sig.parameters[a]
                     if s.kind == _ParameterKind.POSITIONAL_ONLY:
                         bargs = tuple(list(bargs) + [add_args[a]])
-                    kwargs.update({a:add_args[a]})
+                    else: 
+                        kwargs.update({a:add_args[a]})
 
                 return basic(bargs, kwargs)
             return basic(bargs, kwargs)
-
+    
+    def __or__(self,other):
+        if self.col is None:
+            raise ValueError('Can only use |  on collection')
+        if type(other)==Exp:
+            return self.col 
+        elif type(other)==ExpList:
+            return list(self.col) 
 
 
     @singledispatch
     def __truediv__(self,other :Callable) -> CInst :
+        if self.col is not None:
+            return CInst(other(self.col),unsafe=self._unsafe)
         return CInst(other, self, self._unsafe & (~UnsafeType.Currying))
 
     @__truediv__.register
@@ -194,10 +219,12 @@ class CInst(Generic[P,T]):
             return other(**self.col)
         else:
             return other(*self.col)
+
     @staticmethod
     def conv_str_to_func(st):
         if st.startswith('->'):
             return eval('lambda x:' + st[2:])
+
     @__matmul__.register
     def __matmul__(self,other: str) -> T:
         if self.col is None:
@@ -319,6 +346,16 @@ class CInst(Generic[P,T]):
 
             return newfunc
 
+        if self.col is not None:
+            if other == 0:
+                return self.col
+            elif other > 0:
+                return list(self.col)[:other]
+            elif type(other) == slice:
+                return list(self.col)[other]
+
+
+
         if (type(other) == tuple):
             fn= partial(self.func,*other)
         elif (type(other) == dict):
@@ -344,6 +381,8 @@ class CSimpInst(CInst):
 
 C=CSimpInst()
 CS=CSimpInst(unsafe=UnsafeType.Safe)
+exp=Exp() 
+explist=ExpList()
 
 # U = TypeVar('U')
 

@@ -20,6 +20,14 @@ def ass(x):
     assert x is not None 
     return x 
 
+def cache_if_not_none(func):
+    def internal(*arg,**kw):
+        func.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is None)
+        return func(*arg,**kw)
+    return internal
+
+
+
 
 def c(*cargs):
     def composed(*args,**kwargs):

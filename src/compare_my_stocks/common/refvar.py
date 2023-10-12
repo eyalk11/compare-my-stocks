@@ -27,10 +27,8 @@ def refproperty(var,value=None):
         return klass
     return decorator
 T = TypeVar('T')
-class M_A(type): pass
 
 class RefVar():
-    metaclass = M_A
     def __init__(self, value=None):
         self.value = value
     def get(self,*args):
@@ -39,7 +37,9 @@ class RefVar():
         self.value = value
 
     def __getattribute__(self, name):
-        if name in ['value','set','get']:
+        import logging
+        logging.debug(name)
+        if name in ['value','set','get','__class__']:
             return object.__getattribute__(self, name)
         else:
             return getattr(self.value, name)

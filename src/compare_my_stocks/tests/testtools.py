@@ -47,19 +47,19 @@ def mock_config_to_default_sess():
 
 
 @pytest.fixture(scope="session")
-def IBSource():
+def IBSourceSess():
     x = IBSource(host='127.0.0.1', port=config.Sources.IBSource.PortIB,proxy=False)
     return x
 
 
 @pytest.fixture(scope="session")
 @pytest.mark.usefixtures("mock_config_to_default_sess")
-def inp(IBSource):
+def inp(IBSourceSess):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    InputSource = IBSource
+    InputSource = IBSourceSess
     tr=TransactionHandlerManager(None)
     tmpinp = InputProcessor(eng, tr,InputSource)
     tmpinp.data= InputDataImpl()
@@ -70,12 +70,12 @@ def inp(IBSource):
     return tmpinp
 
 @pytest.fixture
-def inpb(IBSource):
+def inpb(IBSourceSess):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    InputSource = IBSource
+    InputSource = IBSourceSess
     config.TransactionHandlers.SaveCaches=False
     tr=TransactionHandlerManager(None)
     tmpinp = InputProcessor(eng, tr,InputSource)
@@ -86,16 +86,16 @@ def inpb(IBSource):
     tmpinp.save_data = Mock(return_value=None)
     return tmpinp
 @pytest.fixture
-def PolySource():
+def PolySourceFix():
     return PolySource()
 
 @pytest.fixture
-def inp_poly(PolySource):
+def inp_poly(PolySourceFix):
     eng=MagicMock()
     eng.params = Parameters(
         type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
         show_graph=False)
-    InputSource = PolySource
+    InputSource = PolySourceFix
     config.TransactionHandlers.SaveCaches=False
     tr=TransactionHandlerManager(None)
     tmpinp = InputProcessor(eng, tr,InputSource)

@@ -14,6 +14,8 @@ def singleton(class_):
         return instances[class_]
     return getinstance
 
+import multiprocessing
+
 @singleton
 class RemoteProcess:
 
@@ -41,11 +43,15 @@ class RemoteProcess:
         logging.info("IBSourceRem is ready")
     @staticmethod
     def launch_without_console(command):
-        """Launches 'command' windowless and waits until finished"""
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        try:
+            import ibsrv 
+            return multiprocessing.Pool(1).apply_async(ibsrv.ibsrv)
+        except:
+            """Launches 'command' windowless and waits until finished"""
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
-        return subprocess.Popen(command, startupinfo=startupinfo,creationflags = subprocess.CREATE_NO_WINDOW)
+            return subprocess.Popen(command, startupinfo=startupinfo,creationflags = subprocess.CREATE_NO_WINDOW)
 
     def run_additional_process(cls):
         try:

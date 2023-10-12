@@ -17,13 +17,16 @@ def test_curry():
 
 
 def test_col():
-    x= C/[1,2,3] << '-> x*2'
-    assert x==[2,4,6]
+    x= (C/[1,2,3] << '-> x*2') % 0
+    assert list(x)==[2,4,6]
 def test_basic():
     f= C / list /map % (lambda x: x*2) @  range(1,5)
     assert f==[2,4,6,8]
     assert list(f)==[2,4,6,8]
 
+def test_tmp():
+    x= C/ (1,2,3) / list %2
+    assert x==[1,2]
 def test_colb():
     x= C/(1,8,2) @ range
     assert x==range(1,8,2)

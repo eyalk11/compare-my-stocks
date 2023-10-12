@@ -70,6 +70,7 @@ class PolySource(InputSource):
         dic['currency']=dic.get('currency_name').upper()
         dic['exchange']=dic.get('primary_exchange')
         dic['symbol']=dic.get('ticker') 
+        dic['validExchanges']=dic.get('validexchanges')
         return dic 
 
 

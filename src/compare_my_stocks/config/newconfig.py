@@ -49,6 +49,7 @@ class IBConf:
     FlexToken: Optional[str] = None
     FlexQuery: Optional[str] = None
     QueryIfOlderThan: datetime.timedelta = datetime.timedelta(days=3)
+
 @paramaware 
 @dataclass 
 class PolyConf: 
@@ -111,6 +112,7 @@ class IBSourceConf:
     RegularAccount: Optional[str] = None
     RegularUsername: Optional[str] =None
     UsePythonIfNotResolve: bool = True
+    DefaultExchange: Optional[str] = None
 @paramaware
 @dataclass
 class UIConf:
@@ -134,6 +136,7 @@ class TestingConf:
 @paramaware
 @dataclass
 class RunningConf:
+    NoColor:bool = False
     IsTest: bool = False
     StopExceptionInDebug: bool = True
     VerifySaving: VerifySave = VerifySave.Ask
@@ -181,6 +184,7 @@ class SymbolsConf:
     ReplaceSymInInput: dict = field(default_factory=dict)
     TranslateCurrency: dict = field(default_factory=dict)
     CurrencyFactor: dict = field(default_factory=dict)
+    CacheTTL: int = 1000
 
 
 

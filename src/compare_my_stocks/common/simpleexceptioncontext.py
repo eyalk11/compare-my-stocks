@@ -53,11 +53,15 @@ class SimpleExceptionContext:
         # Code to be executed when exiting the context
         if self.do_nothing:
             return False
+        
+                
+        if exc_value is None:
+            return False
         try:
             if self.callback is not None:
                 self.callback(exc_value)
         except:
-            logging.warn("error in callback")
+            logging.warn("error in callback {} ".format(self.callback))
         if exc_type is not None:
             # Handle any exceptions raised within the context
             return self.on_exception(exc_type,exc_value,traceback)   # Propagate any exceptions raised within the context

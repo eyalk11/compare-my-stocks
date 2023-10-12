@@ -50,6 +50,9 @@ class InputDataImplInterface(metaclass=ABCMeta):
     def _err_transactions(self):
         ...
 
+    @abstract_attribute
+    def _hist_by_date(self):
+        ...
 
 
     @classmethod
@@ -72,3 +75,22 @@ class InputDataImplInterface(metaclass=ABCMeta):
     @abstractmethod
     def save_data(self):
         ...
+def might_change_big(func):
+    def internal(self,*args,**kwargs):
+        self._semaphore.acquire(100)
+        try:
+            return func(self,*args,**kwargs)
+        finally:
+            self._semaphore.release(100)
+    return internal
+
+
+
+def might_change(func):
+    def internal(self,*args,**kwargs):
+        self._semaphore.acquire()
+        try:
+            return func(self,*args,**kwargs)
+        finally:
+            self._semaphore.release()
+    return internal

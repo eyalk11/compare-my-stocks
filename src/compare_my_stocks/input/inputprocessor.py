@@ -1,4 +1,4 @@
-from common.common import c, ass
+from common.common import ass
 from common.composition import C
 from memoization import cached
 
@@ -6,7 +6,7 @@ from common.refvar import RefVar
 from compare_my_stocks.common.common import neverthrow
 from compare_my_stocks.common.dolongprocess import DoLongProcessSlots, TaskParams
 from input.inputdata import InputDataImpl
-from input.inputdatainterface import InputDataImplInterface
+from input.inputdatainterface import InputDataImplInterface, might_change
 from input.inputprocessorinterface import InputProcessorInterface
 from transactions.transactioninterface import BuyDictItem,TransactionSource
 import collections
@@ -24,7 +24,7 @@ import numpy
 import pandas
 import pandas as pd
 import pytz
-from PySide6.QtCore import QRecursiveMutex
+from PySide6.QtCore import QRecursiveMutex, QSemaphore
 
 from common.loghandler import TRACELEVEL
 from config import config
@@ -52,6 +52,7 @@ class SymbolError(Exception):
 class InputProcessor(InputProcessorInterface):
     dicts_names = ['alldates', 'unrel_profit', 'value', 'avg_cost_by_stock', 'rel_profit_by_stock',
                    'tot_profit_by_stock', 'holding_by_stock']
+
 
     @property
     def _data(self) -> InputDataImplInterface:
@@ -110,18 +111,18 @@ class InputProcessor(InputProcessorInterface):
 
     @property
     def InputSource(self) -> InputSourceInterface:
-        return self._InputSource
+        return self._inputsource
 
     @property
     def transaction_handler(self) -> TransactionHandlerManager:
         return self._transaction_handler
 
-    def __init__(self, symb, transaction_handler, InputSource=None):
+    def __init__(self, symb, transaction_handler, inputsource=None):
         self.to_save_data = False 
         self._force_upd_all_range = None
 
-        self._InputSource: InputSource = InputSource
-        if self._InputSource is None:
+        self._inputsource: InputSource = inputsource
+        if self._inputsource is None:
             logging.warn("not using any source")
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
@@ -145,6 +146,7 @@ class InputProcessor(InputProcessorInterface):
         self._save_data_proc=DoLongProcessSlots(self._save_data)
         # self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
         self.currency_on_date = C// self.get_currency_on_certain_time % { 'curr':  (lambda sym : self._data.get_currency_for_sym(sym)) } #@ (lambda t,sym,cache_only: (t,sym,cache_only))
+        self._semaphore=QSemaphore(100)
         a=1
 
     @property
@@ -190,6 +192,7 @@ class InputProcessor(InputProcessorInterface):
 
         return hh
 
+    @might_change
     def update_currency_hist(self,currency,df):
         df=df[StandardColumns]
         mi = pd.MultiIndex.from_product([[currency], list(StandardColumns)])
@@ -206,6 +209,7 @@ class InputProcessor(InputProcessorInterface):
             self._data.currency_hist=self._data.currency_hist.combine_first(df)
 
 
+    @might_change
     def get_currency_hist(self, currency, fromdate, enddate,minimal=False,queried: Optional[RefVar]=None,cache_only=False):
         fromdate=localize_it(conv_date(fromdate,premissive=False))
         enddate=localize_it(conv_date(enddate))
@@ -244,7 +248,7 @@ class InputProcessor(InputProcessorInterface):
 
             for (mindate, maxdate) in ls:
                 try:
-                    tmpdf= self._InputSource.get_currency_history(pair, mindate, maxdate)
+                    tmpdf= self._inputsource.get_currency_history(pair, mindate, maxdate)
                 except AssertionError:
                     raise ValueError("Bad currency")
                 didquery=True
@@ -270,6 +274,7 @@ class InputProcessor(InputProcessorInterface):
         #goodind=  list(set([x for x in  self._data.currency_hist[currency].index if x>=(fromdate - datetime.timedelta(days=1)).date() and x<=enddate.date()  ]).intersection(set(get_good_keys())))
         #return df.loc[ goodind ]
     
+    @might_change
     def get_currency_on_certain_time(self, curr,  t,cache_only=False ):
 
         for i in range(1,3):
@@ -301,6 +306,7 @@ class InputProcessor(InputProcessorInterface):
 
 
 
+    @might_change
     def get_buy_operations_with_adjusted(self,items):
         logging.debug("st get_buy")
         self._data._no_adjusted_for = set()
@@ -308,14 +314,15 @@ class InputProcessor(InputProcessorInterface):
         for t,v in items:
             v: BuyDictItem
             curr=self._data.get_currency_for_sym(v.Symbol)
-            if curr in set(['unk', config.Symbols.Basecur]):
+
+            if curr in set(['unk', config.Symbols.Basecur,None]): #None currency means symbol info is empty
                 self._data._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
                 yield BuyOp(date=localize_it(t),currency=None,buydic=v)
             else:
                 try:
                     with SimpleExceptionContext(err_description= f"error getting currency for transaction {v.Symbol}", detailed=False):
                         val, queried = self.get_currency_on_certain_time(curr, t)
-                        if queried:
+                        if queried == True:
                             gok=True
                         if val == 'err':
                             self._data._err_transactions.add(v.Symbol)
@@ -914,7 +921,7 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):
-        if self._InputSource is None:
+        if self._inputsource is None:
             return False
 
 
@@ -975,18 +982,18 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
-        if self._InputSource is None:
+        if self._inputsource is None:
             return 0
         logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
         #self._InputSource.ownership()
-        l, hist = self._InputSource.get_symbol_history(sym_corrected, mindate, maxdate,
+        l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.Symbols.Crypto))  # should be rounded
 
         self._data.symbol_info[sym] = (l if l else {}) #just for debug I think
         if (cont := self._data.symbol_info[sym].get('contract')):
             logging.debug(f"resolved {sym} is {cont}")
         if hist is None:
-            raise SymbolError("bad symbol")
+            raise SymbolError("empty history")
         elif len(hist)==0:
                 raise SymbolError("empty history")
         else:
@@ -1087,10 +1094,10 @@ class InputProcessor(InputProcessorInterface):
 
 
     def get_relevant_currency(self,x):
-        if self._InputSource is None:
+        if self._inputsource is None:
             return
         if x not in self._relevant_currencies_rates:
-            self._relevant_currencies_rates[x] = self._InputSource.get_current_currency((config.Symbols.Basecur, x))
+            self._relevant_currencies_rates[x] = self._inputsource.get_current_currency((config.Symbols.Basecur, x))
         return  self._relevant_currencies_rates[x]
 
     @simple_exception_handling("adjusting for currency", return_succ=0)
@@ -1105,9 +1112,9 @@ class InputProcessor(InputProcessorInterface):
             logging.debug('Using cached relevant currencies {}'.format(self._relevant_currencies_time))
 
         upd= False
-        if self._InputSource is not None:
+        if self._inputsource is not None:
             for x in relevant_currencies:
-                self._relevant_currencies_rates[x] = ifnotnan(self._InputSource.get_current_currency((config.Symbols.Basecur, x)),lambda t:1/t)
+                self._relevant_currencies_rates[x] = ifnotnan(self._inputsource.get_current_currency((config.Symbols.Basecur, x)), lambda t: 1 / t)
                 upd = upd or (self._relevant_currencies_rates[x] is not None)
 
 
@@ -1224,12 +1231,12 @@ class InputProcessor(InputProcessorInterface):
         fastway = False
         firsttime=self.data is None
         if firsttime:
-            self.data = InputDataImpl.full_data_load()
+            self.data = InputDataImpl.full_data_load(self._semaphore)
             if self._data.fullcachedate:
                 self.process_transactions() #not strictly needed. Can be done in parallel
                 if self.transaction_handler.need_to_save:
                     logging.debug("new transactions since last cache , not fast-way")
-                    self.data = InputDataImpl()
+                    self.data = InputDataImpl(self._semaphore)
                     fastway =False #We process transactions again. That can be done
                 else:
                     self._initial_process_done = True

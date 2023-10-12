@@ -18,6 +18,7 @@ from common.common import neverthrow
 #   of printing directly. This will allow other libraries to use their
 #   custom logging implementation.
 
+
 TRACELEVEL=5
 
 import logging
@@ -57,9 +58,9 @@ class ImpacketFormatter(colorlog.ColoredFormatter):
   Prefixing logged messages through the custom attribute 'bullet'.
   '''
 
-  def __init__(self):
+  def __init__(self,**kwargs):
 
-      colorlog.ColoredFormatter.__init__(self,'%(log_color)s%(bullet)s %(filename)s:%(lineno)d | %(message)s',log_colors=log_colors)
+      colorlog.ColoredFormatter.__init__(self,'%(log_color)s%(bullet)s %(filename)s:%(lineno)d | %(message)s',log_colors=log_colors,**kwargs)
 
   def format(self, record):
     if record.levelno == logging.INFO:
@@ -77,8 +78,8 @@ class ImpacketFormatterTimeStamp(ImpacketFormatter):
   '''
   Prefixing logged messages through the custom attribute 'bullet'.
   '''
-  def __init__(self):
-      logging.Formatter.__init__(self,'[%(asctime)-15s] %(filename)s %(bullet)s %(message)s', None)
+  def __init__(self,**kwargs):
+      logging.Formatter.__init__(self,'[%(asctime)-15s] %(filename)s %(bullet)s %(message)s', None, **kwargs)
 
   def formatTime(self, record, datefmt=None):
       return ImpacketFormatter.formatTime(self, record, datefmt="%Y-%m-%d %H:%M:%S")
@@ -97,16 +98,21 @@ def init_log_default(config):
         logfile = config.Running.LogFile
         logerrorfile = config.Running.LogErrorFile
     debug = config.Running.Debug if not dont_print() else False
-    init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug)
+    if config.Running.NoColor:
+        kwargs = {'no_color':True}
+    else:
+        kwargs = {} 
 
-def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
+    init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug,kwargs=kwargs )
+
+def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={}):
     import matplotlib
     matplotlib.set_loglevel("INFO")
     def set_format(handler):
         if not ts:
-            handler.setFormatter(ImpacketFormatter())
+            handler.setFormatter(ImpacketFormatter(**kwargs))
         else:
-            handler.setFormatter(ImpacketFormatterTimeStamp())
+            handler.setFormatter(ImpacketFormatterTimeStamp(**kwargs))
     # We add a StreamHandler and formatter to the root logger
     logging.addLevelName(TRACELEVEL,"TRACE")
     if debug and not dont_print():
@@ -141,6 +147,9 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0):
         ch.setLevel(logging.ERROR)
         fh.setFormatter(MyFormatter())
         log.addHandler(ch)
+
+    log.debug(f'init_log {kwargs}') 
+
 
     # Found to work. Not the best.
 

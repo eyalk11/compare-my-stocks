@@ -6,6 +6,8 @@ import sys
 import os
 from pathlib import Path
 
+import pandas as pd
+
 from common.common import neverthrow
 from compare_my_stocks.common.simpleexceptioncontext import SimpleExceptionContext
 
@@ -34,7 +36,7 @@ from input.inputprocessor import InputProcessor
 from transactions.IBtransactionhandler import IBTransactionHandler
 from transactions.parsecsv import return_trades
 import config
-from tests.testtools import inp, realeng, IBSource, inpb, realenghookinp
+from tests.testtools import inp, realeng, IBSourceSess, inpb, realenghookinp
 from transactions.transactioninterface import BuyDictItem
 
 #cfg.StopExceptionInDebug = True
@@ -69,8 +71,8 @@ def test_var():
     assert not g
 
 
-def test_basic_sym(IBSource):
-    x = IBSource
+def test_basic_sym(IBSourceSess):
+    x = IBSourceSess
     pair = ("ILS", "USD")
     f = pair[1] + pair[0]
     contract = Forex(f)
@@ -147,11 +149,33 @@ def test_org_histdic(inp):
     assert 1 == 1
 
 
+def test_current_histdic(inp):
+    tmpinp = inp
+    tmpinp.load_cache(False, process_params=tmpinp.process_params)
+    assert 1 == 1
+
+
 def test_jsonscheme():
     from pydantic import TypeAdapter
     from config.newconfig import Config
     t=TypeAdapter(Config)
     t.json_schema()
+
+def test_fixhistdic():
+    dat, inp = get_inp_fast()
+    hist=inp._data._hist_by_date
+    d= collections.OrderedDict()
+    for k,v in hist.items():
+        if type(k)==pandas.Timestamp:
+            d[k.to_pydatetime()]=v
+        else:
+            d[k]=v
+    df=pd.DataFrame.from_dict(dict(d), orient='index',columns=v.keys())
+    df.index = pd.to_datetime(df.index).date
+    df = df.groupby(df.index).first()
+    histb=df.to_dict()
+
+
 
 @pytest.mark.parametrize('stock_name',["TSLA"])
 def test_aa(stock_name: str):
@@ -159,10 +183,7 @@ def test_aa(stock_name: str):
 
     save_path = f"c:/users/ekarni/compare-my-stocks/{stock_name}.bin"
 
-    config.config.Input.FullCacheUsage = UseCache.FORCEUSE
-    dat = InputDataImpl.full_data_load()
-    inp=InputProcessor(None,None,None)
-    inp.data=dat
+    dat, inp = get_inp_fast()
     zz = inp.get_status_for_cur('TSLA')
     d = 1
     dat._unrel_profit_adjusted = defaultdict(InputDataImpl.init_func)
@@ -196,6 +217,16 @@ def test_aa(stock_name: str):
     pickle.dump(self, open(save_path, "wb"))
 
     #
+
+
+def get_inp_fast():
+    config.config.Input.FullCacheUsage = UseCache.FORCEUSE
+    dat = InputDataImpl.full_data_load()
+    inp = InputProcessor(None, None, None)
+    inp.data = dat
+    return dat, inp
+
+
 from testtools import mock_config_to_default_alt
 
 # @pytest.mark.parametrize("realenghookinp",[r'c:\users\ekarni\compare-my-stocks\testlumi.bin'],indirect=True)

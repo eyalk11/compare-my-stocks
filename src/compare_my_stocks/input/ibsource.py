@@ -12,8 +12,10 @@ import pandas as pd
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 from memoization import cached
 
-from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, selfifnn, ifnn, StandardColumns
-from common.simpleexceptioncontext import simple_exception_handling
+from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, selfifnn, ifnn, StandardColumns, \
+    cache_if_not_none
+from common.refvar import RefVar
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from common.loghandler import TRACELEVEL
 from config import config
 from input.inputsource import InputSource
@@ -25,6 +27,7 @@ import Pyro5.api
 from ib import timeoutreg #register timeout error. don't remove!
 
 WRONG_EXCHANGE = 200
+HISTORY_ERROR=162
 from ib.remoteprocess import RemoteProcess
 
 
@@ -97,11 +100,11 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     def init(self):
-
-        logging.debug(('init'))
+        IB.RaiseRequestErrors=True
 
         #util.UseQT('PySide6')
         util.logToConsole('DEBUG')
+        logging.debug(('initaa'))
         try:
             asyncio.get_event_loop()
         except:
@@ -171,10 +174,12 @@ class IBSourceRem:
     @make_sure_connected
     def reqHistoricalData_ext(self, contract, enddate, td):
         logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
-        try:
-            cont=Contract.create(**contract)
-        except:
-            cont = Contract(**contract)
+        if type(contract)!=Contract:
+
+            try:
+                cont=Contract.create(**contract)
+            except:
+                cont = Contract(**contract)
         bars= self.reqHistoricalData(cont,
                                       conv_date(enddate), td)
 
@@ -221,7 +226,7 @@ class IBSourceRem:
         INC=["category","subcategory", "longName","validexchanges","marketName","stockType", "lastTradeTime"]
         c=Contract(**contractdic)
         for x in  self.ib.reqContractDetails(c):
-            logging.debug((log_conv(asdict(x),x.validexchanges)))
+            logging.debug((log_conv(asdict(x),x.validExchanges)))
             yield dictfilt(asdict(x),INC)
 
 
@@ -261,16 +266,30 @@ class IBSource(InputSource):
     def disconnect(self):
         self.ibrem._pyroRelease()
         self.ibrem.connected=False
+
+    @cache_if_not_none
+    @cached(ttl=300)
+    @simple_exception_handling(err_description='get currenct currency', return_succ=None, never_throw=True)
     def get_current_currency(self, pair):
-        res= self.ibrem.get_current_currency(pair)
+        try:
+            res= self.ibrem.get_current_currency(pair)
+        except RequestError:
+            res = None
         if res is None:
             res=self.ibrem.get_current_currency(tuple(pair[::-1]))
             if res is not None:
                 res=1/res
         return res
 
+    # def get_current_currency(self,pair):
+        # self.get_current_currency_int.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is None)
+        # return self.get_current_currency_int(pair)
 
 
+
+    @cache_if_not_none
+    @cached
+    @simple_exception_handling(err_description='error in resolve symbol',return_succ=None,never_throw=True)
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
             try:
@@ -330,13 +349,50 @@ class IBSource(InputSource):
     @simple_exception_handling(err_description='error in get_symbol_history',return_succ=(None,[]),never_throw=True)
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
 
-        l = self.resolve_symbol(sym)
-        if not l:
-            logging.debug((f'error resolving {sym}'))
-            return None, None
+        with SimpleExceptionContext('error resolving symbol',return_succ=(None,[]),never_throw=True,detailed=False):
+            l = self.resolve_symbol(sym)
+            if not l:
+                logging.debug((f'error resolving {sym}'))
+                return None, None
         return l, self.historicalhelper(startdate, enddate, l['contract'])
 
+    @cached(custom_key_maker=lambda self,contract,enddate, td: contract)
+    def get_right_contract_bars(self,contract,enddate, td):
+        with self.lock:
+            cont = asdict(contract) if type(contract) is not dict else contract
+            if not cont['exchange'] and cont["secType"]=='STK':
+                logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
+                cont['exchange'] = config.Symbols.TranslateExchanges.get(cont['primaryExchange'],
+                                                                         cont['primaryExchange'])
+
+            for i in range(2):
+                    try:
+                        bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
+                        return cont,bars
+                    except RequestError as e:
+                        if  cont["secType"]!='STK':
+                            raise
+                        logging.debug('req err')
+                        if e.code in [ WRONG_EXCHANGE,HISTORY_ERROR]:
+                            logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
+                            cont['exchange']= config.Sources.IBSource.DefaultExchange
+                            if config.Sources.IBSource.DefaultExchange is None:
+                                return None
+                            if i==1:
+                                logging.debug("tried twice. giving up")
+                                raise
+
+                        else:
+                            logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
+                            return None
+
+
     def historicalhelper(self, startdate, enddate, contract):
+        bars=None
+
+
+
+
         startdate=conv_date(startdate,premissive=False)
         enddate = conv_date(enddate)
         #startdate=datetime.datetime(startdate)
@@ -346,29 +402,26 @@ class IBSource(InputSource):
         else:
             td = enddate.date()-startdate.date()
             td = td.days + 1
-        with self.lock:
-            cont = asdict(contract) if type(contract) is not dict else contract
-            if not cont['exchange']:
-                logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
-                cont['exchange']= config.Symbols.TranslateExchanges.get(cont['primaryExchange'], cont['primaryExchange'])
 
-            try:
-                bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
-            except RequestError as e:
-                if e.code == WRONG_EXCHANGE:
-                    logging.debug((f'bad exchange for symbol. try resolve? {cont}. {e.message}'))
-                else:
-                    logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
-                return None
-            df = nbutil.df(bars)
-            if df is None:
-                return None
-            df = df.rename(columns={'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
-            df.set_index('date',inplace=True)
-            df=df.rename(index={i: conv_date(str(i)) for i in df.index})
-            df = df.loc[df.index >= pd.to_datetime(startdate.date())]
-            df = df.loc[df.index <= pd.to_datetime(enddate.date())]
-            return df
+
+        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is None)
+        is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
+        cont,bars = self.get_right_contract_bars(contract,enddate,td)
+
+        if cont is None:
+            return None
+        if is_cached: #used cache - the bars are probably wrong. but the contract is right
+            bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td)
+        df = nbutil.df(bars)
+        if df is None:
+            return None
+
+        df = df.rename(columns={'open': 'Open', 'close': 'Close', 'high': 'High', 'low': 'Low'})
+        df.set_index('date',inplace=True)
+        df=df.rename(index={i: conv_date(str(i)) for i in df.index})
+        df = df.loc[df.index >= pd.to_datetime(startdate.date())]
+        df = df.loc[df.index <= pd.to_datetime(enddate.date())]
+        return df
 
 
 
@@ -378,7 +431,7 @@ class IBSource(InputSource):
         if type(sym)==dict and "_dic" in sym:
             sym=sym['_dic'] #why?
 
-        return type(sym)==dict and 'validexchanges' in sym
+        return type(sym)==dict and ('validExchanges' in sym or 'primaryExchange' in sym)
 
 
     def query_symbol(self, sym):
@@ -401,6 +454,7 @@ class IBSource(InputSource):
             else:
                 raise KeyError(f"no data for {pair} ")
 
+
     def get_currency_history(self, pair, startdate, enddate):
         f=pair[1]+pair[0]
         if b:=self.to_reverse_pair(pair): #might raise keyerror
@@ -412,6 +466,8 @@ class IBSource(InputSource):
             if res is not None:
                 res[StandardColumns] = res[StandardColumns].applymap(lambda x: 1 / x)
         return res
+    def get_all_symbols(self):
+        raise NotImplementedError() 
 
     # v = {"Sym":w['contractDesc'], "Qty": w["position"], "Last": last , "RelProfit": w['realizedPnl'], "Value": w['mktValue'],
     #      'Currency': w['currency'], 'Crypto': 0, 'Open': open, 'Source': 'IB', 'AvgConst': w['AvgCost'],
