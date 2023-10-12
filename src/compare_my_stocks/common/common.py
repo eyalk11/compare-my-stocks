@@ -16,7 +16,7 @@ P = ParamSpec('P')
 Q = ParamSpec('Q')
 U = TypeVar('U')
 
-def ass(x):
+def assert_not_none(x):
     assert x is not None 
     return x 
 
@@ -338,3 +338,12 @@ class TransactionSourceType(Flag):
 
 
 StandardColumns = ['Open', 'High', 'Low', 'Close']
+
+
+def singleton(class_):
+    instances = {}
+    def getinstance(*args, **kwargs):
+        if class_ not in instances:
+            instances[class_] = class_(*args, **kwargs)
+        return instances[class_]
+    return getinstance

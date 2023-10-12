@@ -37,8 +37,6 @@ class RefVar():
         self.value = value
 
     def __getattribute__(self, name):
-        import logging
-        logging.debug(name)
         if name in ['value','set','get','__class__']:
             return object.__getattribute__(self, name)
         else:

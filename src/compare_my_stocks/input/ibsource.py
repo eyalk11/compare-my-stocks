@@ -385,6 +385,8 @@ class IBSource(InputSource):
                         else:
                             logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
                             return None
+                    except Exception as e:
+                        raise
 
 
     def historicalhelper(self, startdate, enddate, contract):
@@ -437,18 +439,27 @@ class IBSource(InputSource):
     def query_symbol(self, sym):
         pass
 
+
     @cached  # type: ignore
     def to_reverse_pair(self,pair):
         f = pair[1] + pair[0]
         contract = Forex(f)
-        ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(), contract)
+        try:
+            ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(), contract)
+        except RequestError as e :
+            logging.debug((f'error in to_reverse_pairA {e.message} {e.code}'))
+            ls=None
         if ls is not None and  len(ls) > 0:
             return False
         else:
             f = pair[0] + pair[1]
             contract = Forex(f)
-            ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(),
-                                       contract)
+            try:
+                ls = self.historicalhelper(datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now(),
+                                           contract)
+            except RequestError as e:
+                logging.debug((f'error in to_reverse_pairb {e.message} {e.code}'))
+                ls=None
             if ls is not None and len(ls) > 0:
                 return True
             else:

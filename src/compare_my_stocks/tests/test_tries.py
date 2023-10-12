@@ -161,19 +161,22 @@ def test_jsonscheme():
     t=TypeAdapter(Config)
     t.json_schema()
 
-def test_fixhistdic():
-    dat, inp = get_inp_fast()
-    hist=inp._data._hist_by_date
+def test_fixhistdic(inp):
+    tmpinp = inp
+    tmpinp.load_cache(False, process_params=tmpinp.process_params)
+    hist=tmpinp._data._hist_by_date
     d= collections.OrderedDict()
     for k,v in hist.items():
+        from pandas import Timestamp 
         if type(k)==pandas.Timestamp:
-            d[k.to_pydatetime()]=v
-        else:
-            d[k]=v
-    df=pd.DataFrame.from_dict(dict(d), orient='index',columns=v.keys())
-    df.index = pd.to_datetime(df.index).date
-    df = df.groupby(df.index).first()
-    histb=df.to_dict()
+            k=k.to_pydatetime()
+        date=Timestamp(k.date())
+        d[date]=v 
+    tmpinp.save_cache()
+    # df=pd.DataFrame.from_dict(dict(d), orient='index',columns=v.keys())
+    # df.index = pd.to_datetime(df.index).date
+    # df = df.groupby(df.index).first()
+    # histb=df.to_dict()
 
 
 

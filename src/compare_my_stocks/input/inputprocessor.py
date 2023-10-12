@@ -1,4 +1,4 @@
-from common.common import ass
+from common.common import assert_not_none
 from common.composition import C
 from memoization import cached
 
@@ -56,16 +56,19 @@ class InputProcessor(InputProcessorInterface):
 
     @property
     def _data(self) -> InputDataImplInterface:
-        return ass(self.data)
+        return assert_not_none(self.data)
 
     def __getattr__(self, item): #for external access mainly
+        if 'data' == item:
+            return object.__getattr__(self,item)
         if 'ipython' in item:
             raise AttributeError(item)
         if 'getattr' in item:
             raise AttributeError(item)
-        # logging.debug(item)
         if hasattr(self.data,item):
             return getattr(self.data,item)
+        else:
+            raise AttributeError(item)
 
     def complete_status(self):
         def get_stat(filter_str):
@@ -275,6 +278,7 @@ class InputProcessor(InputProcessorInterface):
         #return df.loc[ goodind ]
     
     @might_change
+    @simple_exception_handling(err_description="error in getting currency in certain time")
     def get_currency_on_certain_time(self, curr,  t,cache_only=False ):
 
         for i in range(1,3):
@@ -664,7 +668,7 @@ class InputProcessor(InputProcessorInterface):
                         _ , cur_action = buyoperations.popitem(False)
                         t=cur_action[0]
                         t = localize_it(t)
-                        if t> self.process_params.transactions_todate:
+                        if self.process_params.transactions_todate is not None and t> self.process_params.transactions_todate:
                             break
                         mini=True
                     else:

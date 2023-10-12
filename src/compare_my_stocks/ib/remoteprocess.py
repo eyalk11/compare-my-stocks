@@ -1,18 +1,10 @@
-import asyncio
 import logging
 import os
 import subprocess
 import time
 
+from common.common import singleton
 from config import config
-
-def singleton(class_):
-    instances = {}
-    def getinstance(*args, **kwargs):
-        if class_ not in instances:
-            instances[class_] = class_(*args, **kwargs)
-        return instances[class_]
-    return getinstance
 
 import multiprocessing
 
@@ -42,24 +34,11 @@ class RemoteProcess:
 
         logging.info("IBSourceRem is ready")
     @staticmethod
-    def launch_without_console(command):
-        try:
-            import ibsrv 
-            return multiprocessing.Pool(1).apply_async(ibsrv.ibsrv)
-        except:
-            """Launches 'command' windowless and waits until finished"""
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    def launch_without_console():
+        import ibsrv
+        return multiprocessing.Pool(1).apply_async(ibsrv.ibsrv)
 
-            return subprocess.Popen(command, startupinfo=startupinfo,creationflags = subprocess.CREATE_NO_WINDOW)
-
-    def run_additional_process(cls):
-        try:
-            open(config.File.IbSrvReady, 'w').write('notstarted')
-            cls.no_ready_file = False
-        except:
-            cls.no_ready_file = True
-
+    def resolve_process(cls):
         if type(config.Sources.IBSource.AddProcess)==str:
             rpath= os.path.abspath(config.Sources.IBSource.AddProcess)
             if not os.path.exists(rpath):
@@ -70,28 +49,36 @@ class RemoteProcess:
             v=[rpath]
         else:
             v=  config.Sources.IBSource.AddProcess
+        v = ["start", "/wait"] + v
+        return v
+    def run_additional_process(cls):
+        try:
+            open(config.File.IbSrvReady, 'w').write('notstarted')
+            cls.no_ready_file = False
+        except:
+            cls.no_ready_file = True
+
+
 
         if os.name != "nt":
-            logging.warn("Additional process is only tested on windows. Run ibsrv manually (--ibsrv). ")
-            cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
+            logging.warn("Additional process is only tested on windows. Consider running manually.")
+            #cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
+            cls.proc = cls.launch_without_console()
             return True
 
 
-        v = ["start", "/wait"] + v
         if config.Running.StartIbsrvInConsole:
+            v= cls.resolve_process()
+            if not v:
+                return False
             logging.debug("STARTCONS " + str(v))
             cls.proc = subprocess.Popen(v, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True,bufsize=1)
         else:
+            logging.debug("STARTNOTCONSOLE")
+            cls.proc = cls.launch_without_console()
 
-            v= ["cmd","/c"," ".join(v).replace("/wait","/B /wait")]
-            logging.debug("STARTNOTCONSOLE " + str(v))
-            # We create here a new process using start , because apperently, IBSRV has errors even !!! if it is started as a normal process.
-            # the cmd /c is because it fails to find executable named start.
-            cls.proc = cls.launch_without_console(v)
 
-        logging.debug("Running " + str(v))
         return True
          
 
         # os.spawnle(os.P_NOWAIT,'python',[config.AddProcess])
-        time.sleep(1)

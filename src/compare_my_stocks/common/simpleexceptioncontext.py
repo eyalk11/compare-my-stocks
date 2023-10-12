@@ -3,7 +3,7 @@ import os
 from functools import partial
 
 from Pyro5.errors import get_pyro_traceback
-
+import inspect
 from Pyro5.errors import format_traceback
 from ibflex.client import BadResponseError
 
@@ -31,20 +31,17 @@ class SimpleExceptionContext:
 
     def __enter__(self):
         # Code to be executed when entering the context
+        tostop = os.environ.get('PYCHARM_HOSTED') == '1'
         try:
             from config import config
-            bol=config.Running.StopExceptionInDebug
+            tostop=config.Running.StopExceptionInDebug
             if config.Running.IS_TEST:
-                bol = True
+                tostop = True
             self.config = config
         except:
-            bol=False
             self.config=None
             #logging.debug("error loading config in simple exception handling. Probably fine.")
 
-        tostop= os.environ.get('PYCHARM_HOSTED') == '1'
-
-        tostop = tostop or bol
 
         self.do_nothing= tostop and not self.never_throw and self.return_succ is None
 
@@ -113,6 +110,8 @@ def simple_exception_handling(err_description=None,return_succ='undef',never_thr
                 err_to_ignore+=decorated.errors_to_handle
             try:
                 with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback):
+                    from common.loghandler import TRACELEVEL
+                    logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
                     ret= func(*args,**kwargs)
                     no_exception = True
             except Exception as e:
