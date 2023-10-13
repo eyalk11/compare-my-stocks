@@ -1,5 +1,5 @@
-from common.common import assert_not_none
-from common.composition import C
+from common.common import assert_not_none, c
+from composition import C, Orig, X, A
 from memoization import cached
 
 from common.refvar import RefVar
@@ -147,9 +147,10 @@ class InputProcessor(InputProcessorInterface):
         self.failed_to_get_new_data=None
 
         self._save_data_proc=DoLongProcessSlots(self._save_data)
-        # self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
-        self.currency_on_date = C// self.get_currency_on_certain_time % { 'curr':  (lambda sym : self._data.get_currency_for_sym(sym)) } #@ (lambda t,sym,cache_only: (t,sym,cache_only))
-        self._semaphore=QSemaphore(100)
+        #self.currency_on_date = c(self.get_currency_on_certain_time,lambda t,sym,cache_only: (t,self._data.get_currency_for_sym(sym),cache_only) )
+        self._semaphore = QSemaphore(100)
+        self.currency_on_date = C// self.get_currency_on_certain_time % A(t=Orig,cache_only=Orig,curr=X) / (lambda sym : self._data.get_currency_for_sym(sym)) #}# @ (lambda t,sym,cache_only: (t,sym,cache_only))
+
         a=1
 
     @property
@@ -617,10 +618,6 @@ class InputProcessor(InputProcessorInterface):
                 _cur_stock_price[stock][0], 
                 _cur_stock_price[stock][1],currency_val
             )
-        self._data.mindate = min(
-            self._data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._data._hist_by_date.keys())/1000,tz)
-        self._data.maxdate = max(
-            self._data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._data._hist_by_date.keys())/1000,tz)
 
         _cur_splited_bystock = defaultdict(lambda:1)
         _cur_split_updated_for_stock = defaultdict(lambda:False ) # if we already updated holding for stock
@@ -639,9 +636,16 @@ class InputProcessor(InputProcessorInterface):
         cursplit = 1
         _last_action = defaultdict(lambda: None)
         _cur_accumative_holding_bystock = defaultdict(lambda: 0) #just used to calculate the total holding involved
-        if len(self._data._simp_hist_by_date)==0 and (not partial_symbols_update):
+        if len(self._data._hist_by_date)==0 and (not partial_symbols_update):
             logging.warn(("WARNING: No History at all!"))
             return
+
+        self._data.mindate = min(
+            self._data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(min(self._data._hist_by_date.keys())/1000,tz)
+        self._data.maxdate = max(
+            self._data._hist_by_date.keys())  # datetime.datetime.fromtimestamp(max(self._data._hist_by_date.keys())/1000,tz)
+
+
         hh = pytz.UTC  # timezone('Israel')
         #copy to temporary var and restore at the end
         from_date ,to_date = self.process_params.transactions_fromdate, self.process_params.transactions_todate

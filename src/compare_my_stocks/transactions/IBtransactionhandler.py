@@ -25,7 +25,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self._cache_date=None
         self.need_to_save=True
 
-    def DoQuery(self):
+    def do_query(self):
         logging.info(("running query in IB  for transaction"))
         if not self.DoQuery or not (self.query_id) or not self.token_id:
             return
@@ -88,7 +88,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
 
 
         if not usecache or toquery:
-            newres= self.DoQuery()
+            newres= self.do_query()
             logging.debug('completed')
             if newres is None:
                 logging.debug('no results obtained :(')

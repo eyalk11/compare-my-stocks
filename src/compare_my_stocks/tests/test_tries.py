@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from common.common import neverthrow
-from compare_my_stocks.common.simpleexceptioncontext import SimpleExceptionContext
+from compare_my_stocks.common.simpleexceptioncontext import SimpleExceptionContext, simple_exception_handling
 
 sys.path.insert(0,
     str(Path(os.path.dirname(os.path.abspath(__file__))).parent) )
@@ -230,7 +230,7 @@ def get_inp_fast():
     return dat, inp
 
 
-from testtools import mock_config_to_default_alt
+from tests.testtools import mock_config_to_default_alt
 
 # @pytest.mark.parametrize("realenghookinp",[r'c:\users\ekarni\compare-my-stocks\testlumi.bin'],indirect=True)
 @pytest.mark.usefixtures("mock_config_to_default_alt")
@@ -272,7 +272,12 @@ call(BuyDictItem(Qty=-100, Cost=2800, Symbol='LUMI', Notes=None, IBContract=None
         (todt, BuyDictItem(Qty=-100, Cost=2800, Symbol=stock)),
     ]
     verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt+ datetime.timedelta(days=4),fil)
-
+def test_simp_exc():
+    with SimpleExceptionContext(err_description='bb',never_throw=True):
+        raise Exception('aaa')
+@simple_exception_handling('bbb')
+def test_simp_func():
+    raise Exception('aaa')
 def test_split_profit(realenghookinp):
     eng = realenghookinp
     inp = eng._inp
@@ -303,11 +308,10 @@ def test_split_profit(realenghookinp):
             dateutil.parser.parse("2023-01-25").date(),
         ]
     )
-    with SimpleExceptionContext(err_description="aa",never_throw=True):
-        verify_profit_calc([], buydict, dates_set, fromdt, inp, stock, todt+ datetime.timedelta(days=8), fil)
+    verify_profit_calc([], buydict, dates_set, fromdt, inp, stock, todt+ datetime.timedelta(days=8), fil)
 
 def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
-    def xx():
+    def xx(a):
         return pickle.load(open(fil, "rb"))
 
     sig = signature(InputProcessor.log_info)
@@ -357,9 +361,9 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
         logging.debug(df)
             
         
-        with SimpleExceptionContext(err_description="aa", never_throw=True):
+        with SimpleExceptionContext(err_description="aa", never_throw=False):
             for c in calls:
-                df = df.append(pandas.Series(list(map(str, c.args)), index=df.columns), ignore_index=True)
+                #df = df.append(pandas.Series(list(map(str, c.args)), index=df.columns[:-2]), ignore_index=True)
                 k = c.args
 
                 if c in InputProcessor.log_info.call_args_list:
@@ -370,7 +374,9 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
                             if not (k == l or (neverthrow(lambda: abs(k - l) <= abs(k) / 1000)) or (
                                     math.isnan(k) and math.isnan(l))):
                                 logging.debug("mismatch %s %s" % (k, l))
-                                assert 0 
+                                logging.debug(d)
+                                logging.debug(c)
+                                assert 0 ==1
 
         # InputProcessor.log_info.assert_has_calls(calls)
 

@@ -16,9 +16,14 @@ def format_traceback_str(*args,detailed=True):
 def print_formatted_traceback(detailed=True):
     logging.error(format_traceback_str(detailed=detailed))
 
+def get_caller_info(over):
+    frame = inspect.stack()[over]
+    filename = frame.filename
+    line_number = frame.lineno
+    return os.path.basename(filename), line_number
 
 class SimpleExceptionContext:
-    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None):
+    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None):
         self.err_description=err_description
         self.return_succ=return_succ
         self.never_throw=never_throw
@@ -27,18 +32,26 @@ class SimpleExceptionContext:
         self.detailed=detailed
         self.err_to_ignore=err_to_ignore
         self.callback=callback
+        self.nocfg=noconfig
+        if caller is None:
+            caller= get_caller_info(2)
+        self.caller=caller
+
 
 
     def __enter__(self):
         # Code to be executed when entering the context
         tostop = os.environ.get('PYCHARM_HOSTED') == '1'
-        try:
-            from config import config
-            tostop=config.Running.StopExceptionInDebug
-            if config.Running.IS_TEST:
-                tostop = True
-            self.config = config
-        except:
+        if not self.nocfg:
+            try:
+                from config import config
+                tostop=config.Running.StopExceptionInDebug
+                if config.Running.IsTest:
+                    tostop = True
+                self.config = config
+            except:
+                self.config=None
+        else:
             self.config=None
             #logging.debug("error loading config in simple exception handling. Probably fine.")
 
@@ -74,8 +87,8 @@ class SimpleExceptionContext:
         if strng in tmpst and e.__class__ not in default_not_detailed_errors:
             logf(("".join(get_pyro_traceback())))
         if self.err_description:
-            logf(self.err_description)
-        if self.config is not None and self.config.Running.IS_TEST:
+            logf( '%s:%s' % (self.caller)  + ' ' + str(self.err_description))
+        if self.config is not None and self.config.Running.IsTest:
             logf(format_traceback_str(exc_type,exc_value, traceback, detailed=self.detailed))  # just in case
         elif e.__class__ not in default_not_detailed_errors and self.detailed:
             logf(format_traceback_str(exc_type,exc_value, traceback, detailed=self.detailed))
@@ -100,16 +113,18 @@ def excp_handler(exc_type,handler=lambda a,b: None):
         return internal
     return decorated
 
-def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None):
+def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False):
     def decorated(func):
+        caller = get_caller_info(2)
         def internal(*args,**kwargs):
             nonlocal err_to_ignore
+
             no_exception = False
             ret=None
             if hasattr(decorated,'errors_to_handle'):
                 err_to_ignore+=decorated.errors_to_handle
             try:
-                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback):
+                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback,noconfig=noconfig,caller=caller):
                     from common.loghandler import TRACELEVEL
                     logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
                     ret= func(*args,**kwargs)

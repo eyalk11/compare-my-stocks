@@ -377,14 +377,14 @@ class IBSource(InputSource):
                             logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
                             cont['exchange']= config.Sources.IBSource.DefaultExchange
                             if config.Sources.IBSource.DefaultExchange is None:
-                                return None
+                                return None,None
                             if i==1:
                                 logging.debug("tried twice. giving up")
                                 raise
 
                         else:
                             logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
-                            return None
+                            return None,None
                     except Exception as e:
                         raise
 
@@ -406,7 +406,7 @@ class IBSource(InputSource):
             td = td.days + 1
 
 
-        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is None)
+        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is (None,None) )
         is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
         cont,bars = self.get_right_contract_bars(contract,enddate,td)
 

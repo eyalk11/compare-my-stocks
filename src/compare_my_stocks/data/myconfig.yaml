@@ -89,6 +89,9 @@ Symbols: !SymbolsConf
   - ISLAND
   - XERTA
   - LSE
+  CurrencyFactor: {"ILS":100.0,"ILA":100.0}
+  TranslateCurrency: {"ILA":"ILS"}
+
 TransactionHandlers: !TransactionHandlersConf
   TransactionSource:  !TransactionSourceType Both 
   BothSymbols: []

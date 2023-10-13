@@ -112,7 +112,7 @@ class IBSourceConf:
     RegularAccount: Optional[str] = None
     RegularUsername: Optional[str] =None
     UsePythonIfNotResolve: bool = True
-    DefaultExchange: Optional[str] = None
+    DefaultExchange: Optional[str] = "SMART"
 @paramaware
 @dataclass
 class UIConf:
@@ -191,7 +191,7 @@ class SymbolsConf:
 @paramaware
 @dataclass
 class FileConf:
-    HistF: str = r'HistFile.cache'
+    HistF: str = r'hist_file.cache'
     HistFBackup: str = HistF + '.back'
     DefaultNotebook: str = r'jupyter\DefaultNotebook.ipynb'
     JsonFilename: str = r'groups.json'
@@ -372,7 +372,7 @@ class ConfigLoader():
             sys.exit(-1)
 
         noexcep=False
-        with SimpleExceptionContext(f"Failed loading config file {config_file}. aborting",always_throw=True):
+        with SimpleExceptionContext(f"Failed loading config file {config_file}. aborting",always_throw=True,noconfig=True):
             cls.config = cls.load_config(config_file)
             noexcep = True
         if not noexcep:
@@ -422,7 +422,7 @@ class ConfigLoader():
         from common.simpleexceptioncontext import simple_exception_handling
         #make the following a method with decorator
 
-        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True)
+        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True,noconfig=True)
         def load_config_int():
             return yaml.load(open(config_file))
 
