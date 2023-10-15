@@ -185,6 +185,13 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
  2. (For developers) `python -m compare_my_stocks` 
  2. (For users) run `compare-my-stocks.exe` (shortcut)
 
+## Reocommanded reading
+
+To avoid some pitholes , it is recommended to check out this list: 
+
+[Things good to know when using the app](https://github.com/eyalk11/compare-my-stocks/wiki/Things-good-to-know-when-using-the-app)
+
+
 ## Remarks 
 
 * This app works best on 1920x1080, but is adaptive to othe resoultions. 
