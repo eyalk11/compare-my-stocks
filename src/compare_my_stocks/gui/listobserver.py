@@ -83,6 +83,10 @@ class ListsObserver(FormInterface):
         for z in [self.window.orgstocks,self.window.refstocks]:
             self.del_selected(z)
 
+    def clear_all_list(self):
+        for z in [self.window.orgstocks,self.window.refstocks]:
+            z.clear()
+
     @staticmethod
     def generic_add_lists(org, dst):
         items = set([x for x in org.selectedItems()])

@@ -15,7 +15,7 @@ T = TypeVar('T')
 P = ParamSpec('P')
 Q = ParamSpec('Q')
 U = TypeVar('U')
-
+really_close= lambda k,l: (abs(k - l) <= abs(k) / 1000) if k!=0 else (abs(l) <= 1/1000)
 def assert_not_none(x):
     assert x is not None 
     return x 
@@ -73,6 +73,8 @@ def checkIfProcessRunning(processName):
 def localize_it (x):
     if x is None:
         return None
+    if type(x) is datetime.date:
+        return x
     return (pytz.UTC.localize(x, True) if not x.tzinfo else x)
 def unlocalize_it(date):
     d=localize_it(date)
@@ -147,7 +149,7 @@ class VerifySave(int,Enum):
 @to_yaml
 class UseCache(int,Enum):
     DONT=0
-    USEIFAVALIABLE=1
+    USEIFAVAILABLE=1
     FORCEUSE=2
 
 class LimitType(int,Flag):

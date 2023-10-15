@@ -218,7 +218,7 @@ class DataGenerator(DataGeneratorInterface):
 
         for gr, stocks in items:
             try:
-                arr = np.array(df[stocks]).transpose()
+                arr = np.array(df[list(set(df.columns).intersection(stocks))]).transpose()
             except KeyError:
                 logging.error('none of the values here')
                 continue

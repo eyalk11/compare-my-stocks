@@ -60,6 +60,7 @@ multimethod = { version ="*",optional = true}
 
 
 voila = {version="*", optional= true}
+python-composition = {version="*", optional= true}
 
 [tool.poetry.extras]
 full = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml','notebook','joblib','matplotlib','polygon-api-client']

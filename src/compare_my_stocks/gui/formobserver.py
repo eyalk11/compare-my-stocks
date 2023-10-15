@@ -48,7 +48,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def refresh_task(self, x, params):
         self.window.last_status.setText('refreshing data')
-        self.graphObj.process(set(x), params, force_upd_all_range=True)
+        self.graphObj.process(set(x), params, force_upd_all_range=not self._min_refresh)
         self.update_graph(1, True)
         self.window.last_status.setText('finished refreshing')
 
@@ -79,6 +79,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self._update_graph_task.finished.connect(self.decrease)
         self.current_mode = DisplayModes.FULL
         self.placeholder = QGroupBox()
+        self._min_refresh = True
 
     def til_today(self):
         tim = datetime.now()
@@ -263,6 +264,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         df = self.graphObj.input_processor._current_status)
         v.generate_dialog([d]) 
 
+    def clear_all(self):
+        self.clear_all_list() 
+        self.window.groups: QListWidget
+        self.window.groups.clearSelection()
+        self.window.comparebox : PySide6.QComboBox
+        self.window.comparebox.currentText=""
+        self.window.COMPARE.setChecked(False)
+        self.window.adjust_currency.setChecked(False)
+        self.update_graph(reset_ranges=ResetRanges.FORCE, force=True)
+
+
     def edit_groups(self):
 
         # jw=json_editor_ui.JSONEditorWindow(None)
@@ -297,6 +309,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.update_graph(1)
 
+    def min_refresh_changed(self, val: PySide6.QtCore.Qt.CheckState):
+        self._min_refresh = (val == PySide6.QtCore.Qt.CheckState.Checked.value)
+
     def setup_observers(self):
         def safeconnect(signal, fun):
             signal = SafeSignal(signal, lambda: not self.ignore_updates_for_now)
@@ -312,6 +327,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled = safeconnect(
             self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled,
             (genobs('show_transactions_graph')))
+        self.window.findChild(QCheckBox, name="minrefresh").toggled.connect(self.min_refresh_changed)
         self.window.findChild(QCheckBox, name="limit_to_port").toggled.connect(self.limit_port_changed)
         self.window.findChild(QCheckBox, name="usereferncestock").toggled = safeconnect(
             self.window.findChild(QCheckBox, name="usereferncestock").toggled, (genobsResetForce('use_ext')))
@@ -339,6 +355,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.addtoref.pressed.connect(self.add_to_ref)
         self.window.addtosel.pressed.connect(self.add_to_sel)
         self.window.open_statusbtn.pressed.connect(self.open_status)
+        self.window.clearBtn.pressed.connect(self.clear_all)
         self.window.exportport.pressed.connect(
             self.graphObj.transaction_handler.export_portfolio)  # Transaction handler manager
         self.window.edit_groupBtn.pressed = safeconnect(self.window.edit_groupBtn.pressed, (self.edit_groups))

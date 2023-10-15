@@ -9,6 +9,7 @@ from dataclasses import asdict
 from functools import partial, lru_cache
 
 import pandas as pd
+from frozendict import frozendict
 from ib_insync import Forex, util as nbutil, Contract, RequestError
 from memoization import cached
 
@@ -355,8 +356,13 @@ class IBSource(InputSource):
                 logging.debug((f'error resolving {sym}'))
                 return None, None
         return l, self.historicalhelper(startdate, enddate, l['contract'])
-
-    @cached(custom_key_maker=lambda self,contract,enddate, td: contract)
+    @staticmethod
+    def get_contract(contract):
+        try:
+            cont = Contract.create(**contract)
+        except:
+            cont = Contract(**contract)
+    @cached(custom_key_maker=lambda self,contract,enddate, td: IBSource.get_contract(contract) if type(contract) is dict else contract)
     def get_right_contract_bars(self,contract,enddate, td):
         with self.lock:
             cont = asdict(contract) if type(contract) is not dict else contract
@@ -385,6 +391,8 @@ class IBSource(InputSource):
                         else:
                             logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
                             return None,None
+                    except TimeoutError as e:
+                        raise
                     except Exception as e:
                         raise
 
@@ -407,7 +415,10 @@ class IBSource(InputSource):
 
 
         self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is (None,None) )
-        is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
+        try:
+            is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
+        except:
+            is_cached=False
         cont,bars = self.get_right_contract_bars(contract,enddate,td)
 
         if cont is None:

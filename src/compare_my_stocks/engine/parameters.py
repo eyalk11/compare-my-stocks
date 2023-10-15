@@ -34,7 +34,7 @@ class Parameters:
     starthidden : bool =0
     compare_with: str =None
     portfolio: str  = None #The portfolio to read from transaction table in MyStocks
-    use_cache : UseCache =UseCache.USEIFAVALIABLE
+    use_cache : UseCache =UseCache.USEIFAVAILABLE
     def_fig_size : tuple = config.UI.DefFigSize
     unite_by_group : UniteType =UniteType.NONE
     show_graph : bool =False

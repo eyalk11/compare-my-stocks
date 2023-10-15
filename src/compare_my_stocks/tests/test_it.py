@@ -124,7 +124,7 @@ def test_basic_poly(PolySource):
     basic(x)
 def test_basic(IBSourceSess):
     x = IBSourceSess
-    basicb(x)
+    basic(x)
 def basic(x):
 
 

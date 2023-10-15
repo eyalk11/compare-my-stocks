@@ -32,7 +32,7 @@ from dataclasses import dataclass
 @paramaware
 @dataclass
 class StockPricesConf:
-    Use: Union[UseCache, int] = UseCache.USEIFAVALIABLE
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
     CacheSpan: datetime.timedelta = datetime.timedelta(days=40)
     File: str = r'stocksplit.cache'
     IgnoreSymbols: Set[str] = field(default_factory=set)
@@ -43,7 +43,7 @@ class StockPricesConf:
 class IBConf:
     File: str = r'ibtrans.cache'
     CacheSpan: datetime.timedelta = datetime.timedelta(hours=5)
-    Use: Union[UseCache, int] = UseCache.USEIFAVALIABLE
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
     TryToQueryAnyway: bool = False
     DoQuery: bool = True
     FlexToken: Optional[str] = None
@@ -60,7 +60,7 @@ class MyStocksConf:
     File: str = r'buydicnk.cache'
     SrcFile: str = "example_mystock.csv"
     PortofolioName: str = "My Portfolio"
-    Use: Union[UseCache, int] = UseCache.USEIFAVALIABLE
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
 
 
 @paramaware
@@ -239,6 +239,7 @@ class JupyterConf:
     RapidYFinanaceKey: str = ''
     RapidYFinanaceHost: str = "yfinance-stock-market-data.p.rapidapi.com"
     Expries : int = 24
+    TranslateSymbols: dict = field(default_factory=dict)
 
 @paramaware
 @dataclass

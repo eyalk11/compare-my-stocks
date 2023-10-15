@@ -961,14 +961,8 @@ class InputProcessor(InputProcessorInterface):
                 sym_corrected = config.Symbols.Translatedic.get(sym, sym)
 
 
-            if not self._force_upd_all_range and sym in self._data._hist_by_date:
-                init_keys=  filter (lambda x : ((y:=localize_it(x))>= fromdate and y<=todate) ,self._data._hist_by_date.keys() )
-                if sym in self._data._no_adjusted_for:
-                    cond= lambda x: not math.isnan(x[0].get('Open'))
-                else:
-                    cond = lambda x: not math.isnan(x[0].get('Open')) and not math.isnan(x[1].get('Open'))
-                dates= (date for date in init_keys if ifnotnan(self._data._hist_by_date[date].get(sym),cond ))
-                ls = self.get_range_gap(dates,fromdate,todate) #we have data for this symbol
+            if not self._force_upd_all_range and sym in self._data._usable_symbols:
+                ls = self.get_gaps_for_symbol(fromdate, sym, todate)
             else:
                 ls = [(fromdate,todate)]
             okdays=0
@@ -988,6 +982,24 @@ class InputProcessor(InputProcessorInterface):
                 logging.debug(f'mostly problematic {sym} {okdays}/{requireddays}')
         return successful_once
 
+    def get_gaps_for_symbol(self, fromdate, sym, todate):
+        init_keys = filter(lambda x: ((y := localize_it(x)) >= fromdate and y <= todate),
+                           self._data._hist_by_date.keys())
+        if sym in self._data._no_adjusted_for:
+            cond = lambda x: not math.isnan(x[0].get('Open'))
+        else:
+            cond = lambda x: not math.isnan(x[0].get('Open')) and not math.isnan(x[1].get('Open'))
+        dates = list(date for date in init_keys if ifnotnan(self._data._hist_by_date[date].get(sym), cond))
+        datesset = set(dates)
+        #remove same value dates
+        for k, l in zip(dates[:-1], dates[1:]):
+            if self._data._hist_by_date[k].get(sym)[0].get('Open') == self._data._hist_by_date[l].get(sym)[0].get(
+                    'Open'):
+                datesset.remove(l)
+        dates = C / sorted / list / datesset
+        dates = lmap(partial(tzawareness, d2=fromdate), dates)
+        ls = list(self.get_range_gap(dates, fromdate, todate))  # we have data for this symbol
+        return ls
 
     def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
         if self._inputsource is None:
@@ -1109,8 +1121,8 @@ class InputProcessor(InputProcessorInterface):
         return  self._relevant_currencies_rates[x]
 
     @simple_exception_handling("adjusting for currency", return_succ=0)
-    def adjust_for_currency(self):
-        a=1 #updates adjusted panel
+    def adjust_for_currency(self): #updates adjusted panel to reflect current currency
+        a=1
         cursymdic={ config.Symbols.TranslateCurrency.get(curr:=v.get('currency', 'unk'),curr) :k for k,v in self._data.symbol_info.items() if not (v is None)}
 
         relevant_currencies = set(cursymdic.keys()) - \
@@ -1240,10 +1252,14 @@ class InputProcessor(InputProcessorInterface):
         firsttime=self.data is None
         if firsttime:
             self.data = InputDataImpl.full_data_load(self._semaphore)
-            if self._data.fullcachedate:
+            if not self._data.fullcachedate:
+                logging.debug("no full dates,strange")
+            else:
+
                 self.process_transactions() #not strictly needed. Can be done in parallel
+                logging.debug("process transactions took %s" % (time.process_time() - t))
                 if self.transaction_handler.need_to_save:
-                    logging.debug("new transactions since last cache , not fast-way")
+                    logging.debug("new transactions since last cache , reverting to non-fast-way")
                     self.data = InputDataImpl(self._semaphore)
                     fastway =False #We process transactions again. That can be done
                 else:
@@ -1258,6 +1274,7 @@ class InputProcessor(InputProcessorInterface):
             self._data.load_cache(True)
 
             self.process_transactions()
+            logging.debug("process transactions took %s" % (time.process_time() - t))
             self._initial_process_done = True
         if not fastway:
             elapsed_time = time.process_time() - t

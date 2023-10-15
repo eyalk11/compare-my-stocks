@@ -22,6 +22,7 @@ File: !FileConf
   RevenueFile: NOEARNINGS
   SerializedFile: serialized.dat
 Input: !InputConf
+  FullCacheUsage: !UseCache DONT
   DefaultFromDate: 2022-01-01 00:00:00+00:00
   DownloadDataForProt: true
   IgnoreAdjust: false 
@@ -103,19 +104,19 @@ TransactionHandlers: !TransactionHandlersConf
     FlexQuery: null #QUERYNU
     FlexToken: null #YOURTOKEN
     TryToQueryAnyway: false
-    Use: !UseCache USEIFAVALIABLE
+    Use: !UseCache USEIFAVAILABLE
   IgnoreConf: {}
   MaxPercDiffIbStockWarn: 0.2
   MyStocks: !MyStocksConf
     File: buydicnk.cache
     PortofolioName: My Portfolio
     SrcFile: example_mystock.csv
-    Use: !UseCache USEIFAVALIABLE
+    Use: !UseCache USEIFAVAILABLE
   SupressCommon: false
   StockPrices: !StockPricesConf
     CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
     File: stocksplit.cache
-    Use: !UseCache USEIFAVALIABLE
+    Use: !UseCache USEIFAVAILABLE
 UI: !UIConf
   AdditionalOptions: {}
   DefFigSize: !!python/tuple [6.6, 3.0]

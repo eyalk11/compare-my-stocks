@@ -4,10 +4,15 @@ from functools import partial
 
 from Pyro5.errors import get_pyro_traceback
 import inspect
-from Pyro5.errors import format_traceback
-from ibflex.client import BadResponseError
 
-default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError,BadResponseError ]
+from Pyro5.errors import format_traceback
+try:
+    from ibflex.client import BadResponseError
+    from ib_insync.wrapper import RequestError
+    default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError,BadResponseError,RequestError ]
+except:
+    default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError ]
+
 
 #don't import config here
 

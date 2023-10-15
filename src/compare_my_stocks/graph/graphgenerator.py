@@ -36,7 +36,7 @@ import numpy
 from config import config
 
 UseQT = config.UI.UseQT
-from common.common import Types, lmap, selfifnn, ifnn, timeit
+from common.common import Types, lmap, selfifnn, ifnn, timeit, UniteType
 from common.simpleexceptioncontext import simple_exception_handling
 
 # plt.rcParams["figure.autolayout"] = False
@@ -106,7 +106,7 @@ def show_annotation(sel, cls, ax, generation):
             hold_str = lambda hold,price: f'(qty: {round_til_2(hold)} price: {round_til_2(price)})'
 
             if cls.additional_df and ( ( cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT) )
-            ):
+            ) and (cls.unitetype & (UniteType.ADDTOTALS) == UniteType.NONE) :
                 ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
                 holding_orig = [numpy.interp(xi, ls, cls.additional_df[0][n]) for n in names]
                 price_orig = [numpy.interp(xi, ls, cls.additional_df[1][n]) for n in names]
@@ -406,7 +406,7 @@ class GraphGenerator:
         return handles, labels
 
     @simple_exception_handling("Error while generating graph",err_to_ignore=[TypeError],always_throw=True)
-    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, orig_data, adjust_date=False,
+    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, unitetype,orig_data, adjust_date=False,
                          plot_data=None,additional_df=None):
         def update_prop(handle, orig):
             marker_size = 36
@@ -427,6 +427,7 @@ class GraphGenerator:
         self.orig_data = orig_data
         self.additional_df = additional_df
         self.typ = type
+        self.unitetype=unitetype 
 
         # plt.sca(self._axes)
         try:

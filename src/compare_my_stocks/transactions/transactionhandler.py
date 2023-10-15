@@ -81,7 +81,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
             if type(v[0]) is not datetime:
                 logging.error("bad cache - not datetime")
                 return 0
-            if self.Use == UseCache.USEIFAVALIABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
+            if self.Use == UseCache.USEIFAVAILABLE and self.CacheSpan and self._cache_date and datetime.now() - self._cache_date > self.CacheSpan:
                 logging.info(("not using after all"))
                 return  0
         else:

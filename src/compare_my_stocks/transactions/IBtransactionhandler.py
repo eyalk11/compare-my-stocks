@@ -17,8 +17,8 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
     NAME="IB"
     def __init__(self,man):
         self.DoQuery=True
-        #self.FlexToken, self.FlexQuery = None,None
-        super().__init__(man)
+
+        super().__init__(man) #This updates some configuration fields in this class. FlexQuery etc. bad, but works.
         self.query_id = self.FlexQuery
         self.token_id =  self.FlexToken
         self._tradescache :dict  = {}
@@ -26,9 +26,12 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
         self.need_to_save=True
 
     def do_query(self):
-        logging.info(("running query in IB  for transaction"))
+
         if not self.DoQuery or not (self.query_id) or not self.token_id:
+            if not (self.query_id) or not self.token_id:
+                logging.warn("cant runn query in IB flex, update keys")
             return
+        logging.info(("running query in IB  for transaction"))
         response = None
         with SimpleExceptionContext("IB query failed",never_throw=True):
             response = client.download(self.token_id, self.query_id)
@@ -81,7 +84,7 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             newres=[]
             self.need_to_save=False
         try:
-            toquery = self.TryToQueryAnyway or (ifnn(self._cache_date,lambda: self._cache_date >= datetime.now() - self.QueryIfOlderThan,lambda: True))
+            toquery = self.TryToQueryAnyway or (ifnn(self._cache_date,lambda: self._cache_date <= datetime.now() - self.QueryIfOlderThan,lambda: True))
         except Exception as e:
             logging.debug((f"error in populate_buydic {e}"))
             toquery=False

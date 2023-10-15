@@ -141,13 +141,13 @@ class InputDataImpl(InputDataImplInterface):
             cache_date, cls = pickle.load(open(config.File.FullData, "rb"))
             if (
                 cache_date - datetime.datetime.now() > config.Input.MaxFullCacheTimeSpan
-            ) and config.Input.FullCacheUsage == UseCache.USEIFAVALIABLE:
+            ) and config.Input.FullCacheUsage == UseCache.USEIFAVAILABLE:
                 logging.info("Full data cache too old.Not loaded")
                 return InputDataImpl(semaphore=semphaore)
 
             logging.info(f"Loaded and used FullData cache: {cache_date}")
             cls.fullcachedate = cache_date
-            cls._semphaore= semphaore
+            cls._semaphore= semphaore
             return cls
 
         except Exception as e:

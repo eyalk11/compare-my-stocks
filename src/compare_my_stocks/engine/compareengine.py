@@ -212,6 +212,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 self.params.starthidden,
                 just_upd,
                 type,
+                self.used_unitetype,
                 orig_data,
                 adjust_date=adjust_date,
                 plot_data=plot_data,

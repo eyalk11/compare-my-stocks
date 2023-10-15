@@ -7,7 +7,7 @@ from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToo
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from common.common import LimitType, UniteType, Types, index_of
+from common.common import LimitType, UniteType, Types, index_of, really_close
 from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from gui.forminitializerinterface import FormInitializerInterface
@@ -183,9 +183,9 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         if self.graphObj.minValue is None or self.graphObj.maxValue is None:
             self.disable_slider_values_updates = False
             return
-        if self.graphObj.minValue==self.graphObj.maxValue and self.graphObj.maxValue==0:
+        if really_close(self.graphObj.minValue,self.graphObj.maxValue):
             logging.debug(('bad range'))
-            self.window.min_crit.setRange(self.graphObj.minValue, self.graphObj.maxValue+0.1)
+            self.window.min_crit.setRange(self.graphObj.minValue-0.1, self.graphObj.maxValue+0.1)
         else:
             self.window.min_crit.setRange(self.graphObj.minValue, self.graphObj.maxValue)
 
