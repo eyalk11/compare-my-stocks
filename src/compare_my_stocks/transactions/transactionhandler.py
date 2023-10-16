@@ -19,8 +19,7 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
 
     def __init__(self,manager):
         self._manager  =manager
-        self._buydic = {}
-        self._buysymbols = set()
+        self.init_vars() 
         self._cache_date=None
         self.File=None
         self.Use=None
@@ -114,10 +113,12 @@ class TrasnasctionHandler(TransactionHandlerInterface,TransactionHandlerImplemen
     def translate_symbol(self,symbol):
         return config.Symbols.ReplaceSymInInput.get(symbol,symbol)
 
-    def process_transactions(self):
-
+    def init_vars(self):
         self._buydic = {}
         self._buysymbols = set()
+
+    def process_transactions(self):
+        self.init_vars() 
 
         if  (self.Use is None) or (self.Use and self.Use!=UseCache.DONT):
             if  self.try_to_use_cache():

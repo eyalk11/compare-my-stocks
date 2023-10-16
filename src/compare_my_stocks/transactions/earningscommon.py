@@ -8,8 +8,9 @@ from config import config
 from dataclasses import asdict
 
 class RapidApi:
-    def __init__(self):
-        name=(self.__class__.__name__)
+    def __init__(self,name=None):
+        if name is None:
+            name=(self.__class__.__name__)
         headersconf= name + "Headers"
         self.headers=asdict(getattr(config, headersconf))
         self.headers = {k.replace('_','-'):v for k,v in self.headers.items()} #X-RapidAPI-Key and X-RapidAPI-Host

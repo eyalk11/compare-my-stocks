@@ -1,4 +1,7 @@
 import sys
+from contextvars import ContextVar
+ContextVar('context').set('main')
+
 if 'ipykernel_launcher' in sys.argv:
     print(('strangeeee'))
     if sys.path[0] == '':
@@ -19,6 +22,7 @@ try:
     __builtins__.SILENT=False
 except:
     pass
+
 
 
 from compare_my_stocks import MainClass

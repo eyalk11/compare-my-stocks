@@ -37,6 +37,17 @@ class StockPricesConf:
     File: str = r'stocksplit.cache'
     IgnoreSymbols: Set[str] = field(default_factory=set)
 
+@paramaware
+@dataclass
+class EarningsConf:
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
+    CacheSpan: datetime.timedelta = datetime.timedelta(days=40)
+    File: str = r'earnings.cache'
+    IgnoreSymbols: Set[str] = field(default_factory=set)
+    NoEarnings: bool = False
+    MaxElements: int = 10
+    EarningsAtStart: bool = True
+    ThreadTimeout:int =8
 
 @paramaware
 @dataclass
@@ -77,7 +88,7 @@ class TransactionHandlersConf:
     JustFromTheEndOfMyStock : bool = False
     TransactionSource:  TransactionSourceType = TransactionSourceType.Both
     TrackStockDict : Dict[str,Set[datetime.datetime]] = field(default_factory=dict)
-
+    Earnings: EarningsConf= field(default_factory=EarningsConf)
     ReadjustJustIB : bool = False
     DontAdjustSplitsMyStock : bool = False
     DontReadjust : list = field(default_factory=list)
@@ -98,8 +109,8 @@ class TransactionHandlersConf:
 
 @dataclass
 class RapidKeyConf:
-    XRapidApiHost: Optional[str] = None
-    XRapidApiKey: Optional[str] = None
+    X_RapidAPI_Host: Optional[str] = None
+    X_RapidAPI_Key: Optional[str] = None
 
 @paramaware
 @dataclass
@@ -136,6 +147,7 @@ class TestingConf:
 @paramaware
 @dataclass
 class RunningConf:
+    LogLevel: Optional[int] = None
     NoColor:bool = False
     IsTest: bool = False
     StopExceptionInDebug: bool = True
@@ -155,11 +167,7 @@ class RunningConf:
     DisplayConsole : bool =False
     Title: str = "Compare My Stocks"
     TryToScaleDisplay : bool = True
-@paramaware
-@dataclass
-class EarningsConf:
-    SkipEarnings: int = 1
-    TryStorageForEarnings: int = 1
+
 @paramaware
 @dataclass
 class DefaultParamsConf:
@@ -205,6 +213,7 @@ class FileConf:
     ExportedPort: str = "exported.csv"
     IbSrvReady: str = "ibsrv_ready.txt"
     FullData: str = "fullinpdata.bin"
+
 
 @paramaware
 @dataclass

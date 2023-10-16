@@ -40,6 +40,7 @@ class MainWindow(FormInitializer,QMainWindow):
 
 
     def closeEvent(self, event):
+        self.remove_file()
         self.wind.voila_widget.close_renderer()
 
 

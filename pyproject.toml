@@ -57,16 +57,17 @@ ipydatagrid = { version= "*",optional = true }
 joblib = { version= "^1.3.2",optional = true }
 polygon-api-client = {version ="^1.12.4",optional = true} 
 multimethod = { version ="*",optional = true}
+ordered-set = { version ="*",optional = true}
 
 
 voila = {version="*", optional= true}
 python-composition = {version="*", optional= true}
 
 [tool.poetry.extras]
-full = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','ib-insync','pyro5','ibflex','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml','notebook','joblib','matplotlib','polygon-api-client']
+full = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'ib-insync', 'pyro5', 'ibflex', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition']
 mini = ['colorlog','django','numpy','ruamel.yaml']
 jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila','joblib','matplotlib']
-full_no_ib = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','pyro5','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml','notebook','joblib','matplotlib','polygon-api-client']
+full_no_ib = ['ipydatagrid', 'requests','pyside6','matplotlib','pandas','python','pytz','json-editor-pyside6','qtvoila','superqt','mplcursors','pyro5','qt-collapsible-section-pyside6','six','psutil','dataconf','toml','pytest','ipykernel','setuptools','nbformat', 'colorlog','django','numpy','ruamel.yaml','notebook','joblib','matplotlib','polygon-api-client', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition']
 
 [build-system]
 requires = ["poetry-core"]

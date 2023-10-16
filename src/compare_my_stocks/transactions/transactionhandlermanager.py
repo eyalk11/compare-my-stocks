@@ -15,6 +15,9 @@ from common.common import CombineStrategyEnum, localize_it, TransactionSourceTyp
 from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.symbolsinterface import SymbolsInterface
+
+from transactions.earningsproc import EarningProcessor
+
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
 from transactions.stockprices import StockPrices
@@ -30,6 +33,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._handlers= (self._ib, self._stock) = tuple(self.get_handlers())
         self._buysymbols=set()
         self._StockPrices = StockPrices(self, self.buysymbols)
+        self._earnings= EarningProcessor(self,self.buysymbols)
 
     def log_buydict_stats(self):
         pass
@@ -77,7 +81,9 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         #self._StockPrices._tickers=self.buysymbols
         self._StockPrices._tickers = self.buysymbols
 
+        self._earnings._tickers = self.buysymbols 
         self._StockPrices.process_transactions()
+        self._earnings.process_transactions()
 
     @simple_exception_handling("error in combine transactions")
     def combine_transactions(self):
@@ -111,8 +117,8 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
 
 
-        totsum = 0
-        totholding = 0
+        # totsum = 0
+        # totholding = 0
         # for k, v in sorted(lmap(lambda x: (localize_it(x[0]),x[1]) ,self._buydic.items())):
             # if v.Symbol!="TSLA":
                 # continue

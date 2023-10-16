@@ -33,7 +33,6 @@ from common.common import UseCache, addAttrs, dictfilt, ifnn, log_conv, \
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from engine.parameters import copyit
 from engine.symbols import SimpleSymbol
-from input.earningsproc import EarningProcessor
 
 from input.inputsource import InputSource, InputSourceInterface
 from engine.symbolsinterface import SymbolsInterface
@@ -141,7 +140,7 @@ class InputProcessor(InputProcessorInterface):
         self._relevant_currencies_time = None
 
         self._proccessing_mutex = QRecursiveMutex()
-        self._earningProc=EarningProcessor.generate_or_make()
+
 
 
         self.failed_to_get_new_data=None
@@ -422,7 +421,7 @@ class InputProcessor(InputProcessorInterface):
             logging.log(TRACELEVEL,('entering lock'))
             self._proccessing_mutex.lock()
             logging.log(TRACELEVEL,('entered'))
-            self.convert_dicts_to_df_and_add_earnings(partial_symbols_update)
+            self.convert_dicts_to_df_and_add_earnings(len(partial_symbols_update)>0)
             logging.log(TRACELEVEL,('fin convert'))
             if config.Input.IgnoreAdjust:
                 self.adjusted_panel=self._data._reg_panel.copy()
@@ -1055,21 +1054,25 @@ class InputProcessor(InputProcessorInterface):
         NONADJUSTEDDICTS= len(self._data.dicts) -2
         # no more dicts #we removed alldatesadjusted from dicts..
         seldict= self._data.dicts[:NONADJUSTEDDICTS]
+        combinedindex = sorted(list(self._data._fset))
 
         try:
 
             #income, revenue, cs =# get_earnings()
-            raise Exception("no earnings for now")
-            #income, revenue, cs = #EarningProcessor()
+            # raise Exception("no earnings for now")
+            if config.TransactionHandlers.Earnings.NoEarnings:
+                raise Exception("no earnings for now")
+            if (partial_symbols_update):
+                self._earn_thread.join(timeout=config.TransactionHandlers.Earnings.ThreadTimeout)
+            revenue,income = self.transaction_handler._earnings.get_earnings()
             hasearnings=True
-            combinedindex = sorted(
-                list(set(self._data._fset).union(set(cs.index)).union(set(income.index)).union(set(revenue.index))))
+
         except:
             logging.warn(('earning reading failed'))
             # import traceback
             # traceback.print_exc()
             hasearnings = False
-            combinedindex=sorted(list(self._data._fset))
+
 
 
         for name, dic in zip(self.dicts_names,seldict):
@@ -1086,27 +1089,22 @@ class InputProcessor(InputProcessorInterface):
 
             dataframes.append(df)
 
-        try:
+        with SimpleExceptionContext("earning processing"):
             if hasearnings:
-                dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,cs,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,cs,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
-            else:
-                dataframes += [pandas.DataFrame(), pandas.DataFrame(), pandas.DataFrame()]
-        except:
-            import traceback
-            traceback.print_exc()
-            logging.debug(('earnings calc failed '))
+                dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
 
         self._data._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
-    def return_df(df, cur,CommonStock_df,name):
+    def return_df(df, cur,name):
+        from ordered_set import OrderedSet
+        common = list(OrderedSet(df.columns).intersection(cur.columns))
         cur.sort_index(axis=0, inplace=True)
+        from jupyter.jupytertools import  convert_dates_df
+        cur=convert_dates_df(cur)
         cur=cur.reindex(sorted(list(df.index)),method='pad')
-        CommonStock_df.sort_index(axis=0,inplace=True)
-        CommonStock_df=CommonStock_df.reindex(df.index,method='pad')
-        eps= cur.divide(CommonStock_df)
-        cur= df[cur.columns].divide(eps) #pr ps / eps = price / earnings
-        cur.columns = pd.MultiIndex.from_product([[name], list(cur.columns)], names=['Name', 'Symbols'])
+        cur= df[common].divide(cur[common]) #pr ps / eps = price / earnings
+        cur.columns = pd.MultiIndex.from_product([[name], (common)], names=['Name', 'Symbols'])
         return cur
 
 
@@ -1244,7 +1242,10 @@ class InputProcessor(InputProcessorInterface):
             return ret
 
 
-
+    @simple_exception_handling("exception in partial process")
+    def process_partial_transactions(self,partial_sym):
+        self.transaction_handler._earnings.generate(partial_sym)
+        #add stock prices  maybe
 
     def process_internal(self, partial_symbol_update):
         t = time.process_time()
@@ -1276,6 +1277,12 @@ class InputProcessor(InputProcessorInterface):
             self.process_transactions()
             logging.debug("process transactions took %s" % (time.process_time() - t))
             self._initial_process_done = True
+        else:
+            if len(partial_symbol_update)>0:
+                import threading
+                self._earn_thread=threading.Thread(target=self.process_partial_transactions,args=(partial_symbol_update,))
+                self._earn_thread.start()
+
         if not fastway:
             elapsed_time = time.process_time() - t
             logging.debug(('elasped populating : %s' % elapsed_time))

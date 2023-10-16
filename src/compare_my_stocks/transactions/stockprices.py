@@ -1,11 +1,9 @@
 import logging
 from collections import OrderedDict
-from datetime import time
 
 import dateutil
 
-from config import config
-from input.earningscommon import RapidApi, localize_me
+from transactions.earningscommon import RapidApi, localize_me
 from transactions.transactionhandler import TrasnasctionHandler
 from transactions.transactioninterface import TransactionHandlerImplementator
 
@@ -57,7 +55,6 @@ class StockPrices(TrasnasctionHandler,RapidApi,TransactionHandlerImplementator):
         if not self.is_initialized():
             logging.warn("Couldnt get hist splits , update key!")
             return
-        import requests
 
         url = "https://stock-prices2.p.rapidapi.com/api/v1/resources/stock-prices/10y-3mo-interval"
 

@@ -414,7 +414,7 @@ class IBSource(InputSource):
             td = td.days + 1
 
 
-        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is (None,None) )
+        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result == (None,None) )
         try:
             is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
         except:

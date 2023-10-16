@@ -3,6 +3,10 @@ import logging
 
 import Pyro5.server
 
+if __name__ == "__main__":
+    from contextvars import ContextVar
+    ContextVar('context').set('ibsrv')
+
 try:
     __builtins__['IBSRV']=True # A hack to make the system know it is IBSRV (for logging).
 except:
@@ -31,6 +35,7 @@ class MyDeamon(Pyro5.server.Daemon):
         #     x : IBSourceRem =v[0]
         #     x.on_disconnect()
 def ibsrv():
+
     #Pyro5.server.config.SERIALIZER='marshal'
     Pyro5.server.config.SERVERTYPE="multiplex"
     Pyro5.server.config.DETAILED_TRACEBACK=True

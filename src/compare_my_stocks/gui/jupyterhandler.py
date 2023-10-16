@@ -13,7 +13,8 @@ from config import config
 from gui.jupytercommon import JupyterCommonHandler
 from qtvoila import QtVoila
 from gui.forminterface  import FormInterface
-from common.dolongprocess import DoLongProcessSlots
+from common.dolongprocess import DoLongProcessSlots, TaskParams
+
 
 class State(IntEnum):
     UNINITALIZED=auto()
@@ -93,29 +94,26 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
         self.window.voila_widget.finished.connect(self.voila_loaded)
 
     def finished_generation(self,number):
-        if self.in_generation:
-            logging.log(TRACELEVEL,('already'))
-            return
+
         if self.window.note_group.isHidden():
             return
 
         if self.wont_run:
             return
-        self.generation_task()
-        #self._voila_task.command.emit(tuple())
+        #self.generation_task()
+        self._voila_task.command.emit(TaskParams(params=tuple()))
 
     def reload_me(self):
-        self.voila_run = State.LOADING
-        self.window.voila_widget.close_renderer()
-        self.window.voila_widget.run_voila()
+        #self.finished_generation(2)
+        self.window.voila_widget.refresh()
+
 
     @simple_exception_handling("Generation task")
     def generation_task(self):
-        self.window.voila_widget :QtVoila
-        self.window.voila_widget.max_voila_wait=config.Voila.MaxVoilaWait
+        self.window.voila_widget: QtVoila
+        self.window.voila_widget.max_voila_wait = config.Voila.MaxVoilaWait
 
         self.window.voila_widget: QtVoila
-        self.in_generation=True
         if not self.generate_temp():
             return
         self.window.voila_widget.external_notebook = config.File.DefaultNotebook
@@ -124,24 +122,27 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
             self.wont_run = not self.resolve_voila(self.window.voila_widget)
         if self.wont_run:
             return
-        open(config.File.DataFilePtr,'wt').write(self.file_name)
-        if self.voila_run==State.UNINITALIZED:
+        open(config.File.DataFilePtr, 'wt').write(self.file_name)
+        if self.voila_run == State.UNINITALIZED:
             if not config.Voila.DontRunNotebook:
                 self.voila_run = State.LOADING
                 self.window.voila_widget.run_voila()
-        elif self.voila_run==State.RUNNING:
-            self.reload_me()
+        elif self.voila_run == State.RUNNING:
+            self.voila_run = State.LOADING
+            self.window.voila_widget.close_renderer()
+            self.window.voila_widget.run_voila()
 
-        self.in_generation = False
-
-    def generate_temp(self):
-        import tempfile
+    def remove_file(self):
         if self.file_name!=None:
             try:
                 os.remove(self.file_name)
             except:
-                logging.debug(('error tmp'))
+                logging.debug(('error removing tmp'))
                 return False
+
+    def generate_temp(self):
+        import tempfile
+        self.remove_file()
 
         with tempfile.NamedTemporaryFile(delete=False) as tmp:
             name = tmp.name

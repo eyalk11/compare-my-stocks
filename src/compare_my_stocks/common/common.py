@@ -73,10 +73,12 @@ def checkIfProcessRunning(processName):
 def localize_it (x):
     if x is None:
         return None
-    if type(x) is datetime.date:
+    if type(x) == datetime.date:
         return x
     return (pytz.UTC.localize(x, True) if not x.tzinfo else x)
 def unlocalize_it(date):
+    if type(date) == datetime.date:
+        return date
     d=localize_it(date)
     return d.replace(tzinfo=None)
 
@@ -349,3 +351,17 @@ def singleton(class_):
             instances[class_] = class_(*args, **kwargs)
         return instances[class_]
     return getinstance
+
+
+
+from PySide6.QtCore import QMutex
+
+class QLock:
+    def __init__(self):
+        self.mutex = QMutex()
+
+    def __enter__(self):
+        self.mutex.lock()
+
+    def __exit__(self, type, value, traceback):
+        self.mutex.unlock()

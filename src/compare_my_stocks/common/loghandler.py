@@ -101,11 +101,13 @@ def init_log_default(config):
     if config.Running.NoColor:
         kwargs = {'no_color':True}
     else:
-        kwargs = {} 
+        kwargs = {}
 
-    init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug,kwargs=kwargs )
+    loglevel = config.Running.LogLevel
 
-def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={}):
+    init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug,kwargs=kwargs,loglevel=loglevel )
+
+def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},loglevel=None):
     import matplotlib
     matplotlib.set_loglevel("INFO")
     def set_format(handler):
@@ -115,8 +117,19 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={})
             handler.setFormatter(ImpacketFormatterTimeStamp(**kwargs))
     # We add a StreamHandler and formatter to the root logger
     logging.addLevelName(TRACELEVEL,"TRACE")
-    if debug and not dont_print():
-        logging.getLogger().setLevel(logging.DEBUG)
+    from contextvars import copy_context
+    ctx=copy_context()
+    context=None
+    for k,v in ctx.items():
+        if k.name == 'context':
+            context=v
+            break
+
+    if context =='main':
+        if loglevel is not None:
+            logging.getLogger().setLevel(loglevel)
+        elif debug and not dont_print():
+            logging.getLogger().setLevel(logging.DEBUG)
         #logging.getLogger('Voila').setLevel(logging.DEBUG)
 
     log=logging.getLogger(mod)

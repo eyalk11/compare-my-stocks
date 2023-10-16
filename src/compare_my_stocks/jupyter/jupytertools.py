@@ -137,3 +137,11 @@ def convert_df_dates(df):
     df.index = df.index.to_series().apply(lambda x: num2date(x).date())
     return df
 
+def convert_dates_df(df):
+
+    from matplotlib.dates import date2num
+
+    # assuming df is your DataFrame and df.index is the matplotlib dates
+    df.index = df.index.to_series().apply(lambda x: date2num(x))
+    return df
+

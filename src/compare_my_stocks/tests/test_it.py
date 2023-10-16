@@ -50,6 +50,9 @@ def test_realengine(mock_config_to_default,realeng,useinp):
     finally:
         if useinp & UseInput.WITHINPUT:
             eng.input_processor.InputSource.disconnect()
+# def test_earnings(realeng):
+#     eng= realeng
+#     eng._inp.
 
 def test_adjust_currency(realeng):
     eng = realeng

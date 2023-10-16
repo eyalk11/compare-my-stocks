@@ -30,7 +30,7 @@ from pandas import DataFrame, Timestamp
 from common.common import dictnfilt, UseCache, VerifySave, InputSourceType
 #from config import config as cfg
 from engine.parameters import Parameters
-from input.earningsproc import EarningProcessor
+from transactions.earningsproc import EarningProcessor
 from input.inputdata import InputDataImpl
 from input.inputprocessor import InputProcessor
 from transactions.IBtransactionhandler import IBTransactionHandler
