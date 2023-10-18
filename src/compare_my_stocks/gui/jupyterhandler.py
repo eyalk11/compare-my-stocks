@@ -104,8 +104,8 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
         self._voila_task.command.emit(TaskParams(params=tuple()))
 
     def reload_me(self):
-        #self.finished_generation(2)
-        self.window.voila_widget.refresh()
+        self.voila_run = State.LOADING
+        self.window.voila_widget.close_renderer()
 
 
     @simple_exception_handling("Generation task")
@@ -127,10 +127,10 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
             if not config.Voila.DontRunNotebook:
                 self.voila_run = State.LOADING
                 self.window.voila_widget.run_voila()
-        elif self.voila_run == State.RUNNING:
-            self.voila_run = State.LOADING
-            self.window.voila_widget.close_renderer()
-            self.window.voila_widget.run_voila()
+        elif self.voila_run==State.RUNNING:
+            self.reload_me()
+
+        self.in_generation = False
 
     def remove_file(self):
         if self.file_name!=None:
