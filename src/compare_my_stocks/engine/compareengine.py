@@ -96,6 +96,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         else:
             return selected.union(self.params.selected_stocks)
 
+    @simple_exception_handling(err_description="Exception in generation graph",never_throw=True)
     def gen_graph(self, params: Parameters, just_upd=0, reprocess=1):
         if just_upd and self.params:
             self.params.update_from(params)
@@ -154,7 +155,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 additional_df=self._datagen.additional_dfs_fixed,
             )
 
-    @simple_exception_handling(err_description="Exception in generation")
+    @simple_exception_handling(err_description="Exception in generation",return_succ=False,never_throw=True)
     def call_data_generator(self, auto_reprocess=True):
         b = 0
         for tries in range(2):

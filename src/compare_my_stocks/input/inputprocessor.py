@@ -1,3 +1,5 @@
+from pandas import Timestamp
+
 from common.common import assert_not_none, c
 from composition import C, Orig, X, A
 from memoization import cached
@@ -978,7 +980,7 @@ class InputProcessor(InputProcessorInterface):
 
             successful_once=True
             if okdays==0 or requireddays/okdays<0.5:
-                logging.debug(f'mostly problematic {sym} {okdays}/{requireddays}')
+                logging.debug(f'mostly problematic {str(sym)} {str(okdays)}/{str(requireddays)}')
         return successful_once
 
     def get_gaps_for_symbol(self, fromdate, sym, todate):
@@ -1089,22 +1091,48 @@ class InputProcessor(InputProcessorInterface):
 
             dataframes.append(df)
 
-        with SimpleExceptionContext("earning processing"):
+        with SimpleExceptionContext("earning processing",always_throw=True):
             if hasearnings:
-                dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,"peratio"), InputProcessor.return_df(dataframes[0]['alldates'],revenue,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
+                dataframes +=  [InputProcessor.return_df(dataframes[0]['alldates'],income,"peratio"),
+                                InputProcessor.return_df(dataframes[0]['alldates'],revenue,"pricesells")] #InputProcessor.calculate_earnings(dataframes[0]['alldates'])
 
         self._data._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
     def return_df(df, cur,name):
+        def adjust(df):
+            # Resample the DataFrame to monthly frequency
+            df_monthly = df.resample('MS').asfreq()
+
+            # Forward fill the missing values with a limit of 12
+            df_filled = df_monthly.fillna(method='bfill', limit=12)
+            df_filled = df_filled.fillna(method='ffill', limit=4) #lets fill up to 4 months forward
+            return df_filled
+        origdf=df.copy()
         from ordered_set import OrderedSet
+        from jupyter.jupytertools import convert_dates_df, convert_df_dates
         common = list(OrderedSet(df.columns).intersection(cur.columns))
-        cur.sort_index(axis=0, inplace=True)
-        from jupyter.jupytertools import  convert_dates_df
+        df=df[common]
+        from matplotlib.dates import num2date
+        df.index = df.index.to_series().apply(lambda x: num2date(x))
+        df.index = df.index.to_series().apply(lambda x: Timestamp(x.to_pydatetime().date()))
+        #df=convert_df_dates(df)
+        df=df.resample('MS').asfreq()
+        cur=cur[common]
+        cur = cur.reindex((df.index))
+        cur=adjust(cur)
+        #cur=cur.fillna(value=-1)
+
+        #cur.sort_index(axis=0, inplace=True)
+
         cur=convert_dates_df(cur)
-        cur=cur.reindex(sorted(list(df.index)),method='pad')
-        cur= df[common].divide(cur[common]) #pr ps / eps = price / earnings
+        cur=cur.reindex(sorted(list(origdf.index)),method='ffill')
+        #cur[cur==-1]=numpy.NaN
+
+        #cur = cur.loc[:,~cur.columns.duplicated()].copy()
+        cur= origdf[common].divide(cur[common]) #pr ps / eps = price / earnings
         cur.columns = pd.MultiIndex.from_product([[name], (common)], names=['Name', 'Symbols'])
+        cur[cur<0]=0
         return cur
 
 
@@ -1236,15 +1264,16 @@ class InputProcessor(InputProcessorInterface):
         #From this point, symbols are textual!
         ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
         callback = lambda e: self._eng.statusChanges.emit(f'Exception in processing {e}')
-        with SimpleExceptionContext('exception in processing',callback=callback):
+        with SimpleExceptionContext('exception in processing',callback=callback,never_throw=True):
             ret=self.process_internal(ls)
             logging.debug(f"process end {ret}")
             return ret
+        return False
 
 
     @simple_exception_handling("exception in partial process")
     def process_partial_transactions(self,partial_sym):
-        self.transaction_handler._earnings.generate(partial_sym)
+        self.transaction_handler._earnings.generate(partial_sym,force=self._force_upd_all_range)
         #add stock prices  maybe
 
     def process_internal(self, partial_symbol_update):

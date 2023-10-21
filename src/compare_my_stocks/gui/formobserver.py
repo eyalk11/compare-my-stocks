@@ -41,11 +41,15 @@ except:
 
 
 class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
+    @simple_exception_handling("update task",never_throw=True)
     def update_task(self, params):
+        logging.debug("start update task ")
         self.graphObj.update_graph(params)
         if params.is_forced:
             self.graphObj.input_processor.save_data() #not strictly needed
+        logging.debug("end update task ")
 
+    @simple_exception_handling("refresh task",never_throw=True)
     def refresh_task(self, x, params):
         self.window.last_status.setText('refreshing data')
         self.graphObj.process(set(x), params, force_upd_all_range=not self._min_refresh)
@@ -120,9 +124,13 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def update_graph(self, reset_ranges: ResetRanges, force=False, after=None, adjust_date=False, btn=False):
         # ignores adjust_data for now.
-        def call(params):
-            after_task, adjust_date = params  # arab
+        @simple_exception_handling("after update",never_throw=True)
+        def call(params=None):
             self.decrease()
+            if params is None:
+                return
+            after_task, adjust_date = params  # arab
+
             self.update_ranges(reset_ranges)
             # if adjust_date:
             #     self.graphObj.adjust_date = True
@@ -138,6 +146,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 if self._update_graph_task.command_waiting >= 3:
                     logging.debug(('update waiting'))
                     self.window.last_status.setText('Update is waiting (generating graph probably)')
+                    return
 
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)

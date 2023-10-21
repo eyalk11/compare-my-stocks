@@ -1,3 +1,5 @@
+import datetime
+
 import dateutil
 
 import pandas
@@ -7,7 +9,7 @@ from transactions.earningscommon import RapidApi
 from transactions.transactionhandler import TrasnasctionHandler
 from transactions.transactioninterface import TransactionHandlerImplementator
 
-
+from config import config
 class EarningProcessor(TrasnasctionHandler,RapidApi,TransactionHandlerImplementator):
     NAME="Earnings"
     def __init__(self, man,tickers):
@@ -58,18 +60,34 @@ class EarningProcessor(TrasnasctionHandler,RapidApi,TransactionHandlerImplementa
         except:
             return (pandas.DataFrame(), pandas.DataFrame())
 
-    def generate(self,ls,dontsave=False ):
-        aa = [self.get_dfs(k) for k in ls]
-        rev, inc = zip(*aa)
-        allrev = pandas.concat(rev, axis=1)
-        allrev=allrev.fillna(method='bfill', axis=0)
-        allinc = pandas.concat(inc, axis=1).fillna(method='bfill', axis=0)
+    def generate(self,ls,dontsave=False,force=False ):
+        def adjust(df):
+            df = pandas.concat(df, axis=1)
+            if df.empty:
+                return df
+
+            # Resample the DataFrame to monthly frequency
+            df_monthly = df.resample('MS').asfreq()
+
+            # Forward fill the missing values with a limit of 12
+            #df_filled = df_monthly.fillna(method='bfill', limit=12)
+            #df_filled = df_filled.fillna(method='ffill', limit=4) #lets fill up to 4 months forward
+            return df_monthly
+
+        aa = [self.get_dfs(k) for k in self.gen(ls,force=force)]
+        allrev, allinc = tuple(map(adjust,zip(*aa)))
+
         if self.revdf is not None:
+            common = set(self.revdf.columns).intersection(set(allrev.columns))
+            if len(common) > 0:
+                self.revdf.drop(columns=common, inplace=True)
+                self.epsnorm.drop(columns=common, inplace=True)
             allrev = pandas.concat([self.revdf, allrev], axis=1) 
         self.revdf = allrev
         if self.epsnorm is not None:
             allinc = pandas.concat([self.epsnorm, allinc], axis=1)
         self.epsnorm = allinc
+
         if not dontsave:
             self.save_cache()
 
@@ -77,15 +95,24 @@ class EarningProcessor(TrasnasctionHandler,RapidApi,TransactionHandlerImplementa
         self.revdf = None
         self.epsnorm = None 
 
+
+
+    def gen(self,ls,force=False):
+        for x in ls:
+            if x in self.IgnoreSymbols:
+                continue
+            if self.revdf is not None and (x in self.revdf.columns):
+                if not force:
+                    try:
+                        if (datetime.datetime.now() - max(self.revdf[~self.revdf[[x]].isnull()].index))< config.Earnings.MaxSpanToRefershEntry:
+                            continue
+                    except:
+                        pass
+
+            yield x
     def populate_buydic(self):
         if not self.EarningsAtStart:
             return
-        def gen():
-            for x in self._tickers:
-                if x in self.IgnoreSymbols:
-                    continue
-                if self.revdf is not None and (x in self.revdf.columns):
-                    continue
-                yield x
 
-        self.generate(list(gen())[0:self.MaxElements],dontsave=True) #will save afterwards
+
+        self.generate(list(self.gen(self._tickers))[0:self.MaxElements],dontsave=True) #will save afterwards

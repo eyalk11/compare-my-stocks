@@ -48,6 +48,7 @@ class EarningsConf:
     MaxElements: int = 10
     EarningsAtStart: bool = True
     ThreadTimeout:int =8
+    MaxSpanToRefershEntry:  datetime.timedelta = datetime.timedelta(days=120)
 
 @paramaware
 @dataclass
@@ -421,7 +422,8 @@ class ConfigLoader():
         #set(cls.config.__dataclass_fields__.keys()) - cls.config._changed_keys
         if len(remained_keys)>0:
             yy='\n'.join([': '.join( [x,str(y)]) for x,y in  zip( remained_keys,vals)])
-            logging.warn(f"The following keys weren't specified in config so were set to default:\n {yy}")
+            if not dont_print():
+                logging.warn(f"The following keys weren't specified in config so were set to default:\n {yy}")
 
         return cls.config
 

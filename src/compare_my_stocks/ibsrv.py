@@ -6,6 +6,8 @@ import Pyro5.server
 if __name__ == "__main__":
     from contextvars import ContextVar
     ContextVar('context').set('ibsrv')
+from contextvars import ContextVar
+ContextVar('subcontext').set('ibsrv')
 
 try:
     __builtins__['IBSRV']=True # A hack to make the system know it is IBSRV (for logging).

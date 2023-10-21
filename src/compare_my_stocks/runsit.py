@@ -143,10 +143,10 @@ class MainClass:
         #Then init_log to have basic formatting
         # Then we import config. SILENT should be false.
         # config calls init_log again with the right parameters.
-        logging.getLogger().setLevel(logging.INFO if not debug else logging.DEBUG)
+        #logging.getLogger().setLevel(logging.INFO if not debug else logging.DEBUG)
 
 
-        init_log()
+        init_log(debug=debug)
 
 
 

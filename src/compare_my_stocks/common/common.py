@@ -365,3 +365,14 @@ class QLock:
 
     def __exit__(self, type, value, traceback):
         self.mutex.unlock()
+
+
+def get_ctx(context_var='context'):
+    from contextvars import copy_context
+    ctx = copy_context()
+    context = None
+    for k, v in ctx.items():
+        if k.name == context_var:
+            context = v
+            break
+    return context

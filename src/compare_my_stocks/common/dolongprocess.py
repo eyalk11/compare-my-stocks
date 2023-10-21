@@ -9,40 +9,6 @@ from common.simpleexceptioncontext import simple_exception_handling
 from common.loghandler import TRACELEVEL
 import colorlog
 
-class DoLongProcess(QObject):
-    finished = Signal()
-    # def quit_thread(self):
-    #     logging.debug(f'quit thread {self.thread}')
-    #     self.thread.quit()
-    def __init__(self,task):
-        QObject.__init__(self)
-        self._task=task
-        self._realtask=None
-        self.started=False
-        self.thread = QThread()
-        self._lock= threading.Lock()
-
-
-        #self.finished.connect(self.quit_thread)
-
-    @Slot()
-    def run(self):
-        if not self._realtask:
-            logging.error("no real task")
-            return
-        self.started = True
-        logging.log(TRACELEVEL,('bef real task'))
-        self._realtask()
-        logging.log(TRACELEVEL,('post'))
-        self.finished.emit()
-        self.started = False
-
-
-    @property
-    def is_started(self):
-        return self.started
-
-
 
 from collections import namedtuple
 TaskParams=namedtuple("TaskParams","params finish_params", defaults=(None,None))
@@ -100,11 +66,11 @@ class DoLongProcessSlots(QObject):
             #to update status
         finally:
             self.mutex.unlock()
-        if taskparams.finish_params:
-            self.finished.emit(taskparams.finish_params)
-        else:
-            self.finished.emit([])
-        self.started = False
+            if taskparams.finish_params:
+                self.finished.emit(taskparams.finish_params)
+            else:
+                self.finished.emit(tuple())
+            self.started = False
 
         # self.thread.finished.connect(self.thread.deleteLater)
 

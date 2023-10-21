@@ -1,8 +1,7 @@
-import logging
 import re
 import sys
 
-from common.common import neverthrow
+from common.common import neverthrow, get_ctx
 
 # Implemntation taken from :
 # Impacket - Collection of Python classes for working with network protocols.
@@ -24,6 +23,8 @@ TRACELEVEL=5
 import logging
 import os
 def dont_print(): #started from jupyter tools
+    if get_ctx()=='main' and get_ctx('subcontext')=='ibsrv':
+        return True
     return logging.getLogger().level == logging.CRITICAL
 
 class MyFormatter(logging.Formatter):
@@ -90,6 +91,7 @@ class MyFilter(object):
 
     def filter(self, logRecord):
         return logRecord.levelno <= self.__level
+
 def init_log_default(config):
     if 'IBSRV' in __builtins__ and __builtins__['IBSRV']:
         logfile = config.Running.IBLogFile
@@ -117,21 +119,17 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
             handler.setFormatter(ImpacketFormatterTimeStamp(**kwargs))
     # We add a StreamHandler and formatter to the root logger
     logging.addLevelName(TRACELEVEL,"TRACE")
-    from contextvars import copy_context
-    ctx=copy_context()
-    context=None
-    for k,v in ctx.items():
-        if k.name == 'context':
-            context=v
-            break
+    context = get_ctx()
 
     if context =='main':
         if loglevel is not None:
             logging.getLogger().setLevel(loglevel)
         elif debug and not dont_print():
             logging.getLogger().setLevel(logging.DEBUG)
+        else:
+            logging.warn("No loglevel set")
         #logging.getLogger('Voila').setLevel(logging.DEBUG)
-
+    #logging.getLogger().setLevel(5)
     log=logging.getLogger(mod)
     log.setLevel(logging.getLogger().level)
     log.handlers.clear()

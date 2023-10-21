@@ -133,6 +133,8 @@ def simple_exception_handling(err_description=None,return_succ='undef',never_thr
                     from common.loghandler import TRACELEVEL
                     logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
                     ret= func(*args,**kwargs)
+                    logging.log(level=TRACELEVEL, msg=f"after: {err_description} {func}")
+
                     no_exception = True
             except Exception as e:
                 if hasattr(decorated, 'errors_to_handle'):
