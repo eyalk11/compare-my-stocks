@@ -194,6 +194,7 @@ class SymbolsConf:
     TranslateCurrency: dict = field(default_factory=dict)
     CurrencyFactor: dict = field(default_factory=dict)
     CacheTTL: int = 1000
+    UseCurrentIBStocksForPortfolio: bool = False
 
 
 

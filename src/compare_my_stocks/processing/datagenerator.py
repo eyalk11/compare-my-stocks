@@ -217,19 +217,31 @@ class DataGenerator(DataGeneratorInterface):
                 items += [('All', filt(x, df))]
 
         for gr, stocks in items:
+            rel=list(set(df.columns).intersection(stocks))
             try:
-                arr = np.array(df[list(set(df.columns).intersection(stocks))]).transpose()
+                arr = np.array(df[rel])
             except KeyError:
                 logging.error('none of the values here')
                 continue
+
+
+
+            arr = arr.transpose() 
             incomplete = (arr.shape[0] != len(stocks))
             if incomplete:
-                logging.debug(('incomplete unite'))
+                logging.warn(f'Incomplete unite {gr} - {set(df.columns)} {stocks}')
             if len(arr)==0:
                 return ndf,[]
-            if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
 
-                ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
+            if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
+                for i in range(1):
+                    if self.params.weighted_for_portfolio:
+                        if gr == 'Portfolio':
+                            pos_df = pandas.DataFrame(self._eng.input_processor.get_position_dict(), index=['aa'])
+                            ndf.loc[:, gr] =np.average(arr, axis=0, weights=np.array(pos_df[rel])[0])
+                            break
+                else:
+                    ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
 
             elif self.used_unitetype & UniteType.AVG:
                 ndf.loc[:, gr] = numpy.nanmean(arr, axis=0)

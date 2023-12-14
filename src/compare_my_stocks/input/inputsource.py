@@ -11,6 +11,8 @@ from config import config
 from engine.symbols import AbstractSymbol
 from memoization import cached
 
+from input.inputprocessorinterface import InputPosition
+
 
 class InputSourceInterface(metaclass=ABCMeta):
     @abstractmethod
@@ -59,10 +61,17 @@ class InputSourceInterface(metaclass=ABCMeta):
     def get_best_matches(self, sym, results=10, strict=True):
         pass
 
+    @abstractmethod
+    def get_positions(self) -> InputPosition:
+        pass 
+
 
 class InputSource(InputSourceInterface):
     def __init__(self):
         self._allsymbols = []
+
+    def get_positions(self):
+        return []
 
     def can_handle_dict(self,sym):
         return True

@@ -73,13 +73,13 @@ def checkIfProcessRunning(processName):
 def localize_it (x):
     if x is None:
         return None
-    if type(x) == datetime.date:
+    if type(x) is date:
         return x
     return (pytz.UTC.localize(x, True) if not x.tzinfo else x)
-def unlocalize_it(date):
-    if type(date) == datetime.date:
-        return date
-    d=localize_it(date)
+def unlocalize_it(dat):
+    if type(dat) is date:
+        return dat
+    d=localize_it(dat)
     return d.replace(tzinfo=None)
 
 
@@ -291,13 +291,13 @@ import dateutil.parser
 def conv_date(dat,premissive=True):
     if premissive and dat is None:
         dat=datetime.now()
-    if type(dat)==str:
+    if type(dat) is str:
          return dateutil.parser.parse(dat)
-    elif type(dat)==datetime:
+    elif type(dat) is datetime:
         return dat
     elif 'Timestamp' in str(type(dat)):
         return dat.to_pydatetime()
-    elif type(dat)==date:
+    elif type(dat) is date:
         return datetime.fromordinal(dat.toordinal())
     else:
         raise AttributeError("no attr")

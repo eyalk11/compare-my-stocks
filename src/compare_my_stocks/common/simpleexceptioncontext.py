@@ -22,6 +22,7 @@ def print_formatted_traceback(detailed=True):
     logging.error(format_traceback_str(detailed=detailed))
 
 def get_caller_info(over):
+    return "aa",2
     frame = inspect.stack()[over]
     filename = frame.filename
     line_number = frame.lineno

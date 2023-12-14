@@ -1,6 +1,16 @@
 from common.better_abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
+from typing import Dict, Optional
 
 from input.inputdatainterface import InputDataImplInterface
+
+@dataclass 
+class InputPosition:
+    symbol : str
+    position : float
+    avgCost : float
+    contract : Optional[Dict]
+    currency: str
 
 
 class InputProcessorInterface(metaclass=ABCMeta):

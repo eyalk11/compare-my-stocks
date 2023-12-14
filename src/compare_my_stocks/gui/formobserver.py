@@ -51,10 +51,10 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     @simple_exception_handling("refresh task",never_throw=True)
     def refresh_task(self, x, params):
-        self.window.last_status.setText('refreshing data')
+        self.window.last_status.setText('Refreshing data')
         self.graphObj.process(set(x), params, force_upd_all_range=not self._min_refresh)
         self.update_graph(1, True)
-        self.window.last_status.setText('finished refreshing')
+        self.window.last_status.setText('Finished refreshing')
 
     def decrease(self, *args):
         self._update_graph_task.command_waiting = self._update_graph_task.command_waiting - 1
@@ -116,7 +116,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             return
 
         if self._refresh_stocks_task.is_started:
-            self.window.last_status.setText("already runnning another")
+            self.window.last_status.setText("Already runnning another")
             return
         self._refresh_stocks_task.command.emit(TaskParams(params=(toupdate, params)))
 
@@ -142,11 +142,11 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             return
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
-                self._update_graph_task.command_waiting += 1
                 if self._update_graph_task.command_waiting >= 3:
                     logging.debug(('update waiting'))
                     self.window.last_status.setText('Update is waiting (generating graph probably)')
                     return
+                self._update_graph_task.command_waiting += 1
 
                 self._update_graph_task.finished.disconnect()
                 self._update_graph_task.finished.connect(call)
@@ -158,8 +158,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 # self.graphObj.update_graph(Parameters(ignore_minmax=reset_ranges))
 
         except:
-            logging.debug(('failed updating graph'))
-            self.window.last_status.setText('failed updating graph')
+            logging.debug(('Failed updating graph'))
+            self.window.last_status.setText('Failed updating graph')
             import traceback
             traceback.print_exc()
 
@@ -270,7 +270,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         v=VoilaStatus()
         d= DfDesc (
         df_name = "Current status" , df_desc= 'Relevant numbers about stocks in your portfolio',
-        df = self.graphObj.input_processor._current_status)
+        df = self.graphObj.input_processor.get_status_df() )
         v.generate_dialog([d]) 
 
     def clear_all(self):
@@ -280,6 +280,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.comparebox : PySide6.QComboBox
         self.window.comparebox.currentText=""
         self.window.COMPARE.setChecked(False)
+        self.window.WEIGHTED.setChecked(False)
         self.window.adjust_currency.setChecked(False)
         self.update_graph(reset_ranges=ResetRanges.FORCE, force=True)
 
@@ -333,6 +334,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.max_num.setEdgeLabelMode(EdgeLabelMode.LabelIsValue)
         self.window.min_crit.valueChanged = safeconnect(self.window.min_crit.valueChanged, (genobs('valuerange')))
         self.window.max_num.valueChanged = safeconnect(self.window.max_num.valueChanged, (genobs('numrange')))
+        self.window.findChild(QCheckBox, name="WEIGHTED").toggled = safeconnect(self.window.findChild(QCheckBox, name="WEIGHTED").toggled,genobsResetForce('weighted_for_portfolio'))
         self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled = safeconnect(
             self.window.findChild(QCheckBox, name="checkBox_showtrans").toggled,
             (genobs('show_transactions_graph')))

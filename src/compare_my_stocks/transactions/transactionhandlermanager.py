@@ -68,6 +68,8 @@ class TransactionHandlerManager(TransactionHandlerInterface):
 
     def get_portfolio_stocks(self):
         return self._inp.get_portfolio_stocks()
+    def get_portfolio_stocks_position(self): #with poisition 
+        return self._inp.get_portfolio_stocks_position()
 
     def process_transactions(self): #from all sources
         self._buydic = {}

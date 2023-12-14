@@ -400,8 +400,8 @@
                <rect>
                 <x>9</x>
                 <y>9</y>
-                <width>322</width>
-                <height>116</height>
+                <width>323</width>
+                <height>122</height>
                </rect>
               </property>
               <layout class="QFormLayout" name="formLayout">
@@ -1565,6 +1565,13 @@
                      </property>
                      <property name="text">
                       <string>Do Comparision</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QCheckBox" name="WEIGHTED">
+                     <property name="text">
+                      <string>Weighted avg for portfolio</string>
                      </property>
                     </widget>
                    </item>

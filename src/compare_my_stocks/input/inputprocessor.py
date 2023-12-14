@@ -1,12 +1,12 @@
 from pandas import Timestamp
 
-from common.common import assert_not_none, c
+from common.common import assert_not_none, c, InputSourceType
 from composition import C, Orig, X, A
 from memoization import cached
 
 from common.refvar import RefVar
-from compare_my_stocks.common.common import neverthrow
-from compare_my_stocks.common.dolongprocess import DoLongProcessSlots, TaskParams
+from common.common import neverthrow
+from common.dolongprocess import DoLongProcessSlots, TaskParams
 from input.inputdata import InputDataImpl
 from input.inputdatainterface import InputDataImplInterface, might_change
 from input.inputprocessorinterface import InputProcessorInterface
@@ -19,6 +19,7 @@ from collections import defaultdict
 # from datetime import datetime
 import datetime
 from copy import copy
+
 from functools import reduce, partial
 
 import matplotlib
@@ -122,6 +123,7 @@ class InputProcessor(InputProcessorInterface):
         return self._transaction_handler
 
     def __init__(self, symb, transaction_handler, inputsource=None):
+        self._portfolio_stocks=None
         self.to_save_data = False 
         self._force_upd_all_range = None
 
@@ -830,16 +832,31 @@ class InputProcessor(InputProcessorInterface):
         self._data._current_status= st
 
     def get_portfolio_stocks(self):
-        if self._data._current_status is None:
-            return set()
-        return set(self._data._current_status[ self._data._current_status['Holding']!=0].index)
+        if config.Symbols.UseCurrentIBStocksForPortfolio:
+            portstock= self.get_port_stock_ex()
+            if portstock is None:
+                return set()
+            return set([x.symbol for x in portstock])
+        else:
+            if self._data._current_status is None:
+                return set()
+            return set(self._data._current_status[ self._data._current_status['Holding']!=0].index)
+
+    def get_position_dict(self,all=False):
+        if config.Symbols.UseCurrentIBStocksForPortfolio:
+             portstock = self.get_port_stock_ex()
+             if portstock is None:
+                 return {}
+             return {x.symbol: x.position for x in portstock if (all or x.contract['secType']=='STK')}
+        else:
+            return {x: self._data._current_status.loc[x]['Holding'] for x in self._data._current_status.index}
 
 
-
-
-
-
-
+    def get_port_stock_ex(self):
+        if config.Input.InputSource == InputSourceType.IB:
+            if self._portfolio_stocks is None:
+                self._portfolio_stocks = list(self._inputsource.get_positions())
+        return self._portfolio_stocks
 
     def simplify_hist(self, partial_symbols_update):
         #very not efficient, can be rewritten. Still fast enough.
@@ -1341,6 +1358,18 @@ class InputProcessor(InputProcessorInterface):
     def process_transactions(self):
         self._transaction_handler.process_transactions()
     #self._proccessing_mutex.unlock()
+    @simple_exception_handling(err_description="error in get_status_df",never_throw=True)
+    def get_status_df(self):
+        df=self._data._current_status
+        if config.Input.InputSource != InputSourceType.IB: 
+            return df
+        port=self.get_port_stock_ex(all=True) 
+        def g(port):
+            for k in port:
+                yield {'Average Cost IB':k[3] , 'name':k[1].get('localSymbol',k[1]['symbol']),'Position IB':k[2]}
+        dff=pandas.DataFrame(g(port)) 
+        dff.set_index('name',inplace=True)
+        return df.join(dff)
 
 
 

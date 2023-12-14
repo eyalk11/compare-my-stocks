@@ -47,10 +47,10 @@ class ListsObserver(FormInterface):
     def process_elem(self,params):
         while True:
             ls = to_simple(self.addqueue)
-            self.window.last_status.setText('processing added stocks')
+            self.window.last_status.setText('Processing added stocks')
             self.graphObj.process(set(ls),
                                   params)  #blocks. should have mutex here. We do partial update with params and list..
-            self.window.last_status.setText('finshed processing')
+            self.window.last_status.setText('Finished processing')
             self.addqueue = list(set(self.addqueue) - set(ls))
             if len(self.addqueue)==0:
                 break

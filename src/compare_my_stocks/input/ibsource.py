@@ -10,7 +10,7 @@ from functools import partial, lru_cache
 
 import pandas as pd
 from frozendict import frozendict
-from ib_insync import Forex, util as nbutil, Contract, RequestError
+from ib_insync import Forex, util as nbutil, Contract, RequestError, Position
 from memoization import cached
 
 from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, selfifnn, ifnn, StandardColumns, \
@@ -19,6 +19,7 @@ from common.refvar import RefVar
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from common.loghandler import TRACELEVEL
 from config import config
+from input.inputprocessorinterface import InputPosition
 from input.inputsource import InputSource
 from config import config
 from ib_insync import IB,util
@@ -27,9 +28,15 @@ import Pyro5.client
 import Pyro5.api
 from ib import timeoutreg #register timeout error. don't remove!
 
+from ib.remoteprocess import RemoteProcess
+from typing import Optional, Dict
+
+
+
 WRONG_EXCHANGE = 200
 HISTORY_ERROR=162
-from ib.remoteprocess import RemoteProcess
+
+
 
 
 
@@ -173,6 +180,26 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     @make_sure_connected
+    def reqPositions(self):
+        pos=self.ib.reqPositions()
+        for p in pos:
+            contract = asdict(p.contract)
+            #import ib_insync.contract.Option
+            #zz=ib_insync.contract.Option
+            #p.contract=contract
+            yield p._replace(contract=contract)
+
+    @Pyro5.server.expose
+    @make_sure_connected
+    def req_details(self,conid):
+        c = Contract()
+        c.conId = conid
+        contdet= self.ib.reqContractDetails(c)
+        if len(contdet)>0:
+            return asdict(contdet[0].contract)
+        return None
+    @Pyro5.server.expose
+    @make_sure_connected
     def reqHistoricalData_ext(self, contract, enddate, td):
         logging.debug(f"reqHistoricalData_ext {contract} .days {td} to {enddate}")
         if type(contract)!=Contract:
@@ -233,12 +260,6 @@ class IBSourceRem:
 
 
 
-    def get_positions(self):
-        logging.debug("positions")
-        y = self.ib.reqPositions()
-        for k in y:
-            if k.contract.secType=='STK':
-                yield {'contract':k.contract, 'currency':k.contract.currency,'avgCost':k.avgCost,'position':k.position}
 
 class IBSource(InputSource):
     def __init__(self,host=config.Sources.IBSource.HostIB,port=config.Sources.IBSource.PortIB,clientId=None,readonly=True,proxy=True):
@@ -264,9 +285,21 @@ class IBSource(InputSource):
 
 
         self.lock = threading.Lock()
+
     def disconnect(self):
         self.ibrem._pyroRelease()
         self.ibrem.connected=False
+
+
+    @simple_exception_handling("get_positions",return_succ=[],never_throw=True)
+    def get_positions(self):
+        logging.debug("positions")
+        y = self.ibrem.reqPositions()
+        
+        for k in y:
+            k = Position(*k)
+            symbol = k.contract.get('localsymbol', k.contract['symbol'])
+            yield InputPosition(** {'symbol':symbol, 'contract':k.contract, 'currency':k.contract['currency'],'avgCost':k.avgCost,'position':k.position})
 
     @cache_if_not_none
     @cached(ttl=300)
@@ -362,31 +395,49 @@ class IBSource(InputSource):
             cont = Contract.create(**contract)
         except:
             cont = Contract(**contract)
+    @cache_if_not_none
+    @cached
+    def req_details(self,conid):
+        return self.ibrem.req_details(conid)
+
+    def resolve_contract(self,contract):
+        #try to find the right exchange etc. returns dict
+        c=contract['conId']
+        return self.req_details(c)
+
+
     @cached(custom_key_maker=lambda self,contract,enddate, td: IBSource.get_contract(contract) if type(contract) is dict else contract)
     def get_right_contract_bars(self,contract,enddate, td):
         with self.lock:
             with SimpleExceptionContext('error right contract',always_throw=True,callback=lambda x: x):
                 cont = asdict(contract) if type(contract) is not dict else contract
-                if not cont['exchange'] and cont["secType"]=='STK':
+                if not cont['exchange'] and cont["secType"] in ['STK','IND']:
                     logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
                     cont['exchange'] = config.Symbols.TranslateExchanges.get(cont['primaryExchange'],
                                                                              cont['primaryExchange'])
 
                 for i in range(2):
                         try:
+                            logging.debug(cont)
                             bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
                             return cont,bars
                         except RequestError as e:
-                            if  cont["secType"]!='STK':
-                                raise
-                            logging.debug('req err')
-                            if e.code in [ WRONG_EXCHANGE,HISTORY_ERROR]:
-                                logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
-                                cont['exchange']= config.Sources.IBSource.DefaultExchange
-                                if config.Sources.IBSource.DefaultExchange is None:
-                                    return None,None
+                            logging.debug(('req err', str(e), e.code))
+
+                            if e.code in [ WRONG_EXCHANGE,HISTORY_ERROR] or ('enter exchange' in e.message.lower()) :
+                                if cont['conId']:
+                                    cont=(self.resolve_contract(cont))
+                                    logging.debug((f'resolve got new contract {cont}'))
+                                    continue
+                                if cont["secType"] != 'STK':
+                                    cont['exchange']=cont['primaryExchange']
+                                else:
+                                    logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
+                                    cont['exchange']= config.Sources.IBSource.DefaultExchange
+                                    if config.Sources.IBSource.DefaultExchange is None:
+                                        return None,None
                                 if i==1:
-                                    logging.debug("tried twice. giving up")
+                                    logging.debug("tried twice to resolve. giving up")
                                     raise
 
                             else:
@@ -418,6 +469,7 @@ class IBSource(InputSource):
         self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result == (None,None) )
         try:
             is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
+            logging.debug('is cached %s' % is_cached)
         except:
             is_cached=False
         cont,bars = self.get_right_contract_bars(contract,enddate,td)

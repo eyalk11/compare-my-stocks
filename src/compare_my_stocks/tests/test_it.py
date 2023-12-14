@@ -2,6 +2,8 @@ import sys
 import os
 from pathlib import Path
 
+from ib_insync import Contract, Index
+
 sys.path.insert(0,
     str(Path(os.path.dirname(os.path.abspath(__file__))).parent) )
 
@@ -21,7 +23,7 @@ import numpy
 
 from unittest.mock import patch
 
-from .testtools import *
+from tests.testtools import *
 @pytest.mark.parametrize("useinp", [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT, UseInput.WITHINPUT,
                                     UseInput.LOADDEFAULTCONFIG])
 def test_realengine(mock_config_to_default,realeng,useinp):
@@ -90,6 +92,25 @@ def test_get_currency_adv(inp):
     #df = tmpinp.get_currency_hist('ILS', datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now())
     assert len(df)>=3
 
+def test_resolve(IBSourceSess):
+    x= IBSourceSess
+    x : IBSource
+    ls = x.get_matching_symbols('NDX')
+    ls=list(ls)
+    ls[0]['exchange']='NASDAQ'
+    ls[0]['primaryExchange']=''
+    # contract= Contract()
+    # contract.conId=416843
+    # #contract =  Contract();
+    # #contract.SecType = "NEWS";
+    # #contract.Exchange = "BRF";
+    # zz=x.ibrem.ib.reqContractDetails(contract)
+    x.get_right_contract_bars.cache_remove_if(lambda x, y, z: True)
+    uu=x.get_right_contract_bars(ls[0]['contract'],datetime.datetime.now(),3)
+    assert len(uu)>0
+
+
+
 
 def test_get_currentcurrency(inp):
     tmpinp = inp
@@ -128,6 +149,8 @@ def test_basic_poly(PolySource):
 def test_basic(IBSourceSess):
     x = IBSourceSess
     basic(x)
+def n(x):
+    pass
 def basic(x):
 
 
@@ -138,6 +161,7 @@ def basic(x):
         x.get_symbol_history(ls[0], datetime.datetime.now() - datetime.timedelta(days=3), datetime.datetime.now()))
     assert len(l) > 0
     assert True #len(ls)>0
+
 def basicb(x):
 
 

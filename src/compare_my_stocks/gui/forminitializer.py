@@ -93,6 +93,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.window.daterangepicker.start=self.graphObj.mindate
         self.window.daterangepicker.end = self.graphObj.maxdate
         self.window.daterangepicker.update_obj()
+        self.window.findChild(QCheckBox, name="WEIGHTED").setChecked(self.graphObj.params.weighted_for_portfolio)
         if not initial:
             self.window.daterangepicker.datevalue= (self.graphObj.params.fromdate,self.graphObj.params.todate)
         else:

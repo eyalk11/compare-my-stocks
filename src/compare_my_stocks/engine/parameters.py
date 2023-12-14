@@ -54,6 +54,7 @@ class Parameters:
     resolve_hack: dict = field(default_factory=dict)
     show_transactions_graph : bool = True
     is_forced: bool = False #doesn't matter actually, only for caching
+    weighted_for_portfolio: bool = False
 
     #Resolve hack is meant to provide custom symbol data to the input processor
     #most of the code originally written to work with strings. So, here we input the entire info the dic and treat the symbol as dic.

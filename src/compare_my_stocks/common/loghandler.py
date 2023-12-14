@@ -126,8 +126,7 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
             logging.getLogger().setLevel(loglevel)
         elif debug and not dont_print():
             logging.getLogger().setLevel(logging.DEBUG)
-        else:
-            logging.warn("No loglevel set")
+
         #logging.getLogger('Voila').setLevel(logging.DEBUG)
     #logging.getLogger().setLevel(5)
     log=logging.getLogger(mod)
