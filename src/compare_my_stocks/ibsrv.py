@@ -16,7 +16,7 @@ except:
 
 
 from config import config
-from ib.timeoutreg import thingy_class_to_dict, thingy_dict_to_class
+from ib.timeoutreg import thingy_class_to_dict, thingy_dict_to_class  # noqa: None
 from input.ibsource import IBSourceRem, IBSourceRemGenerator
 #does registeration dont delete: 
 from ib import timeoutreg

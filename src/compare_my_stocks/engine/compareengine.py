@@ -16,6 +16,7 @@ from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
 from transactions.transactionhandlermanager import TransactionHandlerManager
+from pandas.core.frame import DataFrame
 
 
 class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
@@ -183,7 +184,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         self, df, just_upd, type, orig_data, adjust_date=False, additional_df=None
     ):
         if df.empty:
-            self.statusChanges.emit(f"No Data For Graph!")
+            self.statusChanges.emit("No Data For Graph!")
             return
 
         def upd(msg, err=False):
@@ -220,7 +221,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 additional_df=additional_df,
             )
             if self._inp.failed_to_get_new_data:
-                upd(f"Generated Graph with old data  (  Query failed :() ")
+                upd("Generated Graph with old data  (  Query failed :() ")
             else:
                 upd("Generated Graph :)")
             self.params.is_forced = False

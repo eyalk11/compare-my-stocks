@@ -10,7 +10,7 @@ import numpy as np
 import pytz
 import psutil
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
-
+import functools
 T = TypeVar('T')
 P = ParamSpec('P')
 Q = ParamSpec('Q')
@@ -19,6 +19,15 @@ really_close= lambda k,l: (abs(k - l) <= abs(k) / 1000) if k!=0 else (abs(l) <= 
 def assert_not_none(x):
     assert x is not None 
     return x 
+
+def cache_if_not_cond(func=None, cond=None):
+    if func is None:
+        return functools.partial(cache_if_not_cond,
+                cond=cond)    
+    def internal(*arg,**kw):
+        func.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: cond(user_function_result))
+        return func(*arg,**kw)
+    return internal
 
 def cache_if_not_none(func):
     def internal(*arg,**kw):

@@ -987,7 +987,7 @@ class InputProcessor(InputProcessorInterface):
             requireddays=0
             try:
                 for (mindate,maxdate) in  ls:
-                    okdays+=self.get_hist_sym(mindate, maxdate, sym, sym_corrected)
+                    okdays+=self.get_hist_sym(mindate, maxdate, sym, sym_corrected,self._force_upd_all_range)
                     requireddays+=(maxdate-mindate).days
 
             except SymbolError:
@@ -1004,9 +1004,9 @@ class InputProcessor(InputProcessorInterface):
         init_keys = filter(lambda x: ((y := localize_it(x)) >= fromdate and y <= todate),
                            self._data._hist_by_date.keys())
         if sym in self._data._no_adjusted_for:
-            cond = lambda x: not math.isnan(x[0].get('Open'))
+            cond = lambda x: x[0] is not None and not math.isnan(x[0].get('Open'))
         else:
-            cond = lambda x: not math.isnan(x[0].get('Open')) and not math.isnan(x[1].get('Open'))
+            cond = lambda x: x[0] is not None and x[1] is not None and not math.isnan(x[0].get('Open')) and not math.isnan(x[1].get('Open'))
         dates = list(date for date in init_keys if ifnotnan(self._data._hist_by_date[date].get(sym), cond))
         datesset = set(dates)
         #remove same value dates
@@ -1019,7 +1019,7 @@ class InputProcessor(InputProcessorInterface):
         ls = list(self.get_range_gap(dates, fromdate, todate))  # we have data for this symbol
         return ls
 
-    def get_hist_sym(self,mindate, maxdate, sym, sym_corrected):
+    def get_hist_sym(self,mindate, maxdate, sym, sym_corrected,force=False):
         if self._inputsource is None:
             return 0
         logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
@@ -1055,11 +1055,20 @@ class InputProcessor(InputProcessorInterface):
         hist = hist.to_dict('index')
         if adjusted is not None:
             adjusted = adjusted.to_dict('index')
+
+        #erase existing data
         okdays = sum([1 for d in hist.values() if not math.isnan(d['Open'])])
+        if okdays>1 and force:
+            matched_dates= self.data._hist_by_date.keys() 
+            matched_dates=filter(lambda x: x.to_pydatetime().date()>=(mindate.date()) and x.to_pydatetime().date()<=(maxdate.date()),matched_dates)
+
+            #delete symbol from dates 
+            for date in matched_dates:
+                if sym in self._data._hist_by_date[date]:
+                    self._data._hist_by_date[date].pop(sym)
 
         self._data._usable_symbols.add(sym)
         for date, dic in hist.items():
-            from pandas import Timestamp 
             date=Timestamp(date.date())
             if not date in self._data._hist_by_date:
                 self._data._hist_by_date[date] = {}

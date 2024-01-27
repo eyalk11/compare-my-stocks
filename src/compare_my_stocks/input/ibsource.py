@@ -14,7 +14,7 @@ from ib_insync import Forex, util as nbutil, Contract, RequestError, Position
 from memoization import cached
 
 from common.common import conv_date, dictfilt, log_conv, print_formatted_traceback, selfifnn, ifnn, StandardColumns, \
-    cache_if_not_none
+    cache_if_not_none, cache_if_not_cond
 from common.refvar import RefVar
 from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext
 from common.loghandler import TRACELEVEL
@@ -30,7 +30,6 @@ from ib import timeoutreg #register timeout error. don't remove!
 
 from ib.remoteprocess import RemoteProcess
 from typing import Optional, Dict
-
 
 
 WRONG_EXCHANGE = 200
@@ -173,8 +172,8 @@ class IBSourceRem:
             if len(a)>0:
                 return a[0].close
 
-    def get_realtime_contract(self, contract):
-        tick = self.ib.reqMktData(contract, '233,221')
+    def get_realtime_contract(self, contract,additional=False):
+        tick = self.ib.reqMktData(contract, '233,221,165' if additional else '233,221')
         tick.update()
         return tick
 
@@ -406,47 +405,49 @@ class IBSource(InputSource):
         return self.req_details(c)
 
 
+    @cache_if_not_cond(cond=lambda x: x == (None, None))
     @cached(custom_key_maker=lambda self,contract,enddate, td: IBSource.get_contract(contract) if type(contract) is dict else contract)
+    @simple_exception_handling(err_description="get right contract bars ", return_succ=(None, None))
     def get_right_contract_bars(self,contract,enddate, td):
         with self.lock:
-            with SimpleExceptionContext('error right contract',always_throw=True,callback=lambda x: x):
-                cont = asdict(contract) if type(contract) is not dict else contract
-                if not cont['exchange'] and cont["secType"] in ['STK','IND']:
-                    logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
-                    cont['exchange'] = config.Symbols.TranslateExchanges.get(cont['primaryExchange'],
-                                                                             cont['primaryExchange'])
+            cont = asdict(contract) if type(contract) is not dict else contract
+            if not cont['exchange'] and cont["secType"] in ['STK','IND']:
+                logging.warn((f'(historicalhelper) warning: no exchange for contract {cont}'))
+                cont['exchange'] = config.Symbols.TranslateExchanges.get(cont['primaryExchange'],
+                                                                         cont['primaryExchange'])
 
-                for i in range(2):
-                        try:
-                            logging.debug(cont)
-                            bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
-                            return cont,bars
-                        except RequestError as e:
-                            logging.debug(('req err', str(e), e.code))
+            for i in range(2):
+                try:
+                    logging.debug(cont)
+                    bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td) #we might get more than we opted for because it returns all the traded days up to the enddate..
+                    return cont,bars
+                except RequestError as e:
+                    logging.debug(('req err', str(e), e.code))
 
-                            if e.code in [ WRONG_EXCHANGE,HISTORY_ERROR] or ('enter exchange' in e.message.lower()) :
-                                if cont['conId']:
-                                    cont=(self.resolve_contract(cont))
-                                    logging.debug((f'resolve got new contract {cont}'))
-                                    continue
-                                if cont["secType"] != 'STK':
-                                    cont['exchange']=cont['primaryExchange']
-                                else:
-                                    logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
-                                    cont['exchange']= config.Sources.IBSource.DefaultExchange
-                                    if config.Sources.IBSource.DefaultExchange is None:
-                                        return None,None
-                                if i==1:
-                                    logging.debug("tried twice to resolve. giving up")
-                                    raise
-
-                            else:
-                                logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
+                    if e.code in [ WRONG_EXCHANGE,HISTORY_ERROR] or ('enter exchange' in e.message.lower()) :
+                        if cont['conId']:
+                            cont=(self.resolve_contract(cont))
+                            logging.debug((f'resolve got new contract {cont}'))
+                        elif cont["secType"] != 'STK':
+                            cont['exchange']=cont['primaryExchange']
+                        else:
+                            logging.debug((f'bad exchange for symbol {cont}. trying to  resolve with {config.Sources.IBSource.DefaultExchange}  . {e.message}'))
+                            cont['exchange']= config.Sources.IBSource.DefaultExchange
+                            if config.Sources.IBSource.DefaultExchange is None:
                                 return None,None
-                        except TimeoutError as e:
+                        if i==1:
+                            logging.debug("tried twice to resolve. giving up")
                             raise
-                        except Exception as e:
-                            raise
+
+                    else:
+                        logging.debug((f'failed reqHistoricalData {e.message} {e.code}'))
+                        return None,None
+                except TimeoutError as e:
+                    raise
+                except Exception as e:
+                    raise
+            logging.debug('end')
+            return None, None
 
 
     def historicalhelper(self, startdate, enddate, contract):
@@ -466,7 +467,7 @@ class IBSource(InputSource):
             td = td.days + 1
 
 
-        self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result == (None,None) )
+        #self.get_right_contract_bars.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result == (None,None) )
         try:
             is_cached=  IBSource.get_right_contract_bars.cache_contains_argument((self,contract,enddate,td))
             logging.debug('is cached %s' % is_cached)
