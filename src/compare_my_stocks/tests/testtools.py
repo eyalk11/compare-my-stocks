@@ -114,22 +114,28 @@ def additional_process():
 @pytest.fixture
 def realeng(additional_process):
     a=additional_process
-    eng= CompareEngine(None)
-    eng.transaction_handler.save_cache = Mock(return_value=None)
-    eng.transaction_handler._ib.save_cache =Mock(return_value=None)
-    eng.transaction_handler._stock.save_cache =Mock(return_value=None)
-    eng.transaction_handler._StockPrices.save_cache =Mock(return_value=None)
-
-    eng.params = Parameters(
-        type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
-        show_graph=False)
-
-
-    eng.call_graph_generator = Mock(return_value=None)
-    eng.input_processor.save_data = Mock(return_value=None) #Dont save anything please . Because loading data like that is not nice.
+    eng = get_eng()
 
     return eng
 
+
+def get_eng(have_graph_gen=False,params : Parameters=None):
+    eng = CompareEngine(None)
+    eng.transaction_handler.save_cache = Mock(return_value=None)
+    eng.transaction_handler._ib.save_cache = Mock(return_value=None)
+    eng.transaction_handler._stock.save_cache = Mock(return_value=None)
+    eng.transaction_handler._StockPrices.save_cache = Mock(return_value=None)
+    if params is None:
+        eng.params = Parameters(
+            type=Types.PRICE, unite_by_group=UniteType.NONE, isline=True, groups=['FANG'], use_cache=UseCache.DONT,
+            show_graph=False)
+    else:
+        eng.params=params
+    if not have_graph_gen:
+        eng.call_graph_generator = Mock(return_value=None)
+    eng.input_processor.save_data = Mock(
+        return_value=None)  # Dont save anything please . Because loading data like that is not nice.
+    return eng
 
 
 #patch get_ibsource to return IBSource instead of None

@@ -3,7 +3,7 @@ import logging
 from common.logger import *
 import collections
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Tuple
 from collections import OrderedDict
 from common.common import selfifnn 
@@ -56,7 +56,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         plot_data = collections.defaultdict(list)
         for date, item in self._buydic.items():
             if item.Symbol in columns:
-                if date>=from_date and date<=to_date:
+                if date>=from_date -timedelta(days=1) and date<=to_date + timedelta(days=1):
                     plot_data[item.Symbol].append((date, item.Cost, item.Qty,item.Source,item.AdjustedPrice))
         return dict(plot_data)
 

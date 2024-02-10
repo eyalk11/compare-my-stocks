@@ -1,5 +1,5 @@
 from pandas import Timestamp
-
+from engine.symbols import SpecialSymbol
 from common.common import assert_not_none, c, InputSourceType
 from composition import C, Orig, X, A
 from memoization import cached
@@ -47,7 +47,6 @@ BuyOp= NamedTuple("BuyOp", [('date', datetime.datetime), ('buydic', BuyDictItem)
 
 class SymbolError(Exception):
     pass
-
 
 @addAttrs(['tot_profit_by_stock', 'value', 'alldates', 'holding_by_stock', 'rel_profit_by_stock', 'unrel_profit',
            'avg_cost_by_stock'])
@@ -945,6 +944,24 @@ class InputProcessor(InputProcessorInterface):
             self._save_data_proc.command.emit(TaskParams(params=tuple()))
 
 
+    def get_special_symbol_hist(self,sym,fromdate,todate):
+        #fill dates by days, do for on days
+        #assyme datetime 
+        with warnings.catch_warnings():
+        # Ignore all warnings
+            warnings.simplefilter("ignore")
+            td= todate - fromdate  
+            f= fromdate.date() 
+            df= pd.DataFrame()
+            for f in pd.date_range(fromdate,todate): 
+                sp=sym.get_date(f.to_pydatetime().date())
+                dic= {'Open':sp,'High':sp,'Low':sp,'Close':sp,'Volume':1}
+                new_row = pd.Series(dic, name=f)
+                df = df.append(new_row)
+            return sym.dic, df
+
+
+    
 
     def get_data_from_source(self, partial_symbols_update,fromdate,todate):
         if self._inputsource is None:
@@ -975,6 +992,8 @@ class InputProcessor(InputProcessorInterface):
         for sym in list(self._data._symbols_wanted if not partial_symbols_update else partial_symbols_update):
 
             sym_corrected = self.process_params.resolve_hack.get(sym, None)
+
+
             if not sym_corrected:
                 sym_corrected = config.Symbols.Translatedic.get(sym, sym)
 
@@ -1024,7 +1043,10 @@ class InputProcessor(InputProcessorInterface):
             return 0
         logging.debug((f'getting symbol hist for {sym} ({sym_corrected}) from {mindate} to {maxdate}'))
         #self._InputSource.ownership()
-        l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
+        if type(sym_corrected) is SpecialSymbol: 
+            l,hist =  self.get_special_symbol_hist(sym_corrected, mindate, maxdate)
+        else:
+            l, hist = self._inputsource.get_symbol_history(sym_corrected, mindate, maxdate,
                                                        iscrypto= (str(sym_corrected) in config.Symbols.Crypto))  # should be rounded
 
         self._data.symbol_info[sym] = (l if l else {}) #just for debug I think
@@ -1205,12 +1227,6 @@ class InputProcessor(InputProcessorInterface):
                         logging.debug(f'Using heuristic for currency {x} {sym}')
                         self._relevant_currencies_rates[x]=self._data._alldates_adjusted[sym][m]/self._data._alldates[sym][m]
 
-
-
-
-
-
-
         #fix the following line for case 'currency' is not in dictonary of value v of _data.symbol_info
         dic={k: self._relevant_currencies_rates.get(curr) for k in self._data.symbol_info.keys()
              if (curr:=self._data.get_currency_for_sym(k) ) in self._relevant_currencies_rates \
@@ -1288,9 +1304,9 @@ class InputProcessor(InputProcessorInterface):
         self._force_upd_all_range=force_upd_all_range
         #This would return text for each symbol. see comment about resolve_hack in parameters.
         #From this point, symbols are textual!
-        ls=set(self.process_params.helper([SimpleSymbol(s) for s in  partial_symbol_update]))
+        ls=set(self.process_params.helper([SimpleSymbol.gen(s) for s in  partial_symbol_update]))
         callback = lambda e: self._eng.statusChanges.emit(f'Exception in processing {e}')
-        with SimpleExceptionContext('exception in processing',callback=callback,never_throw=True):
+        with SimpleExceptionContext('exception in processing',callback=callback):
             ret=self.process_internal(ls)
             logging.debug(f"process end {ret}")
             return ret
@@ -1379,6 +1395,5 @@ class InputProcessor(InputProcessorInterface):
         dff=pandas.DataFrame(g(port)) 
         dff.set_index('name',inplace=True)
         return df.join(dff)
-
 
 

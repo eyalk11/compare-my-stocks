@@ -165,7 +165,9 @@ class GraphGenerator:
 
         if eng is not None: #for testing
             self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
-
+    @property
+    def active(self):
+        return self._axes is not None
     def get_title(self):
         type = self.params.type
 

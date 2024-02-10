@@ -29,6 +29,8 @@ def get_caller_info(over):
     return os.path.basename(filename), line_number
 
 class SimpleExceptionContext:
+    ISWING=None 
+
     def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None):
         self.err_description=err_description
         self.return_succ=return_succ
@@ -43,15 +45,28 @@ class SimpleExceptionContext:
             caller= get_caller_info(2)
         self.caller=caller
 
+    def checkwing(self):
+        if SimpleExceptionContext.ISWING is not None:
+            return  SimpleExceptionContext.ISWING
+        import os
+        import psutil
+        # Get the current process
+        current_process = psutil.Process()
+        # Get the parent process
+        parent_process = current_process.parent()
+        # Get the name of the parent process
+        parent_process_name = parent_process.name()
+        SimpleExceptionContext.ISWING= 'wing' in parent_process_name
+        return SimpleExceptionContext.ISWING
 
 
     def __enter__(self):
         # Code to be executed when entering the context
-        tostop = os.environ.get('PYCHARM_HOSTED') == '1'
+        tostop = os.environ.get('PYCHARM_HOSTED') == '1' or self.checkwing()
         if not self.nocfg:
             try:
                 from config import config
-                tostop=config.Running.StopExceptionInDebug
+                tostop=tostop and config.Running.StopExceptionInDebug
                 if config.Running.IsTest:
                     tostop = True
                 self.config = config

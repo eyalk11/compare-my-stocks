@@ -16,8 +16,6 @@ from graph.graphgenerator import GraphGenerator
 from input.inputprocessor import InputProcessor
 from engine.parameters import Parameters
 from transactions.transactionhandlermanager import TransactionHandlerManager
-from pandas.core.frame import DataFrame
-
 
 class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
     statusChanges = MySignal(str)
@@ -138,23 +136,29 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
             adjust_date = adjust_date or self.params.adjust_date
         else:
             self.params.adjust_date = 0
+
+
         with self._datagenlock:
             res = self.call_data_generator()
             if res == 2:
                 adjust_date = True
+        if not res:
+            return False
+        if not self._generator.active:
+            logging.debug("Graph generator not active")
+            return False
 
-        if res:
-            df = self._datagen.df
-            type = self._datagen.type
-            before_act = self._datagen.df_before_act
-            self.call_graph_generator(
-                df,
-                just_upd,
-                type,
-                before_act,
-                adjust_date=adjust_date,
-                additional_df=self._datagen.additional_dfs_fixed,
-            )
+        df = self._datagen.df
+        type = self._datagen.type
+        before_act = self._datagen.df_before_act
+        self.call_graph_generator(
+            df,
+            just_upd,
+            type,
+            before_act,
+            adjust_date=adjust_date,
+            additional_df=self._datagen.additional_dfs_fixed,
+        )
 
     @simple_exception_handling(err_description="Exception in generation",return_succ=False,never_throw=True)
     def call_data_generator(self, auto_reprocess=True):

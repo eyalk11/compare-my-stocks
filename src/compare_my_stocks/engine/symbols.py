@@ -1,8 +1,12 @@
 import json
 from abc import abstractmethod
 from abc import ABC
+from config import config
 
 from common.common import EnhancedJSONEncoder
+
+
+
 
 
 class AbstractSymbol():
@@ -60,6 +64,21 @@ class SimpleSymbol(AbstractSymbol):
     #         return {'symbol':self.symbol}
     #     else:
     #         return {'symbol': self.symbol,'dic':self.dic}
+    @classmethod
+    def gen(cls,symb):
+        if isinstance(symb,AbstractSymbol):
+            sym=symb.symbol
+        elif isinstance(symb,str):
+            sym=symb
+        else:
+            raise Exception("Unknown type %r" % type(symb))
+
+        if sym.startswith(config.Symbols.SpecialSymbols):
+            return SpecialSymbol(symb[1:])
+        else:
+            return SimpleSymbol(symb)
+
+
 
     def __init__(self,t):
         self._dic=None
@@ -77,4 +96,19 @@ class SimpleSymbol(AbstractSymbol):
             else:
                 self._text=str(t)
 
+class SpecialSymbol(AbstractSymbol):
+    def __init__(self, currency):
+        self.currency=currency
+
+    def get_date(self, date):
+        return 100
+        
+    @property
+    def dic(self):
+        return {'currency':self.currency}
+
+
+    @property
+    def symbol(self):
+        return config.Symbols.SpecialSymbols+self.currency 
 

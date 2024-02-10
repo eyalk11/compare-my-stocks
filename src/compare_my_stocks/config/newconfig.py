@@ -180,6 +180,7 @@ class DefaultParamsConf:
 @paramaware
 @dataclass
 class SymbolsConf:
+    SpecialSymbols: str = '#'
     ValidExchanges: list = field(default_factory=list)
     TranslateExchanges: dict = field(default_factory=dict)
     ExchangeCurrency: dict = field(default_factory=dict)
