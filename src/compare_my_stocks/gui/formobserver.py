@@ -102,7 +102,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def refresh_stocks(self, *args):
         TOLLERANCEGETIT = 5
-        wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT
+        wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT #lets ignore this
         toupdate = self.graphObj.required_syms(True, wantitall, True)
         params = copyit(self.graphObj.params)
         logging.info((f'refreshing {toupdate} from {params.fromdate} to {params.todate}'))

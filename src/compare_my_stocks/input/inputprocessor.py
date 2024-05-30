@@ -1017,6 +1017,11 @@ class InputProcessor(InputProcessorInterface):
             successful_once=True
             if okdays==0 or requireddays/okdays<0.5:
                 logging.debug(f'mostly problematic {str(sym)} {str(okdays)}/{str(requireddays)}')
+            if requireddays> config.Input.MinDaysForSymbol and okdays==0:
+                self._bad_symbols.add(sym)
+                logging.error(f'bad {str(sym)} {str(okdays)}/{str(requireddays)}')
+                
+
         return successful_once
 
     def get_gaps_for_symbol(self, fromdate, sym, todate):
@@ -1053,9 +1058,11 @@ class InputProcessor(InputProcessorInterface):
         if (cont := self._data.symbol_info[sym].get('contract')):
             logging.debug(f"resolved {sym} is {cont}")
         if hist is None:
-            raise SymbolError("empty history")
+            logging.debug(f"none history for {sym} {mindate} {maxdate}")
+            return 0 
         elif len(hist)==0:
-                raise SymbolError("empty history")
+            logging.debug(f"empty history for {sym} {mindate} {maxdate}")
+            return 0
         else:
             logging.debug(f"got history for {sym} {hist.index.min()} {hist.index.max()}")
 

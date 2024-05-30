@@ -235,6 +235,7 @@ class InputConf:
     TzInfo: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
     MaxRelevantCurrencyTime : datetime.timedelta = datetime.timedelta(minutes=60)
     MaxRelevantCurrencyTimeHeur: datetime.timedelta = datetime.timedelta(days=5)
+    MinDaysForSymbol: int = 7
 
 @paramaware
 @dataclass

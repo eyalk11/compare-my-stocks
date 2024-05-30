@@ -140,7 +140,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             wc.setCurrentIndex(index_of( self.graphObj.params.cur_category ,self.graphObj.Categories) )
         self.ignore_cat_changes = False
 
-        options = list(self.graphObj.Groups.keys())
+        options = list(self.graphObj.Groups.keys()) + ['Portfolio'] #add constant
         value = self.graphObj.params.groups if self.graphObj.params.groups != None else list()
         wc= self.window.groups
         if options != [wc.item(x).text() for x in range(wc.count())]:

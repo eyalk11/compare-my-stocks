@@ -1,25 +1,29 @@
+import inspect
 import logging
 import os
 from functools import partial
 
-from Pyro5.errors import get_pyro_traceback
-import inspect
+from Pyro5.errors import format_traceback, get_pyro_traceback
 
-from Pyro5.errors import format_traceback
 try:
-    from ibflex.client import BadResponseError
     from ib_insync.wrapper import RequestError
-    default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError,BadResponseError,RequestError ]
+    from ibflex.client import BadResponseError
+    default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,
+        ValueError,NotImplementedError,BadResponseError,RequestError]
 except:
-    default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError ]
+    default_not_detailed_errors = [
+        ConnectionRefusedError,TimeoutError,ValueError,NotImplementedError]
 
 
-#don't import config here
+# don't import config here
 
 def format_traceback_str(*args,detailed=True):
-    return (''.join([x[:500] for x in format_traceback(*args,detailed=detailed)] ))
+    return (''.join([x[:500] for x in format_traceback(*args,detailed=detailed)]))
+
+
 def print_formatted_traceback(detailed=True):
     logging.error(format_traceback_str(detailed=detailed))
+
 
 def get_caller_info(over):
     return "aa",2
@@ -28,10 +32,11 @@ def get_caller_info(over):
     line_number = frame.lineno
     return os.path.basename(filename), line_number
 
-class SimpleExceptionContext:
-    ISWING=None 
 
-    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None):
+class SimpleExceptionContext:
+    ISWING=None
+
+    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None,logf=None):
         self.err_description=err_description
         self.return_succ=return_succ
         self.never_throw=never_throw
@@ -44,12 +49,14 @@ class SimpleExceptionContext:
         if caller is None:
             caller= get_caller_info(2)
         self.caller=caller
+        self.logf=logf
 
     def checkwing(self):
         if SimpleExceptionContext.ISWING is not None:
-            return  SimpleExceptionContext.ISWING
-        import os
+            return SimpleExceptionContext.ISWING
+
         import psutil
+
         # Get the current process
         current_process = psutil.Process()
         # Get the parent process
@@ -58,7 +65,6 @@ class SimpleExceptionContext:
         parent_process_name = parent_process.name()
         SimpleExceptionContext.ISWING= 'wing' in parent_process_name
         return SimpleExceptionContext.ISWING
-
 
     def __enter__(self):
         # Code to be executed when entering the context
@@ -74,18 +80,17 @@ class SimpleExceptionContext:
                 self.config=None
         else:
             self.config=None
-            #logging.debug("error loading config in simple exception handling. Probably fine.")
-
+            # logging.debug("error loading config in simple exception handling. Probably fine.")
 
         self.do_nothing= tostop and not self.never_throw and self.return_succ is None
 
         return self
+
     def __exit__(self, exc_type, exc_value, traceback):
         # Code to be executed when exiting the context
         if self.do_nothing:
             return False
-        
-                
+
         if exc_value is None:
             return False
         try:
@@ -95,20 +100,26 @@ class SimpleExceptionContext:
             logging.warn("error in callback {} ".format(self.callback))
         if exc_type is not None:
             # Handle any exceptions raised within the context
-            return self.on_exception(exc_type,exc_value,traceback)   # Propagate any exceptions raised within the context
+            # Propagate any exceptions raised within the context
+            return self.on_exception(exc_type,exc_value,traceback)
 
     def on_exception(self, exc_type, exc_value, traceback):
         e=exc_value
         # TmpHook.GetExceptionHook().emit(e)
         if exc_type in self.err_to_ignore and not self.never_throw:
-           return False #throw
-        logf = logging.debug if self.debug else logging.error
+           return False  # throw
+        if self.logf is None:
+            logf = logging.debug if self.debug else logging.error
+        else:
+            logf = self.logf
         tmpst = format_traceback_str(exc_type, exc_value, traceback , detailed=self.detailed)
         strng = "# if you see this in your traceback, you should probably inspect the remote traceback as well"
         if strng in tmpst and e.__class__ not in default_not_detailed_errors:
             logf(("".join(get_pyro_traceback())))
         if self.err_description:
             logf( '%s:%s' % (self.caller)  + ' ' + str(self.err_description))
+        if self.err_description is None:
+            logf( '%s:%s' % (self.caller)  + ' ' + str(e))
         if self.config is not None and self.config.Running.IsTest:
             logf(format_traceback_str(exc_type,exc_value, traceback, detailed=self.detailed))  # just in case
         elif e.__class__ not in default_not_detailed_errors and self.detailed:
@@ -134,18 +145,18 @@ def excp_handler(exc_type,handler=lambda a,b: None):
         return internal
     return decorated
 
-def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False):
+def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,logf=None):
     def decorated(func):
         caller = get_caller_info(2)
         def internal(*args,**kwargs):
-            nonlocal err_to_ignore
+            nonlocal err_to_ignore,logf
 
             no_exception = False
             ret=None
             if hasattr(decorated,'errors_to_handle'):
                 err_to_ignore+=decorated.errors_to_handle
             try:
-                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback,noconfig=noconfig,caller=caller):
+                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback,noconfig=noconfig,caller=caller,logf=logf):
                     from common.loghandler import TRACELEVEL
                     logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
                     ret= func(*args,**kwargs)

@@ -20,6 +20,9 @@ class SymbolsHandler:
             return []
         s = set()
         for g in ls:
+            if g =='Portfolio':
+                s = s.union(set(self.get_portfolio_stocks()))
+                continue
             if g not in self.Groups:
                 raise Exception(f'{g} is not in Groups')
             try:
