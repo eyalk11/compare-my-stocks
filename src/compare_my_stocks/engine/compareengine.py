@@ -95,7 +95,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         else:
             return selected.union(self.params.selected_stocks)
 
-    @simple_exception_handling(err_description="Exception in generation graph",never_throw=True)
+    @simple_exception_handling(err_description="Exception in generation graph",detailed=True, never_throw=True)
     def gen_graph(self, params: Parameters, just_upd=0, reprocess=1):
         if just_upd and self.params:
             self.params.update_from(params)

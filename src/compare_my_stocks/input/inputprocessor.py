@@ -672,8 +672,8 @@ class InputProcessor(InputProcessorInterface):
                         raise StopIteration()
                 except StopIteration:
                     logging.log(TRACELEVEL,("stop iter"))
-                    if len(buyoperations)>0:
-                        _ , cur_action = buyoperations.popitem(False)
+                    if cur_action: #it wasn't processed yet 
+                        # _ , cur_action = buyoperations.popitem(False)
                         t=cur_action[0]
                         t = localize_it(t)
                         if self.process_params.transactions_todate is not None and t> self.process_params.transactions_todate:
@@ -853,6 +853,7 @@ class InputProcessor(InputProcessorInterface):
             return {x: self._data._current_status.loc[x]['Holding'] for x in self._data._current_status.index}
 
 
+    @simple_exception_handling("error getting port stock",never_throw=True,return_succ=[])
     def get_port_stock_ex(self):
         if config.Input.InputSource == InputSourceType.IB:
             if self._portfolio_stocks is None:
@@ -1399,6 +1400,9 @@ class InputProcessor(InputProcessorInterface):
             return df
         port=self.get_port_stock_ex() 
         dff=pandas.DataFrame((port)) 
+        if dff.empty:
+            return df
+        
         dff = dff[['symbol', 'position', 'avgCost', 'currency']]
         dff.rename(columns={'symbol': 'name','avgCost': 'IB AvgConst', 'position': 'IB Position'}, inplace=True)
         dff.set_index('name',inplace=True)
