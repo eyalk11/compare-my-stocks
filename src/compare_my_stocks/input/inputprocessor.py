@@ -79,7 +79,8 @@ class InputProcessor(InputProcessorInterface):
             x = copy(self._eng.params)
             x.use_cache = UseCache.FORCEUSE
             tmpinp.process(params=x, buy_filter=lambda x: (filter_str in x[1].Notes))
-            status = tmpinp._data._current_status
+            tmpinp._inputsource = self._inputsource
+            status = tmpinp.get_status_df()
             return status
 
         return  get_stat("IB"), get_stat("MYSTOCK")
@@ -654,6 +655,7 @@ class InputProcessor(InputProcessorInterface):
 
         self.process_params.transactions_todate = localize_it(self.process_params.transactions_todate)
         self.process_params.transactions_fromdate = localize_it(self.process_params.transactions_todate)
+        cur_action_reflected=False
         try:
             if not partial_symbols_update:
                 self._data._fset=set()
@@ -1393,13 +1395,12 @@ class InputProcessor(InputProcessorInterface):
     @simple_exception_handling(err_description="error in get_status_df",never_throw=True)
     def get_status_df(self):
         df=self._data._current_status
-        if config.Input.InputSource != InputSourceType.IB: 
+        if config.Input.InputSource != InputSourceType.IB or (self._inputsource is None): 
             return df
-        port=self.get_port_stock_ex(all=True) 
-        def g(port):
-            for k in port:
-                yield {'Average Cost IB':k[3] , 'name':k[1].get('localSymbol',k[1]['symbol']),'Position IB':k[2]}
-        dff=pandas.DataFrame(g(port)) 
+        port=self.get_port_stock_ex() 
+        dff=pandas.DataFrame((port)) 
+        dff = dff[['symbol', 'position', 'avgCost', 'currency']]
+        dff.rename(columns={'symbol': 'name','avgCost': 'IB AvgConst', 'position': 'IB Position'}, inplace=True)
         dff.set_index('name',inplace=True)
         return df.join(dff)
 

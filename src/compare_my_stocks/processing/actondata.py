@@ -17,6 +17,7 @@ class ActOnData:
         self._ds=inputData
         self.compare_with=compare_with
         self.transpose_arr = self.arr.transpose()
+
     def __getstate__(self):
         return dictnfilt(self.__dict__,set(['_ds']))
 

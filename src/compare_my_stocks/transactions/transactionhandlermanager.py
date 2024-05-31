@@ -181,7 +181,7 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                         num_of_duplicates +=1 
                         break
                 else:
-                    if v.Symbol=="TSLA":
+                    if v.Symbol=="XAR":
                         tmpcalc[s]=v
                     
                     num_of_updates +=1
