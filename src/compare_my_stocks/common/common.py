@@ -9,7 +9,7 @@ from typing_extensions import ParamSpec
 import numpy as np
 import pytz
 import psutil
-from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback
+from common.simpleexceptioncontext import simple_exception_handling, SimpleExceptionContext, print_formatted_traceback, format_traceback_str
 import functools
 T = TypeVar('T')
 P = ParamSpec('P')

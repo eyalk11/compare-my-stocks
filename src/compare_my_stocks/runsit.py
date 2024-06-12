@@ -213,7 +213,7 @@ class MainClass:
                 splash.show()
             app.processEvents()
             app.aboutToQuit.connect(self.killallchilds)
-            # from ib_insync import util
+            # from ib_async import util
             # util.UseQT()
             # util.patchAsyncio()
 

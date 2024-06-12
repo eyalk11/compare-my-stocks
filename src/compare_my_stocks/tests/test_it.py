@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-from ib_insync import Contract, Index
+from ib_async import Contract, Index
 
 sys.path.insert(0,
     str(Path(os.path.dirname(os.path.abspath(__file__))).parent) )
@@ -95,16 +95,16 @@ def test_get_currency_adv(inp):
 def test_resolve(IBSourceSess):
     x= IBSourceSess
     x : IBSource
-    ls = x.get_matching_symbols('NDX')
-    ls=list(ls)
-    ls[0]['exchange']='NASDAQ'
-    ls[0]['primaryExchange']=''
-    # contract= Contract()
-    # contract.conId=416843
+    #ls = x.get_matching_symbols('NDX')
+    #ls=list(ls)
+    #ls[0]['exchange']='NASDAQ'
+    #ls[0]['primaryExchange']=''
+    contract= Contract()
+    contract.conId=416843
     # #contract =  Contract();
     # #contract.SecType = "NEWS";
     # #contract.Exchange = "BRF";
-    # zz=x.ibrem.ib.reqContractDetails(contract)
+    zz=x.ibrem.ib.reqContractDetails(contract)
     x.get_right_contract_bars.cache_remove_if(lambda x, y, z: True)
     uu=x.get_right_contract_bars(ls[0]['contract'],datetime.datetime.now(),3)
     assert len(uu)>0
@@ -114,6 +114,9 @@ def test_resolve(IBSourceSess):
 
 def test_get_currentcurrency(inp):
     tmpinp = inp
+    contract = Contract()
+    contract.conId = 416843
+    zz = tmpinp._inputsource.ibrem.ib.reqContractDetails(contract)
     x= tmpinp.get_relevant_currency('ILS')
     assert x>0
 

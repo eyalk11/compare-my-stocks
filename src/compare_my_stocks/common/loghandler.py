@@ -93,12 +93,21 @@ class MyFilter(object):
         return logRecord.levelno <= self.__level
 
 def init_log_default(config):
-    if 'IBSRV' in __builtins__ and __builtins__['IBSRV']:
+    context = get_ctx()
+    if context == 'track':
+        if get_ctx('subcontext')=='ibsrv':
+            logfile = config.TrackStock.IBLogFile
+            logerrorfile = config.TrackStock.IBLogErrorFile
+        else:
+            logfile = config.TrackStock.LogFile
+            logerrorfile = config.TrackStock.LogErrorFile
+    elif 'IBSRV' in __builtins__ and __builtins__['IBSRV']:
         logfile = config.Running.IBLogFile
         logerrorfile = config.Running.IBLogErrorFile
     else:
         logfile = config.Running.LogFile
         logerrorfile = config.Running.LogErrorFile
+
     debug = config.Running.Debug if not dont_print() else False
     if config.Running.NoColor:
         kwargs = {'no_color':True}
@@ -121,7 +130,7 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
     logging.addLevelName(TRACELEVEL,"TRACE")
     context = get_ctx()
 
-    if context =='main':
+    if context in ['main','track']:
         if loglevel is not None:
             logging.getLogger().setLevel(loglevel)
         elif debug and not dont_print():

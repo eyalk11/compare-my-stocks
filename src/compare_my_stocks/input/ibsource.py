@@ -34,9 +34,9 @@ from config import config
 from frozendict import frozendict
 from ib import timeoutreg  # register timeout error. don't remove!
 from ib.remoteprocess import RemoteProcess
-from ib_insync import IB, Contract, Forex, Position, RequestError
-from ib_insync import util
-from ib_insync import util as nbutil
+from ib_async import IB, Contract, Forex, Position, RequestError
+from ib_async import util
+from ib_async import util as nbutil
 from input.inputprocessorinterface import InputPosition
 from input.inputsource import InputSource
 from memoization import cached
@@ -213,8 +213,8 @@ class IBSourceRem:
         pos = self.ib.reqPositions()
         for p in pos:
             contract = asdict(p.contract)
-            # import ib_insync.contract.Option
-            # zz=ib_insync.contract.Option
+            # import ib_async.contract.Option
+            # zz=ib_async.contract.Option
             # p.contract=contract
             yield p._replace(contract=contract)
 

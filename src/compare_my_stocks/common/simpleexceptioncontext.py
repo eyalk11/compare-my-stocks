@@ -6,7 +6,7 @@ from functools import partial
 from Pyro5.errors import format_traceback, get_pyro_traceback
 
 try:
-    from ib_insync.wrapper import RequestError
+    from ib_async.wrapper import RequestError
     from ibflex.client import BadResponseError
     default_not_detailed_errors = [ConnectionRefusedError,TimeoutError,
         ValueError,NotImplementedError,BadResponseError,RequestError]

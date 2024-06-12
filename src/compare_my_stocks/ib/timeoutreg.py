@@ -16,7 +16,7 @@ register_class_to_dict(asyncio.exceptions.TimeoutError, thingy_class_to_dict)
 
 register_dict_to_class("waheeee-custom-thingy", thingy_dict_to_class)
 
-import ib_insync
+import ib_async
 
 
 def class_to_dict(obj):
@@ -29,7 +29,7 @@ def class_to_dict(obj):
 
 
 def dict_to_class(classname, d):
-    return ib_insync.wrapper.RequestError(code=d['code'], message=d['message'], reqId=d['reqid'])
+    return ib_async.wrapper.RequestError(code=d['code'], message=d['message'], reqId=d['reqid'])
 register_dict_to_class("reqerror", dict_to_class)
-register_class_to_dict(ib_insync.wrapper.RequestError, class_to_dict)
+register_class_to_dict(ib_async.wrapper.RequestError, class_to_dict)
 

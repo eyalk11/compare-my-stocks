@@ -143,6 +143,7 @@ class UIConf:
 @dataclass
 class TestingConf:
     AddProcess: Optional[Union[str, List]] = field(default_factory=lambda: ["python", "ibsrv.py"])
+    MaxRestartsIb : int =5 #include kills and starts
 
 
 @paramaware
@@ -263,8 +264,16 @@ class SourcesConf:
 
 @paramaware
 @dataclass
-class Config:
+class TrackStockConf:
+    LogFile: str = 'trackstock.log'
+    LogErrorFile: str = 'trackstock_error.log' 
+    IBLogErrorFile: Optional[str] = "iblog_track_error.log"
+    IBLogFile: Optional[str] = "iblog_track.log"
 
+@paramaware
+@dataclass
+class Config:
+    TrackStock: TrackStockConf = field(default_factory=TrackStockConf)
     Testing: TestingConf = field(default_factory=TestingConf)
     Running: RunningConf = field(default_factory=RunningConf)
     Earnings: EarningsConf = field(default_factory=EarningsConf)
@@ -354,6 +363,8 @@ class ConfigLoader():
 
     @classmethod
     def resolve_it(cls, obj, f,use_alternative=None):
+        if not hasattr(obj,f ):
+            return
         res, fil = resolvefile(getattr(obj, f),use_alternative=use_alternative)
 
         if fil == None:
@@ -402,6 +413,8 @@ class ConfigLoader():
 
         for x in RESOLVE_FILES:
             cls.resolve_it(cls.config.Running, x,use_alternative)
+            cls.resolve_it(cls.config.TrackStock, x, False)
+
         if not cls.logging_initialized:
             try:
                 init_log_default(cls.config)
@@ -480,6 +493,7 @@ class ConfigLoader():
         yaml.register_class(SymbolsConf)
         yaml.register_class(InputConf)
         yaml.register_class(TestingConf)
+        yaml.register_class(TrackStockConf)
         return yaml
 
 

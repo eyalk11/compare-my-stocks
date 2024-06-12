@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch, call
 import dateutil
 import pandas
 import pytest
-from ib_insync import Forex
+from ib_async import Forex
 from numpy import nan
 from pandas import DataFrame, Timestamp
 
