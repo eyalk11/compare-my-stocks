@@ -5,6 +5,12 @@ from functools import partial
 
 from Pyro5.errors import format_traceback, get_pyro_traceback
 
+
+try: 
+    from common.loghandler import TRACELEVEL
+except:
+    TRACELEVEL="DONT"
+
 try:
     from ib_async.wrapper import RequestError
     from ibflex.client import BadResponseError
@@ -36,7 +42,7 @@ def get_caller_info(over):
 class SimpleExceptionContext:
     ISWING=None
 
-    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None,logf=None):
+    def __init__(self, err_description=None,return_succ=None,never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,caller=None,logf=None,always_print=False):
         self.err_description=err_description
         self.return_succ=return_succ
         self.never_throw=never_throw
@@ -145,7 +151,7 @@ def excp_handler(exc_type,handler=lambda a,b: None):
         return internal
     return decorated
 
-def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,logf=None):
+def simple_exception_handling(err_description=None,return_succ='undef',never_throw=False,always_throw=False,debug=False,detailed=True,err_to_ignore=[],callback=None,noconfig=False,logf=None,always_print=False):
     def decorated(func):
         caller = get_caller_info(2)
         def internal(*args,**kwargs):
@@ -156,11 +162,13 @@ def simple_exception_handling(err_description=None,return_succ='undef',never_thr
             if hasattr(decorated,'errors_to_handle'):
                 err_to_ignore+=decorated.errors_to_handle
             try:
-                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback,noconfig=noconfig,caller=caller,logf=logf):
-                    from common.loghandler import TRACELEVEL
-                    logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
+                with SimpleExceptionContext(err_description=err_description,return_succ=return_succ,never_throw=never_throw,always_throw=always_throw,debug=debug,detailed=detailed,err_to_ignore=err_to_ignore,callback=callback,noconfig=noconfig,caller=caller,logf=logf,always_print=always_print):
+
+                    if TRACELEVEL!="DONT": 
+                        logging.log(level=TRACELEVEL, msg=f"called: {err_description} {func}")
                     ret= func(*args,**kwargs)
-                    logging.log(level=TRACELEVEL, msg=f"after: {err_description} {func}")
+                    if TRACELEVEL!="DONT":
+                        logging.log(level=TRACELEVEL, msg=f"after: {err_description} {func}")
 
                     no_exception = True
             except Exception as e:
