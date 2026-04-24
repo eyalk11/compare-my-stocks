@@ -6,14 +6,11 @@ import pytest
 
 from transactions.stockprices import StockPrices
 
-# Importing config wires up StockPricesHeaders (RapidAPI key) from the user's
-# myconfig.yaml. Required only for the live-API test below.
 try:
-    from config import config as _config
-    from transactions.earningscommon import RapidApi as _RapidApi
-    _HAS_KEY = bool(_config.StockPricesHeaders.X_RapidAPI_Key)
-except Exception:
-    _HAS_KEY = False
+    import yfinance  # noqa: F401
+    _HAS_YF = True
+except ImportError:
+    _HAS_YF = False
 
 
 def _make_sp(tickers, ignore=frozenset(), buydic=None):
@@ -76,68 +73,36 @@ def test_filter_bad_removes_ignored_from_buydic():
     assert "AAPL" in sp._buydic
 
 
-def test_get_hist_split_raises_on_api_message():
+def test_get_hist_split_empty_when_no_splits(monkeypatch):
+    """When yfinance returns an empty Series, get_hist_split yields nothing."""
+    import pandas as pd
     sp = _make_sp([])
-    with patch.object(StockPrices, "is_initialized", return_value=True), \
-         patch.object(StockPrices, "get_json", return_value={"message": "rate limit"}), \
-         patch("transactions.stockprices.time.sleep" if False else "time.sleep", return_value=None):
-        with pytest.raises(Exception, match="rate limit"):
-            list(sp.get_hist_split("AAPL"))
+
+    class _FakeTicker:
+        splits = pd.Series(dtype="float64")
+
+    import yfinance
+    monkeypatch.setattr(yfinance, "Ticker", lambda sym: _FakeTicker())
+    assert list(sp.get_hist_split("NOSPLITS")) == []
 
 
-def test_get_hist_split_on_string_404_body_raises_attribute_error():
-    """Document current behavior: get_json returning a non-dict (404 body)
-    blows up with AttributeError. populate_buydic catches it."""
-    sp = _make_sp(["FOO"])
-    with patch.object(StockPrices, "is_initialized", return_value=True), \
-         patch.object(StockPrices, "get_json", return_value="Not Found"), \
-         patch("time.sleep", return_value=None):
-        with pytest.raises(AttributeError, match="items"):
-            list(sp.get_hist_split("FOO"))
-
-    # And populate_buydic swallows that same error gracefully:
-    with patch.object(StockPrices, "is_initialized", return_value=True), \
-         patch.object(StockPrices, "get_json", return_value="Not Found"), \
-         patch("time.sleep", return_value=None):
-        sp.populate_buydic()
-    assert "FOO" not in sp._buydic
-
-
-@pytest.mark.skipif(not _HAS_KEY, reason="StockPrices RapidAPI key not configured")
-def test_stockprices_api_live_tsla():
-    """Live integration test: hit the real stock-prices2 RapidAPI with TSLA.
-    Verifies auth, endpoint reachability, and JSON shape. get_hist_split
-    itself returns nothing because the quarterly-sampled endpoint never
-    lands on an actual split day (known limitation of the production code)."""
-    sp = object.__new__(StockPrices)
-    _RapidApi.__init__(sp, "StockPrices")
-    assert sp.headers.get("X-RapidAPI-Key"), "RapidAPI key not loaded"
-
-    with patch("time.sleep", return_value=None):
-        js = sp.get_json(
-            {"ticker": "TSLA"},
-            "https://stock-prices2.p.rapidapi.com/api/v1/resources/stock-prices/10y-3mo-interval",
-        )
-
-    assert isinstance(js, dict) and js, "expected a non-empty dict response"
-    assert "message" not in js, f"API error: {js.get('message')}"
-    sample_key = next(iter(js))
-    row = js[sample_key]
-    for field in ("Close", "Open", "High", "Low", "Volume", "Stock Splits"):
-        assert field in row, f"missing field {field} in response row"
-
-    # get_hist_split should also complete without error (yields nothing
-    # for TSLA given the quarterly sampling).
-    with patch("time.sleep", return_value=None):
-        splits = list(sp.get_hist_split("TSLA"))
-    assert isinstance(splits, list)
-
-
-def test_get_hist_split_uninitialized_yields_nothing():
-    """get_hist_split is a generator; when not initialized it returns early
-    and therefore yields nothing (no API call)."""
+@pytest.mark.skipif(not _HAS_YF, reason="yfinance not installed")
+def test_get_hist_split_live_tsla():
+    """Live test: yfinance must return the two well-known TSLA splits:
+    5-for-1 on 2020-08-31 and 3-for-1 on 2022-08-25."""
     sp = _make_sp([])
-    with patch.object(StockPrices, "is_initialized", return_value=False), \
-         patch.object(StockPrices, "get_json") as gj:
-        assert list(sp.get_hist_split("AAPL")) == []
-    gj.assert_not_called()
+    splits = list(sp.get_hist_split("TSLA"))
+    by_date = {dt.date().isoformat(): ratio for dt, ratio in splits}
+    assert by_date.get("2020-08-31") == 5.0
+    assert by_date.get("2022-08-25") == 3.0
+
+
+@pytest.mark.skipif(not _HAS_YF, reason="yfinance not installed")
+def test_populate_buydic_live_tsla():
+    """End-to-end: populate_buydic on TSLA should yield both splits, sorted."""
+    sp = _make_sp(["TSLA"])
+    sp.populate_buydic()
+    dates = [d.date().isoformat() for d in sp._buydic["TSLA"].keys()]
+    assert "2020-08-31" in dates
+    assert "2022-08-25" in dates
+    assert dates == sorted(dates)
