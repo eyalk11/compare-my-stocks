@@ -215,6 +215,9 @@ class MainClass:
         if self.UseQT:
             from PySide6.QtWidgets import QApplication
             from PySide6 import QtCore
+            from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
+            QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts, True)
+            QQuickWindow.setGraphicsApi(QSGRendererInterface.OpenGLRhi)
             app = QApplication([])
             from .gui.mainwindow import MainWindow
 
