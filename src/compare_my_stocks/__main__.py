@@ -1,4 +1,6 @@
 import sys
+import multiprocessing
+multiprocessing.freeze_support()
 from contextvars import ContextVar
 ContextVar('context').set('main')
 

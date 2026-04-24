@@ -1,7 +1,8 @@
 import sys, os
 
-sys.path.insert(0,
-    os.path.dirname(os.path.abspath(__file__)))
+if not getattr(sys, 'frozen', False):
+    sys.path.insert(0,
+        os.path.dirname(os.path.abspath(__file__)))
 
 # from . import common
 # from . import engine

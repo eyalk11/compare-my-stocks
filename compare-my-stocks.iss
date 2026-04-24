@@ -17,7 +17,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\compare-my-stocks
 DisableProgramGroupPage=yes
-LicenseFile=C:\Users\ekarni\compare-my-stocks\LICENSE
+LicenseFile=LICENSE
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
 ; Uncomment the following line to run in non-administrative install mode (install for the current user only.)

@@ -1,7 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
+
+extra_datas = []
+for _pkg in ('rfc3987_syntax', 'jupyter_events', 'nbformat',
+             'jupyter_server', 'jupyterlab_server', 'voila',
+             'nbclient', 'nbconvert'):
+    extra_datas += collect_data_files(_pkg)
 
 
 a = Analysis(
@@ -17,8 +24,8 @@ a = Analysis(
     ('C:\\Users\\ekarni\\compare-my-stocks\\install' , './install'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\LICENSE' , '.'),
     ('C:\\Users\\ekarni\\compare-my-stocks\\README.md' , '.')
-    ],
-    hiddenimports=['jsonschema_specifications'],
+    ] + extra_datas,
+    hiddenimports=['jsonschema_specifications', 'rfc3987_syntax'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
