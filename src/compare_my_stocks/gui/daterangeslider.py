@@ -25,6 +25,8 @@ class QDateRangeSlider(_GenericRangeSlider[float]):
             return True
         self.date_range = [(x.to_pydatetime()) for x in pd.date_range(start=self.start, end=self.end, freq=self.freq)]
         self.options= [matplotlib.dates.date2num(y) for y in self.date_range]
+        if not self.options:
+            return True
         self._value= [min(self.options),max(self.options)]
         self._setPosition([min(self.options), max(self.options)])
         self.setRange(min(self.options),max(self.options))

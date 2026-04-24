@@ -40,7 +40,8 @@ from ib_async import util as nbutil
 from input.inputprocessorinterface import InputPosition
 from input.inputsource import InputSource
 from memoization import cached
-
+import sys
+sys.modules['ib_insync'] = sys.modules['ib_async']
 WRONG_EXCHANGE = 200
 HISTORY_ERROR = 162
 
@@ -433,7 +434,7 @@ class IBSource(InputSource):
     @simple_exception_handling(
         err_description="error in get_symbol_history",
         return_succ=(None, []),
-        never_throw=True,
+        never_throw=False, #to change
     )
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
         with SimpleExceptionContext(

@@ -41,10 +41,11 @@ if __name__ == "__main__":
     parser.add_argument('--ibconsole', action='store_true', help='Enable ibconsole')
     parser.add_argument('--debug', action='store_true', help='Enable debug')
     parser.add_argument('--ibsrv', action='store_true', help='Use ibsrv instead')
+    parser.add_argument('--nogui', action='store_true', help='Run without GUI')
     # Parse the command-line arguments
     args = parser.parse_args()
 
-    if args.ibsrv: 
+    if args.ibsrv:
         from compare_my_stocks import ibsrv
     else:
-        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole)
+        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui)

@@ -138,7 +138,7 @@ class MainClass:
 
         return round(min(screensize[0]/1920,screensize[1]/1080),2)
 
-    def main(self, console=False, ibconsole=False, debug=False,noconsole=False):
+    def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False):
         # First we do logging to see what is going on
         #Then init_log to have basic formatting
         # Then we import config. SILENT should be false.
@@ -157,6 +157,9 @@ class MainClass:
 
         self.UseWX, self.UseWEB, self.UseQT, self.SimpleMode \
         = config.UI.UseWX, config.UI.UseWEB, config.UI.UseQT, config.UI.SimpleMode
+        if nogui:
+            self.UseQT = self.UseWX = self.UseWEB = False
+            self.SimpleMode = True
         config.Running.StartIbsrvInConsole = config.Running.StartIbsrvInConsole or ibconsole
         config.Running.Debug = config.Running.Debug or debug
 
@@ -255,7 +258,6 @@ class MainClass:
             import sys
             sys.exit(f())
             a = 1
-        else:
-            # simple, should be ok.
+        elif not nogui:
             while (1):
                 time.sleep(1)

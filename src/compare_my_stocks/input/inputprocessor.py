@@ -282,7 +282,7 @@ class InputProcessor(InputProcessorInterface):
         #return df.loc[ goodind ]
     
     @might_change
-    @simple_exception_handling(err_description="error in getting currency in certain time")
+    @simple_exception_handling(err_description="error in getting currency in certain time",return_succ=(None,'err'),always_print=True)
     def get_currency_on_certain_time(self, curr,  t,cache_only=False ):
 
         for i in range(1,3):

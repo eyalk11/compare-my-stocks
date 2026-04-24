@@ -8,6 +8,7 @@ from common.simpleexceptioncontext import SimpleExceptionContext
 from config import config
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
 from ibflex import client, parser, Trade
+from ibflex.client import ResponseCodeError
 from transactions.transactionhandler import TrasnasctionHandler
 def get_ib_handler(manager):
     return IBTransactionHandler(manager)
@@ -33,13 +34,44 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             return
         logging.info(("running query in IB  for transaction"))
         response = None
-        with SimpleExceptionContext("IB query failed",never_throw=True):
+        try:
             response = client.download(self.token_id, self.query_id)
+        except Exception as e:
+            response = self._prompt_and_retry_on_failure(e)
         if not response:
             return None
         with SimpleExceptionContext("IB parse failed",never_throw=True):
             p = parser.parse(response)
             return  p.FlexStatements[0].Trades
+
+    def _prompt_and_retry_on_failure(self, exc):
+        # Token-related codes returned by the IB Flex web service.
+        TOKEN_ERR_CODES = ('1012', '1018')  # Token has expired / Token is invalid
+        is_token_err = isinstance(exc, ResponseCodeError) and getattr(exc, 'code', None) in TOKEN_ERR_CODES
+        if is_token_err:
+            logging.warning(f"IB Flex token problem: {exc}")
+        else:
+            logging.warning(f"IB Flex query failed: {exc}")
+
+        if not self.token_id:
+            return None
+        if not getattr(config.TransactionHandlers.IB, 'PromptOnQueryFail', True):
+            return None
+
+        reason = "Flex token expired or invalid" if is_token_err else f"Flex query failed ({exc})"
+        print(f"\n[IB Flex] {reason}.")
+        print("Please generate a new Flex token in IB Account Management( Performance & Reports ->   Flex Web Service settings) and update "
+              "TransactionHandlers.IB.FlexToken in myconfig.yaml.")
+        try:
+            ans = input("Proceed without a successful IB query? [y/N]: ").strip().lower()
+        except (EOFError, OSError):
+            logging.warning("No stdin available to prompt; exiting")
+            ans = 'n'
+        if ans not in ('y', 'yes'):
+            logging.error("User aborted after IB Flex query failure; exiting")
+            import os
+            os._exit(1)
+        raise exc
 
     def try_to_use_cache(self):
         try:
