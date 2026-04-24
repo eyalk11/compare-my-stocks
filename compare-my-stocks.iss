@@ -1,5 +1,5 @@
 #define MyAppName "Compare My Stocks"
-#define MyAppVersion "1.0.7"
+#define MyAppVersion "1.0.8"
 #define MyAppPublisher "eyalk11"
 #define MyAppURL "https://github.com/eyalk11/compare-my-stocks"
 #define MyAppExeName "compare-my-stocks.exe"
@@ -42,14 +42,14 @@ Source: "dist\combined2\data\*"; DestDir: "{code:GetDir|0}"; Flags: ignoreversio
 ;Source: "data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 [Types]
-Name: "full"; Description: "Full installation. Installs voila support (also python 3.9.6 if needed)."
+Name: "full"; Description: "Full installation. Installs voila support (also python 3.11 if needed)."
 Name: "minimal"; Description: "Just compare-my-stocks"
 
 
 [Components]
 Name: "program"; Description: "Program's Files"; Types: full minimal; Flags: fixed
 Name: "voila"; Description: "Voila and python for displaying notebooks. \
-Notice that voila requires python 3.9.6 (using exes) "; Types: full; 
+Notice that voila requires python 3.11 (using exes) "; Types: full;
 
 
 [Tasks]

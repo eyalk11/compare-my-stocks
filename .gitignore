@@ -65,6 +65,7 @@ android/
 linux/
 django/
 
+.ropeproject/
 src/compare_my_stocks/.jedi/
 src/compare_my_stocks/config/config.yaml
 src/compare_my_stocks/config/myconfig.yaml

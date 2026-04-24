@@ -135,8 +135,8 @@ gen_graph(Parameters(type=Types.PRICE | Types.COMPARE,compare_with='QQQ',groups=
 ### For Developers 
 
  1. `pip install compare-my-stocks[full]` 
- 2. Consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)
- 3. Better to copy  `site-packages\compare_my_stocks\data` to `~/.compare_my_stocks` 
+ <!--2. Consider updating ibflex (from git) as the app in pypi is quite old ( `pip install git+https://github.com/csingley/ibflex.git`)-->
+ 2. Better to copy  `site-packages\compare_my_stocks\data` to `~/.compare_my_stocks` 
 
 ### For Users
 

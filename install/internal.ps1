@@ -8,7 +8,7 @@ return  ($continue -eq 'Yes')
 }
 function installpack ($path)
 {
-    if ($path -eq $null) { $path = "C:\Users\User\AppData\Local\Programs\Python\Python310\python.exe" }
+    if ($path -eq $null) { $path = "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe" }
     Push-Location $PSScriptRoot
     $whl= gci -Filter "*.whl" | Select-Object -First 1
     &$path -m pip install "$($whl.FullName)[jupyter]"
@@ -17,14 +17,14 @@ function installpack ($path)
 function Installpy 
 {
      param($message) 
-     if (-not $(confirmit $message "Python 3.10"))
-     {return $false; } 
-     
-     Write-Host "Installing Python 3.10"
-    Push-Location $env:TEMP 
+     if (-not $(confirmit $message "Python 3.11"))
+     {return $false; }
+
+     Write-Host "Installing Python 3.11"
+    Push-Location $env:TEMP
     mkdir -p installtmp
     Push-Location installtmp
-    Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.10.0/python-3.10.0rc2-amd64.exe"  -OutFile "pythonsetup.exe"
+    Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.11.5/python-3.11.5-amd64.exe"  -OutFile "pythonsetup.exe"
     ./pythonsetup.exe /quiet InstallAllUsers=0 PrependPath=1
     Pop-Location
     rm installtmp -Recurse -Force
@@ -41,14 +41,14 @@ function main
 
     if ($err)
     {
-        $continue= Installpy "Python is not installed. Should it be installed(version 3.10)?" 
+        $continue= Installpy "Python is not installed. Should it be installed(version 3.11)?"
     }
     else
     {
-        $ver = &"$($cmd.path)" --version 
-    if ($ver -notlike "*3.10*")
+        $ver = &"$($cmd.path)" --version
+    if ($ver -notlike "*3.11*")
     {
-    $continue= Installpy " Python version is not 3.10 but $($ver). The compiled version of the app requires python 3.10 to work properly. Should it be installed?"
+    $continue= Installpy " Python version is not 3.11 but $($ver). The compiled version of the app requires python 3.11 to work properly. Should it be installed?"
     }
     else 
     {
