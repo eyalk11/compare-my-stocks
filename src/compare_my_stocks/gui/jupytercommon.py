@@ -15,6 +15,14 @@ class JupyterCommonHandler:
             return True
 
         if config.Voila.AutoResovleVoilaPython:
+            localappdata = os.environ.get('LOCALAPPDATA')
+            if localappdata:
+                candidate = os.path.join(localappdata, 'compare-my-stocks', 'venv', 'Scripts', 'python.exe')
+                if os.path.isfile(candidate):
+                    widg.python_process_path = candidate
+                    logging.warning(f'Auto-resolved voila process to {widg.python_process_path}')
+                    return True
+
             import shutil
             widg.python_process_path=shutil.which('python.exe')
             if widg.python_process_path!= None:
