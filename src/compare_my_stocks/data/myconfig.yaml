@@ -6,8 +6,15 @@ DefaultParams: !DefaultParamsConf
   Ext:
     - QQQ
 Earnings: !EarningsConf
-  SkipEarnings: 1
-  TryStorageForEarnings: 1
+  Use: !UseCache USEIFAVAILABLE
+  CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
+  File: earnings.cache
+  IgnoreSymbols: !!set {}
+  NoEarnings: false
+  MaxElements: 10
+  EarningsAtStart: true
+  ThreadTimeout: 8
+  MaxSpanToRefershEntry: !!python/object/apply:datetime.timedelta [120, 0, 0]
 File: !FileConf
   CommonStock: NOEARNINGS
   DataFilePtr: DATA_FILE
