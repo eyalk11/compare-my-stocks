@@ -48,7 +48,7 @@ def c(*cargs):
     return composed 
 
 def rc(*args):
-    return c(*args)()
+    return c(*args)
 
 def subdates(a,b):
     ach=tzawareness(a,b) 
@@ -273,7 +273,15 @@ smap = lambda x,y: set(map(x,y))
 
 #Write a function that gets two dates and converts the first to timezone aware if the other one is timezone aware
 def tzawareness(d1,d2):
-    if d2.tzinfo is not None:
+    # Handle None values
+    if d1 is None:
+        return None
+    if d2 is None:
+        return d1
+    # Check if d2 is a date object (which has no tzinfo)
+    if type(d2) is date:
+        return unlocalize_it(d1)
+    elif d2.tzinfo is not None:
         return localize_it(d1)
     else:
         return unlocalize_it(d1)
