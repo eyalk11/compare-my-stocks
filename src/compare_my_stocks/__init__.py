@@ -14,8 +14,21 @@ if not getattr(sys, 'frozen', False):
 
 
 #from . import config
-from . import jupyter
-from .runsit import MainClass
+try:
+    from . import jupyter
+    from .runsit import MainClass
+except (ImportError, ModuleNotFoundError) as e:
+    # Handle missing PySide6 or other GUI dependencies in headless/test environments
+    if 'libEGL' in str(e) or 'PySide6' in str(e):
+        import logging
+        logging.debug(f"GUI dependencies not available: {e}")
+        # Create stub MainClass for testing
+        class MainClass:
+            @staticmethod
+            def killallchilds(tolog=False):
+                pass
+    else:
+        raise
 #from config import config
 import logging
 #import common
