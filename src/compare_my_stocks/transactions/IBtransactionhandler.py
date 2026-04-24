@@ -59,15 +59,13 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             return None
 
         reason = "Flex token expired or invalid" if is_token_err else f"Flex query failed ({exc})"
-        print(f"\n[IB Flex] {reason}.")
-        print("Please generate a new Flex token in IB Account Management( Performance & Reports ->   Flex Web Service settings) and update "
-              "TransactionHandlers.IB.FlexToken in myconfig.yaml.")
-        try:
-            ans = input("Proceed without a successful IB query? [y/N]: ").strip().lower()
-        except (EOFError, OSError):
-            logging.warning("No stdin available to prompt; exiting")
-            ans = 'n'
-        if ans not in ('y', 'yes'):
+        from common.userprompt import confirm_yes_no
+        msg = (f"{reason}.\n"
+               "Please generate a new Flex token in IB Account Management "
+               "(Performance & Reports -> Flex Web Service settings) and update "
+               "TransactionHandlers.IB.FlexToken in myconfig.yaml.\n\n"
+               "Proceed without a successful IB query?")
+        if not confirm_yes_no(msg, title="IB Flex query failed"):
             logging.error("User aborted after IB Flex query failure; exiting")
             import os
             os._exit(1)

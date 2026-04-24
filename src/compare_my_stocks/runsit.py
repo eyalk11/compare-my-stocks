@@ -142,15 +142,12 @@ class MainClass:
         from config import config
         if not getattr(config.Sources.IBSource, 'PromptOnConnectionFail', True):
             return
-        print("\n[IB] Failed to start the Interactive Brokers sidecar (ibsrv).")
-        print("Make sure TWS/IB Gateway is running and Sources.IBSource.AddProcess / "
-              "HostIB / PortIB are set correctly in myconfig.yaml.")
-        try:
-            ans = input("Proceed without a live IB connection (fall back to cache)? [y/N]: ").strip().lower()
-        except (EOFError, OSError):
-            logging.warning("No stdin available to prompt; exiting")
-            ans = 'n'
-        if ans not in ('y', 'yes'):
+        from common.userprompt import confirm_yes_no
+        msg = ("Failed to start the Interactive Brokers sidecar (ibsrv).\n"
+               "Make sure TWS/IB Gateway is running and Sources.IBSource.AddProcess / "
+               "HostIB / PortIB are set correctly in myconfig.yaml.\n\n"
+               "Proceed without a live IB connection (fall back to cache)?")
+        if not confirm_yes_no(msg, title="IB connection failed"):
             logging.error("User aborted after IB connection failure; exiting")
             import os
             os._exit(1)

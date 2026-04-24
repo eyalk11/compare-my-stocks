@@ -320,13 +320,11 @@ class IBSource(InputSource):
         except ConnectionRefusedError:
             logging.error("TWS not connected!")
             if getattr(config.Sources.IBSource, 'PromptOnConnectionFail', True):
-                print("\n[IB] TWS/IB Gateway is not connected (connection refused).")
-                print("Make sure TWS or IB Gateway is running and accepting connections.")
-                try:
-                    ans = input("Proceed without live IB connection (fall back to cache)? [y/N]: ").strip().lower()
-                except (EOFError, OSError):
-                    ans = 'n'
-                if ans not in ('y', 'yes'):
+                from common.userprompt import confirm_yes_no
+                msg = ("TWS/IB Gateway is not connected (connection refused).\n"
+                       "Make sure TWS or IB Gateway is running and accepting connections.\n\n"
+                       "Proceed without live IB connection (fall back to cache)?")
+                if not confirm_yes_no(msg, title="IB connection refused"):
                     import os
                     os._exit(1)
         except TimeoutError:
