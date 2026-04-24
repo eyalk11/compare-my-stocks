@@ -126,6 +126,7 @@ class IBSourceConf:
     RegularUsername: Optional[str] =None
     UsePythonIfNotResolve: bool = True
     DefaultExchange: Optional[str] = "SMART"
+    PromptOnConnectionFail: bool = True  # if the IB sidecar (ibsrv) fails to start, prompt on stdin before falling back to cache
 @paramaware
 @dataclass
 class UIConf:

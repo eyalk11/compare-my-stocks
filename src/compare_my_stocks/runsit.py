@@ -138,7 +138,24 @@ class MainClass:
 
         return round(min(screensize[0]/1920,screensize[1]/1080),2)
 
-    def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False):
+    def _prompt_on_ib_connection_fail(self):
+        from config import config
+        if not getattr(config.Sources.IBSource, 'PromptOnConnectionFail', True):
+            return
+        print("\n[IB] Failed to start the Interactive Brokers sidecar (ibsrv).")
+        print("Make sure TWS/IB Gateway is running and Sources.IBSource.AddProcess / "
+              "HostIB / PortIB are set correctly in myconfig.yaml.")
+        try:
+            ans = input("Proceed without a live IB connection (fall back to cache)? [y/N]: ").strip().lower()
+        except (EOFError, OSError):
+            logging.warning("No stdin available to prompt; exiting")
+            ans = 'n'
+        if ans not in ('y', 'yes'):
+            logging.error("User aborted after IB connection failure; exiting")
+            import os
+            os._exit(1)
+
+    def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False, noprompt=False):
         # First we do logging to see what is going on
         #Then init_log to have basic formatting
         # Then we import config. SILENT should be false.
@@ -162,6 +179,9 @@ class MainClass:
             self.SimpleMode = True
         config.Running.StartIbsrvInConsole = config.Running.StartIbsrvInConsole or ibconsole
         config.Running.Debug = config.Running.Debug or debug
+        if noprompt:
+            config.TransactionHandlers.IB.PromptOnQueryFail = False
+            config.Sources.IBSource.PromptOnConnectionFail = False
 
         hiding=False
         if not console:
@@ -189,6 +209,7 @@ class MainClass:
                     config.Sources.IBSource.AddProcess= [sys.executable ,'-m compare_my_stocks --ibsrv']
                     succ=RemoteProcess().run_additional_process()
             else:
+                self._prompt_on_ib_connection_fail()
                 config.Input.InputSource=InputSourceType.Cache
                 logging.warn("Failed to start IBSrv. using cache instead")
 

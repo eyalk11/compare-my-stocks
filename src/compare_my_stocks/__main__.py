@@ -42,10 +42,11 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true', help='Enable debug')
     parser.add_argument('--ibsrv', action='store_true', help='Use ibsrv instead')
     parser.add_argument('--nogui', action='store_true', help='Run without GUI')
+    parser.add_argument('--noprompt', action='store_true', help='Disable interactive prompts (e.g. IB Flex token failure)')
     # Parse the command-line arguments
     args = parser.parse_args()
 
     if args.ibsrv:
         from compare_my_stocks import ibsrv
     else:
-        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui)
+        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui,args.noprompt)
