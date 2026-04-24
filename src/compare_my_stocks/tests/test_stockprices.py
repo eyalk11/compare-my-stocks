@@ -6,6 +6,15 @@ import pytest
 
 from transactions.stockprices import StockPrices
 
+# Importing config wires up StockPricesHeaders (RapidAPI key) from the user's
+# myconfig.yaml. Required only for the live-API test below.
+try:
+    from config import config as _config
+    from transactions.earningscommon import RapidApi as _RapidApi
+    _HAS_KEY = bool(_config.StockPricesHeaders.X_RapidAPI_Key)
+except Exception:
+    _HAS_KEY = False
+
 
 def _make_sp(tickers, ignore=frozenset(), buydic=None):
     """Build a StockPrices instance without running its __init__ / manager wiring."""
@@ -92,6 +101,36 @@ def test_get_hist_split_on_string_404_body_raises_attribute_error():
          patch("time.sleep", return_value=None):
         sp.populate_buydic()
     assert "FOO" not in sp._buydic
+
+
+@pytest.mark.skipif(not _HAS_KEY, reason="StockPrices RapidAPI key not configured")
+def test_stockprices_api_live_tsla():
+    """Live integration test: hit the real stock-prices2 RapidAPI with TSLA.
+    Verifies auth, endpoint reachability, and JSON shape. get_hist_split
+    itself returns nothing because the quarterly-sampled endpoint never
+    lands on an actual split day (known limitation of the production code)."""
+    sp = object.__new__(StockPrices)
+    _RapidApi.__init__(sp, "StockPrices")
+    assert sp.headers.get("X-RapidAPI-Key"), "RapidAPI key not loaded"
+
+    with patch("time.sleep", return_value=None):
+        js = sp.get_json(
+            {"ticker": "TSLA"},
+            "https://stock-prices2.p.rapidapi.com/api/v1/resources/stock-prices/10y-3mo-interval",
+        )
+
+    assert isinstance(js, dict) and js, "expected a non-empty dict response"
+    assert "message" not in js, f"API error: {js.get('message')}"
+    sample_key = next(iter(js))
+    row = js[sample_key]
+    for field in ("Close", "Open", "High", "Low", "Volume", "Stock Splits"):
+        assert field in row, f"missing field {field} in response row"
+
+    # get_hist_split should also complete without error (yields nothing
+    # for TSLA given the quarterly sampling).
+    with patch("time.sleep", return_value=None):
+        splits = list(sp.get_hist_split("TSLA"))
+    assert isinstance(splits, list)
 
 
 def test_get_hist_split_uninitialized_yields_nothing():
