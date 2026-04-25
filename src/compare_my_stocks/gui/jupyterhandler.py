@@ -158,12 +158,13 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
         if filename==None:
             filename=config.File.DefaultNotebook
 
-        from notebook.notebookapp import list_running_servers
-        pids = {x['pid']:x for x in list_running_servers()}
+        from jupyter_server import serverapp
+        
+        pids = {x['pid']:x for x in serverapp.list_running_servers()}
 
         processes = list(filter(lambda p: p.pid in pids.keys(), psutil.process_iter()))
         dirname=os.path.dirname(filename)
-        z=[ pids[p.pid]['url'] for p in processes if 'python' in p.name() and pids[p.pid]['notebook_dir']==dirname]
+        z=[ pids[p.pid]['url'] for p in processes if 'python' in p.name() and pids[p.pid]['root_dir']==dirname]
 
         if len(z)>0:
             logging.info(('launching existing session'))

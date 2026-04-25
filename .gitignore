@@ -99,6 +99,10 @@ src/compare_my_stocks/data/hist_file.cache_befchange
 compare_my_stocks/.vscode
 .vscode
 
+# Files moved to compare_stocks_internal (symlinked)
+combined.spec
+compare-my-stocks.iss
+
 # Auto Claude data directory
 .auto-claude/
 
@@ -109,3 +113,15 @@ compare_my_stocks/.vscode
 .worktrees/
 .security-key
 logs/security/
+
+# Ignore everything in data/ except files already tracked in git
+src/compare_my_stocks/data/*
+!src/compare_my_stocks/data/example_mystock.csv
+!src/compare_my_stocks/data/graphs.json
+!src/compare_my_stocks/data/groups.json
+!src/compare_my_stocks/data/myconfig.schema.json
+!src/compare_my_stocks/data/myconfig.yaml
+!src/compare_my_stocks/data/HistFile.cache
+!src/compare_my_stocks/data/jupyter/
+src/compare_my_stocks/data/jupyter/*
+!src/compare_my_stocks/data/jupyter/defaultnotebook.ipynb

@@ -45,8 +45,15 @@ if __name__ == "__main__":
     parser.add_argument('--ibsrv', action='store_true', help='Use ibsrv instead')
     parser.add_argument('--nogui', action='store_true', help='Run without GUI')
     parser.add_argument('--noprompt', action='store_true', help='Disable interactive prompts (e.g. IB Flex token failure)')
+    parser.add_argument('--config-file', dest='config_file', default=None,
+                        help='Absolute path to a myconfig.yaml to use instead of the default. '
+                             'Overrides COMPARE_STOCK_CONFIG_FILE env var.')
     # Parse the command-line arguments
     args = parser.parse_args()
+
+    if args.config_file:
+        import os
+        os.environ['COMPARE_STOCK_CONFIG_FILE'] = os.path.abspath(args.config_file)
 
     if args.ibsrv:
         from compare_my_stocks import ibsrv

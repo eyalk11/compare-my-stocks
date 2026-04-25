@@ -296,6 +296,7 @@ CONFIGFILENAME = 'myconfig.yaml'
 
 MYPROJ = 'compare_my_stocks'
 PROJPATHENV = 'COMPARE_STOCK_PATH'
+CONFIGFILEENV = 'COMPARE_STOCK_CONFIG_FILE'
 
 MYPATH = os.path.dirname(__file__)
 
@@ -392,8 +393,14 @@ class ConfigLoader():
             Consider copying your config files there """)
             os.makedirs(PROJDIR)
 
-        # yaml.dump(Config(),open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\myconfig.yaml','wt'))
-        res, config_file = resolvefile(CONFIGFILENAME,use_alternative)
+        if config_file is None:
+            config_file = os.environ.get(CONFIGFILEENV) or None
+
+        if config_file and os.path.isabs(config_file) and os.path.exists(config_file):
+            res = True
+        else:
+            # yaml.dump(Config(),open(r'C:\Users\ekarni\compare-my-stocks\src\compare_my_stocks\config\myconfig.yaml','wt'))
+            res, config_file = resolvefile(CONFIGFILENAME,use_alternative)
         if not res:
             logging.error('No config file, aborting')
             sys.exit(-1)

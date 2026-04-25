@@ -23,6 +23,7 @@ from copy import copy
 from functools import reduce, partial
 
 import matplotlib
+import matplotlib.dates
 import numpy
 import pandas
 import pandas as pd

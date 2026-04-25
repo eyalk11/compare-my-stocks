@@ -155,6 +155,34 @@ def test_current_histdic(inp):
     assert 1 == 1
 
 
+def test_local_config_loads_histfile():
+    """Load HistFile.cache via the local (alt) config in src/compare_my_stocks/data/."""
+    from common.common import UseCache, VerifySave
+    from config.newconfig import ConfigLoader
+    c = ConfigLoader.main(use_alternative=True)
+    c.Running.IsTest = True
+    c.TransactionHandlers.SaveCaches = False
+    c.Running.VerifySaving = VerifySave.DONT
+    c.Input.InputSource = None
+    c.Input.FullCacheUsage = UseCache.FORCEUSE
+    c.TransactionHandlers.IB.PromptOnQueryFail = False
+    c.Sources.IBSource.PromptOnConnectionFail = False
+    assert c.File.HistF.endswith("HistFile.cache")
+    assert os.path.exists(c.File.HistF), c.File.HistF
+
+    eng = MagicMock()
+    eng.params = Parameters(use_groups=False, use_cache=UseCache.FORCEUSE, show_graph=False)
+    tmpinp = InputProcessor(eng, MagicMock(), None)
+    tmpinp.data = InputDataImpl(semaphore=tmpinp._semaphore)
+    tmpinp.process_params = eng.params
+    tmpinp.load_cache(True)
+    tmpinp.load_cache(False, process_params=eng.params)
+    assert len(tmpinp.data.symbol_info) > 0
+    assert tmpinp.data._hist_by_date is not None and len(tmpinp.data._hist_by_date) > 0
+    print(f"loaded {len(tmpinp.data.symbol_info)} symbols, "
+          f"{len(tmpinp.data._hist_by_date)} dates from {c.File.HistF}")
+
+
 def test_jsonscheme():
     from pydantic import TypeAdapter
     from config.newconfig import Config

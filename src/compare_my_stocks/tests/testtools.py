@@ -194,6 +194,8 @@ def generate_config(useinp):
     c.File.LogErrorFile=None
     c.Running.IsTest=True
     c.Running.VerifySaving=VerifySave.DONT
+    c.TransactionHandlers.IB.PromptOnQueryFail=False
+    c.Sources.IBSource.PromptOnConnectionFail=False
     if useinp & UseInput.WITHINPUT == UseInput.Nothing :
         c.Input.InputSource=None
     else:
