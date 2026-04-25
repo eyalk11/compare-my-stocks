@@ -181,7 +181,8 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             nuofoptions =1
         self.window.max_num.setRange(0, nuofoptions)
 
-        if self.graphObj.minValue is None or self.graphObj.maxValue is None:
+        mn, mx = self.graphObj.minValue, self.graphObj.maxValue
+        if mn is None or mx is None or mn != mn or mx != mx:
             self.disable_slider_values_updates = False
             return
         if really_close(self.graphObj.minValue,self.graphObj.maxValue):

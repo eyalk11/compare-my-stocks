@@ -303,8 +303,13 @@ class DataGenerator(DataGeneratorInterface):
             self.colswithoutext = self.tmp_colswithoutext
             self._eng.namesChanged.emit(len(self.colswithoutext))
 
-        M = max(list(self.df.max(numeric_only=True)))
-        m = min(list(self.df.min(numeric_only=True)))
+        maxes = [v for v in self.df.max(numeric_only=True) if pandas.notna(v)]
+        mins = [v for v in self.df.min(numeric_only=True) if pandas.notna(v)]
+        if maxes and mins:
+            M = max(maxes)
+            m = min(mins)
+        else:
+            M = m = None
         diff = self.maxValue != M or self.minValue != m
         self.minValue, self.maxValue = m, M
         if diff:
