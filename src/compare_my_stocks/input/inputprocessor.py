@@ -1233,7 +1233,9 @@ class InputProcessor(InputProcessorInterface):
                 sym=cursymdic[x]
 
                 with SimpleExceptionContext(f'getting currency {x} {sym} from heuristic',detailed=False,never_throw=True):
-                    m= max(list(self._data._alldates_adjusted[sym].keys())) #can fail if empty
+                    m = max(self._data._alldates_adjusted[sym].keys(), default=None)
+                    if m is None:
+                        continue
                     if (subdates(datetime.datetime.now(),matplotlib.dates.num2date(m))) < config.Input.MaxRelevantCurrencyTimeHeur:
                         logging.debug(f'Using heuristic for currency {x} {sym}')
                         self._relevant_currencies_rates[x]=self._data._alldates_adjusted[sym][m]/self._data._alldates[sym][m]

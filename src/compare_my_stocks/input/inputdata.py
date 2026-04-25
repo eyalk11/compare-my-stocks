@@ -19,6 +19,34 @@ from config import config
 from input.inputdatainterface import InputDataImplInterface, might_change, might_change_big
 
 
+_NS_PER_SEC = 1_000_000_000
+# Any pandas Timestamp with .value below this threshold (~year 2001 in ns)
+# was almost certainly built with seconds in .value rather than nanoseconds,
+# i.e. silently corrupt -- repr looks fine but pd.date_range / arithmetic break.
+_NS_THRESHOLD = 10 ** 15
+
+
+def _repair_timestamp_keys(hist_by_date):
+    """Repair pickled hist_by_date keys whose Timestamp.value holds seconds
+    instead of nanoseconds. Returns a new dict if any key was repaired,
+    otherwise the original dict."""
+    if not hist_by_date:
+        return hist_by_date
+    sample = next(iter(hist_by_date.keys()))
+    if not isinstance(sample, pandas.Timestamp) or sample.value >= _NS_THRESHOLD:
+        return hist_by_date
+    logging.warning(
+        "hist_by_date keys appear corrupt (Timestamp.value=%d looks like seconds, not ns). Repairing.",
+        sample.value,
+    )
+    repaired = {}
+    for k, v in hist_by_date.items():
+        if isinstance(k, pandas.Timestamp) and k.value < _NS_THRESHOLD:
+            k = pandas.Timestamp(int(k.value) * _NS_PER_SEC)
+        repaired[k] = v
+    return repaired
+
+
 class InputData(ABC):
     @property
     @abstractmethod
@@ -202,6 +230,8 @@ class InputDataImpl(InputDataImplInterface):
                 hist_by_date, _, self._cache_date, self.currency_hist, _ = pickle.load(
                     open(config.File.HistF, "rb")
                 )
+
+                hist_by_date = _repair_timestamp_keys(hist_by_date)
 
                 if type(self.currency_hist) == dict:  # backward compatability
                     self.currency_hist = pandas.DataFrame(self.currency_hist)

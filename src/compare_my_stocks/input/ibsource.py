@@ -624,12 +624,14 @@ class IBSource(InputSource):
             if ls is not None and len(ls) > 0:
                 return True
             else:
-                raise KeyError(f"no data for {pair} ")
+                logging.debug(f"to_reverse_pair: no data for {pair}")
+                return None
 
     def get_currency_history(self, pair, startdate, enddate):
-        f = pair[1] + pair[0]
-        if b := self.to_reverse_pair(pair):  # might raise keyerror
-            f = pair[0] + pair[1]
+        b = self.to_reverse_pair(pair)
+        if b is None:
+            return None
+        f = pair[0] + pair[1] if b else pair[1] + pair[0]
         contract = Forex(f)
         res = self.historicalhelper(startdate, enddate, contract)
 

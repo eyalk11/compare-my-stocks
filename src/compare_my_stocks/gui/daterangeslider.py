@@ -1,4 +1,5 @@
 import matplotlib
+import matplotlib.dates
 import pandas as pd
 from PySide6.QtCore import Signal
 from superqt.sliders._generic_range_slider import _GenericRangeSlider
@@ -32,8 +33,9 @@ class QDateRangeSlider(_GenericRangeSlider[float]):
         self.setRange(min(self.options),max(self.options))
 
 
-        self.setSingleStep((self.options[1] - self.options[0]))
-        self.setPageStep((self.options[5] - self.options[0]))
+        if len(self.options) >= 2:
+            self.setSingleStep((self.options[1] - self.options[0]))
+            self.setPageStep((self.options[min(5, len(self.options) - 1)] - self.options[0]))
 
 
 

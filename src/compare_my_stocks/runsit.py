@@ -152,6 +152,7 @@ class MainClass:
             import os
             os._exit(1)
 
+    @simple_exception_handling(err_description="main")
     def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False, noprompt=False):
         # First we do logging to see what is going on
         #Then init_log to have basic formatting

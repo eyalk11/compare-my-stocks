@@ -31,11 +31,10 @@ from dataclasses import dataclass
 
 
 class _TzSchema:
-    """Pydantic v2 annotation: serialize datetime.timezone as string for JSON schema."""
+    """Pydantic v2 annotation: expose datetime.timezone as unconstrained JSON schema."""
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler: GetCoreSchemaHandler):
-        return _cs.no_info_plain_validator_function(
-            lambda v: v,
+        return _cs.any_schema(
             serialization=_cs.plain_serializer_function_ser_schema(
                 lambda v: str(v) if v is not None else None,
                 info_arg=False,
