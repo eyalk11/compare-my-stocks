@@ -73,9 +73,13 @@ def test_var():
 
 def test_basic_sym(IBSourceSess):
     x = IBSourceSess
-    pair = ("ILS", "USD")
-    f = pair[1] + pair[0]
+    ls = x.get_matching_symbols('GBPUSD')
+    pair = ("EUR", "USD")
+    f = pair[0] + pair[1]
     contract = Forex(f)
+    dd = {x: y for x, y in Forex('USDILS').__dict__.items() if x in ['symbol', 'exchange', 'secType', 'currency']}
+
+    contract= x.get_contract( list(x.get_contract_details_ext(dd,includelist=['symbol', 'exchange', 'secType', 'currency','conId']))[0])
 
     ls = x.historicalhelper(
         datetime.datetime.now() - datetime.timedelta(days=3),
@@ -83,7 +87,7 @@ def test_basic_sym(IBSourceSess):
         contract,
     )
 
-    # ls = x.get_matching_symbols('GBPUSD')
+
 
     assert len(ls) >= 1
 

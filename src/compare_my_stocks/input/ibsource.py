@@ -81,6 +81,15 @@ class IBSourceRem:
     #     if self.IB:
     #         self.on_disconnect()
     Retries = 0
+    INC = [
+        "category",
+        "subcategory",
+        "longName",
+        "validexchanges",
+        "marketName",
+        "stockType",
+        "lastTradeTime",
+    ]
 
     def __init__(
         self,
@@ -279,20 +288,16 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     @make_sure_connected
-    def get_contract_details_ext(self, contractdic):
-        INC = [
-            "category",
-            "subcategory",
-            "longName",
-            "validexchanges",
-            "marketName",
-            "stockType",
-            "lastTradeTime",
-        ]
+    def get_contract_details_ext(self, contractdic,includelist=INC):
         c = Contract(**contractdic)
         for x in self.ib.reqContractDetails(c):
             logging.debug((log_conv(asdict(x), x.validExchanges)))
-            yield dictfilt(asdict(x), INC)
+            x=asdict(x).get('contract',x)
+             
+            if includelist:
+                yield dictfilt((x), includelist)
+            else:
+                yield (x) 
 
 
 class IBSource(InputSource):
@@ -463,6 +468,7 @@ class IBSource(InputSource):
             cont = Contract.create(**contract)
         except:
             cont = Contract(**contract)
+        return cont
 
     @cache_if_not_none
     @cached
