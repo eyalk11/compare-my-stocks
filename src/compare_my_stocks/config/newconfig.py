@@ -3,11 +3,12 @@ import datetime
 import traceback
 from functools import reduce, partial
 from io import StringIO
-from typing import Dict, List, Union, Set
+from typing import Annotated, Dict, List, Union, Set, Optional
 import dacite
 from dataclasses import  field
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, GetCoreSchemaHandler
+from pydantic_core import core_schema as _cs
 
 from common.common import UseCache, InputSourceType, CombineStrategyEnum, VerifySave, TransactionSourceType
 import pytz
@@ -15,7 +16,6 @@ import logging
 from common.loghandler import init_log, dont_print, init_log_default
 import os
 import sys
-from typing import Optional
 from common.common import log_conv
 from common.paramaware import paramaware
 from common.simpleexceptioncontext import SimpleExceptionContext
@@ -28,6 +28,22 @@ FILE_LIST_TO_RES = ["HistF", "HistFBackup", "JsonFilename", "SerializedFile", "R
 #confdict=ConfigDict(arbitrary_types_allowed=True)
 #dataclass=partial(pyddataclass,config=confdict)
 from dataclasses import dataclass
+
+
+class _TzSchema:
+    """Pydantic v2 annotation: serialize datetime.timezone as string for JSON schema."""
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type, _handler: GetCoreSchemaHandler):
+        return _cs.no_info_plain_validator_function(
+            lambda v: v,
+            serialization=_cs.plain_serializer_function_ser_schema(
+                lambda v: str(v) if v is not None else None,
+                info_arg=False,
+            ),
+        )
+
+TimezoneOrNone = Annotated[Optional[datetime.timezone], _TzSchema()]
+
 
 @paramaware
 @dataclass
@@ -165,6 +181,7 @@ class RunningConf:
     LogFile: Optional[str] = "log.txt"
     LogErrorFile: Optional[str] = "error.log"
     UseAlterantiveLocation: Optional[bool] = None #to load data from original location
+    AllowWeakResolve: bool = True #if True, resolvefile() may search legacy locations and fall back outside DATA_DIR; if False, only DATA_DIR is consulted
     TwsProcessName : Optional[str] = "tws.exe"
     SleepForIbsrvToStart: int = 5
     IBLogErrorFile: Optional[str] = "ibsrv_error.log"
@@ -235,7 +252,7 @@ class InputConf:
     IgnoreAdjust: int = 1 #DONT_ADJUST_FOR_CURRENT
     DownloadDataForProt: bool = True
     DefaultFromDate: datetime.datetime = datetime.datetime(2020, 1, 1, tzinfo=pytz.UTC)
-    TzInfo: datetime.timezone =None # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
+    TzInfo: TimezoneOrNone = None  # = datetime.timezone(datetime.timedelta(hours=-3),'GMT3') must provide
     MaxRelevantCurrencyTime : datetime.timedelta = datetime.timedelta(minutes=60)
     MaxRelevantCurrencyTimeHeur: datetime.timedelta = datetime.timedelta(days=5)
     MinDaysForSymbol: int = 7
@@ -302,6 +319,14 @@ MYPATH = os.path.dirname(__file__)
 
 PROJDIR = os.path.join(os.path.expanduser("~"), "." + MYPROJ)
 
+# Single data directory: every relative filename in the config resolves
+# strictly under this directory once it is set. Priority:
+#   1. COMPARE_STOCK_PATH env var (if set)
+#   2. Directory of the located myconfig.yaml
+# Until set, resolvefile() falls back to the legacy search behavior so the
+# config file itself can be located.
+DATA_DIR = os.environ.get(PROJPATHENV) or None
+
 
 def print_if_ok(*args):
     if dont_print():
@@ -315,26 +340,55 @@ def print_if_ok(*args):
 
 
 
-def resolvefile(filename,use_alternative=False):
-    if not 'python' in sys.executable:
-        t = os.path.dirname(sys.executable)
-        datapath = os.path.join(t, 'data')
-    else:
-        datapath = os.path.realpath((os.path.join(MYPATH, '..', 'data')))
-    env = os.environ.get(PROJPATHENV)
-    paths =(env if env else []) +  [PROJDIR, "/etc/" + MYPROJ]  if not use_alternative else [] + [os.curdir, datapath]
+def _allow_weak_resolve():
+    cfg = ConfigLoader.config
+    if cfg is not None:
+        return cfg.Running.AllowWeakResolve
+    return RunningConf.AllowWeakResolve
+
+
+def resolvefile(filename,use_alternative=False,isconfig=False):
+    global DATA_DIR 
     try:
         if filename == '':
             return False, None
         if os.path.isabs(filename):
             return os.path.exists(filename), os.path.realpath(filename)
 
-        for loc in paths + [datapath]:
+        # Once DATA_DIR is set, enforce it as the only base for relative paths.
+        if DATA_DIR:
+            fil = os.path.realpath(os.path.join(DATA_DIR, filename))
+            return os.path.exists(fil), fil
+
+        # DATA_DIR not yet known (only happens while locating the config file
+        # itself). Fall back to the legacy search behavior.
+        if not 'python' in sys.executable:
+            t = os.path.dirname(sys.executable)
+            datapath = os.path.join(t, 'data')
+        else:
+            datapath = os.path.realpath((os.path.join(MYPATH, '..', 'data')))
+        env = os.environ.get(PROJPATHENV)
+        paths=[DATA_DIR]
+        if not DATA_DIR: 
+            if env: 
+                paths = [env] 
+            else: 
+
+                paths = [PROJDIR, "/etc/" + MYPROJ]  if not use_alternative else [] + [os.curdir, datapath]
+
+        for loc in paths + ([datapath] if _allow_weak_resolve() else []):
             fil = os.path.join(loc, filename)
             if os.path.exists(fil):
+                if not isconfig: 
+                    if not _allow_weak_resolve():
+                        DATA_DIR=loc 
                 return True, os.path.abspath(fil)
 
-        return False, os.path.realpath(os.path.join(PROJDIR, filename)  if not use_alternative else os.path.join(datapath,filename)) # default location
+        if _allow_weak_resolve(): 
+            default_base = datapath if use_alternative else PROJDIR
+            return False, os.path.realpath(os.path.join(default_base, filename))
+        else: 
+            return False, os.path.realpath(os.path.join(DATA_DIR, filename))
     except:
         return False, None
 
@@ -405,6 +459,13 @@ class ConfigLoader():
             logging.error('No config file, aborting')
             sys.exit(-1)
 
+        # Pin DATA_DIR. Env var COMPARE_STOCK_PATH wins; otherwise we use the
+        # directory of the (possibly manually-specified) config file. All
+        # later resolve_it() calls force relative paths under DATA_DIR.
+        global DATA_DIR
+        if not DATA_DIR:
+            DATA_DIR = os.path.dirname(os.path.abspath(config_file))
+
         noexcep=False
         with SimpleExceptionContext(f"Failed loading config file {config_file}. aborting",always_throw=True,noconfig=True):
             cls.config = cls.load_config(config_file)
@@ -433,6 +494,8 @@ class ConfigLoader():
 
 
         print_if_ok(log_conv("Using Config File: ", config_file))
+        print_if_ok(log_conv("Log file: ", cls.config.Running.LogFile))
+        print_if_ok(log_conv("Log error file: ", cls.config.Running.LogErrorFile))
 
 
 
