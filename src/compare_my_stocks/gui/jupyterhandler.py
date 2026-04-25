@@ -120,8 +120,8 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
             return
         self.window.voila_widget.external_notebook = config.File.DefaultNotebook
         if self.window.voila_widget.python_process_path is None:
-            self.window.voila_widget.python_process_path = config.Voila.VoilaPythonProcessPath
-            self.wont_run = not self.resolve_voila(self.window.voila_widget)
+            ok, self.window.voila_widget.python_process_path  = self.resolve_voila()
+            self.wont_run = not ok
         if self.wont_run:
             return
         open(config.File.DataFilePtr, 'wt').write(self.file_name)
@@ -170,6 +170,13 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
             webbrowser.open(z[0])
         else:
             logging.info(('didn\'t find instance, running'))
+            if os.path.basename(sys.executable).lower() in ['python.exe', 'python3.exe']:
+                python_exe = sys.executable
+            else:
+                ok, python_exe = self.resolve_voila()
+                if not ok or python_exe is None:
+                    logging.warning("launch_notebook: can't find a python interpreter to run notebook (frozen exe and no resolved python)")
+                    return
             import subprocess
-            cmd = ['start',sys.executable, '-m', 'notebook', filename]
+            cmd = ['start', python_exe, '-m', 'notebook', filename]
             subprocess.Popen(cmd,stderr=subprocess.PIPE,stdout=subprocess.PIPE,shell=True)

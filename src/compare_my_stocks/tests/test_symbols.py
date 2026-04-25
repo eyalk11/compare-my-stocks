@@ -278,8 +278,8 @@ class TestSimpleSymbolGenFactory:
 
     def test_gen_with_string_special(self):
         """Test gen() with special symbol string creates SpecialSymbol."""
-        # config.Symbols.SpecialSymbols is set to '$' in conftest
-        symbol = SimpleSymbol.gen("$USD")
+        prefix = config.Symbols.SpecialSymbols
+        symbol = SimpleSymbol.gen(f"{prefix}USD")
         assert isinstance(symbol, SpecialSymbol)
         assert symbol.currency == "USD"
 
@@ -335,8 +335,7 @@ class TestSpecialSymbolBehavior:
     def test_special_symbol_symbol_property(self):
         """Test SpecialSymbol symbol property."""
         symbol = SpecialSymbol("GBP")
-        # config.Symbols.SpecialSymbols is '$' in conftest
-        assert symbol.symbol == "$GBP"
+        assert symbol.symbol == f"{config.Symbols.SpecialSymbols}GBP"
 
     def test_special_symbol_get_date(self):
         """Test SpecialSymbol get_date method."""
@@ -398,7 +397,7 @@ class TestSymbolIntegration:
         symbols = [simple, special]
         assert len(symbols) == 2
         assert symbols[0].symbol == "AAPL"
-        assert symbols[1].symbol == "$USD"
+        assert symbols[1].symbol == f"{config.Symbols.SpecialSymbols}USD"
 
     def test_symbol_comparison_sorting(self):
         """Test sorting symbols."""
@@ -414,7 +413,8 @@ class TestSymbolIntegration:
 
     def test_gen_factory_with_list(self):
         """Test gen() factory with a list of symbols."""
-        symbols_list = ["AAPL", "MSFT", "$EUR"]
+        prefix = config.Symbols.SpecialSymbols
+        symbols_list = ["AAPL", "MSFT", f"{prefix}EUR"]
         generated = [SimpleSymbol.gen(s) for s in symbols_list]
 
         assert isinstance(generated[0], SimpleSymbol)

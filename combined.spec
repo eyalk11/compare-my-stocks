@@ -10,6 +10,11 @@ for _pkg in ('rfc3987_syntax', 'jupyter_events', 'nbformat',
              'nbclient', 'nbconvert'):
     extra_datas += collect_data_files(_pkg)
 
+# debugpy's _vendored/__init__.py does os.listdir(__file__ dir) at import time,
+# so the directory must exist on disk (not just inside the PYZ). ipykernel
+# imports debugpy unconditionally from ipykernel.debugger.
+extra_datas += collect_data_files('debugpy', include_py_files=True)
+
 
 a = Analysis(
     ['C:\\Users\\ekarni\\compare-my-stocks\\src\\compare_my_stocks\\__main__.py',
