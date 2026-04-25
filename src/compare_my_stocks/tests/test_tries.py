@@ -71,6 +71,62 @@ def test_var():
     assert not g
 
 
+def test_resolve_forex_pair(IBSourceSess):
+    """resolve_forex_pair should pick the canonical IB direction and cache it.
+
+    For ILS/USD, IB only carries USDILS (~3 ILS per USD); ILSUSD does not exist.
+    So pair=('ILS','USD') -> reverse=False (use as-is), pair=('USD','ILS') ->
+    reverse=True (caller applies 1/x). EUR is the opposite: only EURUSD exists.
+    """
+    src = IBSourceSess
+
+    r = src.resolve_forex_pair(("ILS", "USD"))
+    assert r is not None, "USDILS should resolve on IB"
+    reverse, contract = r
+    assert reverse is False
+    assert contract.conId
+    ils_conid = contract.conId
+
+    r = src.resolve_forex_pair(("USD", "ILS"))
+    assert r is not None
+    reverse, contract = r
+    assert reverse is True
+    assert contract.conId == ils_conid  # same canonical USDILS contract
+
+    r = src.resolve_forex_pair(("EUR", "USD"))
+    assert r is not None
+    reverse, contract = r
+    assert reverse is True  # EURUSD is canonical, so reverse direction needed
+    eur_conid = contract.conId
+    assert eur_conid
+
+    r = src.resolve_forex_pair(("USD", "EUR"))
+    assert r is not None
+    reverse, contract = r
+    assert reverse is False
+    assert contract.conId == eur_conid
+
+    assert src.resolve_forex_pair(("XXX", "YYY")) is None
+
+
+def test_get_currency_history(IBSourceSess):
+    """End-to-end currency history. USDILS rate is ~3, so ('ILS','USD') (no
+    reverse) returns ~3 and ('USD','ILS') (reverse=True) returns ~1/3."""
+    src = IBSourceSess
+    end = datetime.datetime.now()
+    start = end - datetime.timedelta(days=5)
+
+    df = src.get_currency_history(("ILS", "USD"), start, end)
+    assert df is not None and len(df) > 0
+    last = df["Close"].iloc[-1]
+    assert 2.5 < last < 4.5, f"USDILS rate looks wrong: {last}"
+
+    df2 = src.get_currency_history(("USD", "ILS"), start, end)
+    assert df2 is not None and len(df2) > 0
+    last2 = df2["Close"].iloc[-1]
+    assert 0.2 < last2 < 0.45, f"reversed USDILS rate looks wrong: {last2}"
+
+
 def test_basic_sym(IBSourceSess):
     x = IBSourceSess
     ls = x.get_matching_symbols('GBPUSD')
@@ -86,7 +142,7 @@ def test_basic_sym(IBSourceSess):
         datetime.datetime.now(),
         contract,
     )
-
+    print(ls)
 
 
     assert len(ls) >= 1

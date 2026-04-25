@@ -600,50 +600,57 @@ class IBSource(InputSource):
     def query_symbol(self, sym):
         pass
 
+    FOREX_KEYS = ['symbol', 'exchange', 'secType', 'currency']
+
+    @simple_exception_handling(
+        err_description="resolve_forex_contract", return_succ=None, never_throw=True
+    )
+    def _resolve_forex_contract(self, pair_str):
+        """Look up a full Forex contract (with conId) via IB contract details.
+
+        Returns a Contract or None if IB does not know this pair. Uses the
+        new get_contract_details_ext(includelist=...) entry point, so we no
+        longer have to fetch historical bars just to test existence.
+        """
+        forex = Forex(pair_str)
+        dd = {k: v for k, v in forex.__dict__.items() if k in self.FOREX_KEYS}
+        details = list(self.ibrem.get_contract_details_ext(
+            dd, includelist=self.FOREX_KEYS + ['conId']
+        ))
+        if not details:
+            return None
+        return self.get_contract(details[0])
+
     @cached  # type: ignore
+    def resolve_forex_pair(self, pair):
+        """Resolve a currency pair to (reverse, contract).
+
+        IB only carries one direction of any FX pair (e.g. Forex('USDILS')
+        works and is worth ~3.7 ILS/USD; Forex('ILSUSD') does not exist).
+        We try pair[1]+pair[0] first, since that is the conventional IB
+        symbol when pair is the (quote, base) form used by the rest of the
+        code (e.g. pair=('ILS','USD') -> 'USDILS', reverse=False, no 1/x).
+        Fallback is pair[0]+pair[1] with reverse=True so the caller inverts.
+        """
+        for reverse, sym in [(False, pair[1] + pair[0]), (True, pair[0] + pair[1])]:
+            contract = self._resolve_forex_contract(sym)
+            if contract is not None:
+                return reverse, contract
+        logging.debug(f"resolve_forex_pair: no data for {pair}")
+        return None
+
     def to_reverse_pair(self, pair):
-        f = pair[1] + pair[0]
-        contract = Forex(f)
-        try:
-            ls = self.historicalhelper(
-                datetime.datetime.now() - datetime.timedelta(days=3),
-                datetime.datetime.now(),
-                contract,
-            )
-        except RequestError as e:
-            logging.debug((f"error in to_reverse_pairA {e.message} {e.code}"))
-            ls = None
-        if ls is not None and len(ls) > 0:
-            return False
-        else:
-            f = pair[0] + pair[1]
-            contract = Forex(f)
-            try:
-                ls = self.historicalhelper(
-                    datetime.datetime.now() - datetime.timedelta(days=3),
-                    datetime.datetime.now(),
-                    contract,
-                )
-            except RequestError as e:
-                logging.debug((f"error in to_reverse_pairb {e.message} {e.code}"))
-                ls = None
-            if ls is not None and len(ls) > 0:
-                return True
-            else:
-                logging.debug(f"to_reverse_pair: no data for {pair}")
-                return None
+        r = self.resolve_forex_pair(pair)
+        return None if r is None else r[0]
 
     def get_currency_history(self, pair, startdate, enddate):
-        b = self.to_reverse_pair(pair)
-        if b is None:
+        r = self.resolve_forex_pair(pair)
+        if r is None:
             return None
-        f = pair[0] + pair[1] if b else pair[1] + pair[0]
-        contract = Forex(f)
+        b, contract = r
         res = self.historicalhelper(startdate, enddate, contract)
-
-        if b:
-            if res is not None:
-                res[StandardColumns] = res[StandardColumns].applymap(lambda x: 1 / x)
+        if b and res is not None:
+            res[StandardColumns] = res[StandardColumns].applymap(lambda x: 1 / x)
         return res
 
     def get_all_symbols(self):
