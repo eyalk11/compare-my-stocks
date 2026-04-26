@@ -683,6 +683,11 @@
                     "default": true,
                     "title": "Try To Scale Display",
                     "type": "boolean"
+                },
+                "UseYFinance": {
+                    "default": true,
+                    "title": "Use YFinance",
+                    "type": "boolean"
                 }
             },
             "required": [

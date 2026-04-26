@@ -187,6 +187,7 @@ class RunningConf:
     DisplayConsole : bool =False
     Title: str = "Compare My Stocks"
     TryToScaleDisplay : bool = True
+    UseYFinance: bool = True #if False, skip yfinance-backed split lookups in StockPrices.populate_buydic
 
 @paramaware
 @dataclass
@@ -521,7 +522,7 @@ class ConfigLoader():
         from common.simpleexceptioncontext import simple_exception_handling
         #make the following a method with decorator
 
-        @simple_exception_handling(err_description="excpetion in loading config",always_throw=True,noconfig=True)
+        @simple_exception_handling(err_description=f"excpetion in loading config from {config_file}",always_throw=True,noconfig=True)
         def load_config_int():
             return yaml.load(open(config_file))
 

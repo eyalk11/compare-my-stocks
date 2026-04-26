@@ -46,6 +46,9 @@ class StockPrices(TrasnasctionHandler, TransactionHandlerImplementator):
 
     def get_hist_split(self, symbol):
         """Yield (datetime, ratio) for each stock split on `symbol`, via yfinance."""
+        from config import config
+        if not getattr(config.Running, "UseYFinance", True):
+            return
         try:
             import yfinance as yf
         except ImportError:
@@ -53,7 +56,7 @@ class StockPrices(TrasnasctionHandler, TransactionHandlerImplementator):
             return
 
         series = yf.Ticker(symbol).splits
-        if series is None or series.empty:
+        if series is None or len(series) == 0 or not hasattr(series, "items"):
             return
         for ts, ratio in series.items():
             dt = ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts

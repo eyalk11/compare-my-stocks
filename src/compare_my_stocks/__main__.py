@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     if args.config_file:
         import os
-        os.environ['COMPARE_STOCK_CONFIG_FILE'] = os.path.abspath(args.config_file)
+        os.environ['COMPARE_STOCK_CONFIG_FILE'] = os.path.abspath(os.path.expanduser(args.config_file))
 
     if args.ibsrv:
         from compare_my_stocks import ibsrv
