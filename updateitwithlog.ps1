@@ -1,0 +1,1 @@
+C:/gitproj/compare_stocks_internal/updateitwithlog.ps1
