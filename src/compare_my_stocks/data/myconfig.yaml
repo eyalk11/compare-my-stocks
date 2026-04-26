@@ -5,6 +5,7 @@ DefaultParams: !DefaultParamsConf
   DefaultGroups: []
   Ext:
     - QQQ
+    - AAPL
 Earnings: !EarningsConf
   Use: !UseCache USEIFAVAILABLE
   CacheSpan: !!python/object/apply:datetime.timedelta [40, 0, 0]
