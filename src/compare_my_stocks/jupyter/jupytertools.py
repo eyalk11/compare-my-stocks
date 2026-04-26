@@ -36,7 +36,7 @@ def unite_if_needed(x,data,query_func=query_symbol):
 
 def load_data() -> Serialized:
     if os.path.exists(config.File.DataFilePtr):
-        filename =open(config.File.DataFilePtr,'rt').read()
+        filename = open(config.File.DataFilePtr, 'rt').read().strip()
         if os.path.exists(filename):
             data: Serialized = pickle.load(open(filename, 'rb'))
             return data
@@ -51,15 +51,12 @@ from decimal import Decimal
 
 
 def add_change_from(df,data, max=True):
-    arr = numpy.nanmax(data.beforedata, axis=0)
-    if max:
-        ndat = -100 + data.beforedata.iloc[-1] / arr * 100
-    else:
-        ndat = data.beforedata.iloc[-1] / arr * 100 - 100
+    arr = numpy.nanmax(data.beforedata, axis=0) if max else numpy.nanmin(data.beforedata, axis=0)
+    ndat = data.beforedata.iloc[-1] / arr * 100 - 100
 
     ndat = ndat[df.columns]
     ndat = ndat.apply(lambda x: "{:.2f}".format(x) + '%')
-    ndat = ndat.rename('Change from ' + 'max' if max else 'min')
+    ndat = ndat.rename('Change from ' + ('max' if max else 'min'))
     df = df.append(ndat)
     return df
 
