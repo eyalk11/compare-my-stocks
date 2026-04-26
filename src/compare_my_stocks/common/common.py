@@ -371,10 +371,11 @@ def singleton(class_):
 
 
 
-from PySide6.QtCore import QMutex
+
 
 class QLock:
     def __init__(self):
+        from PySide6.QtCore import QMutex
         self.mutex = QMutex()
 
     def __enter__(self):

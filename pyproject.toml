@@ -72,7 +72,7 @@ numerize = {version="*", optional= true}
 [tool.poetry.extras]
 full = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'ib-insync', 'ib-async', 'pywin32', 'frozendict', 'yfinance', 'pyro5', 'ibflex', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
 mini = ['colorlog','django','numpy','ruamel.yaml']
-jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila','joblib','matplotlib','jupyter']
+jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila','joblib','matplotlib','jupyter','pyro5','numerize','numpy','pytz']
 full_no_ib = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'pywin32', 'frozendict', 'yfinance', 'pyro5', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
 
 [build-system]

@@ -62,7 +62,7 @@ function Install-Wheel ($uv)
         $whl = Get-ChildItem -Filter "*.whl" | Select-Object -First 1
         if (-not $whl) { throw "No wheel (*.whl) found next to this script." }
         Write-Host "Installing $($whl.Name)[jupyter] into venv..."
-        & $uv pip install --python $VenvPython "$($whl.FullName)[jupyter]"
+        & $uv pip install --python  $VenvPython --force-reinstall "$($whl.FullName)[jupyter]"
         if ($LASTEXITCODE -ne 0) { throw "uv pip install failed." }
     }
     finally { Pop-Location }
