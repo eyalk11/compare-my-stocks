@@ -9,7 +9,6 @@ from typing import List
 
 import numpy
 import pandas
-from PySide6.QtWidgets import QMessageBox
 
 from common.common import UseCache, log_conv, VerifySave
 from common.simpleexceptioncontext import print_formatted_traceback, simple_exception_handling, excp_handler
@@ -306,6 +305,7 @@ class InputDataImpl(InputDataImplInterface):
     def save_data(self):
         # The difference between the regular cache and fullcache is that fullcache doesn't know how to handle transactions diffs .
         def show_message_box():
+            from PySide6.QtWidgets import QMessageBox
             reply = QMessageBox.question(
                 None,
                 "Confirmation",
