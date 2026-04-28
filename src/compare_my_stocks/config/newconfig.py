@@ -226,7 +226,7 @@ class FileConf:
     HistFBackup: str = HistF + '.back'
     DefaultNotebook: str = r'jupyter\DefaultNotebook.ipynb'
     JsonFilename: str = r'groups.json'
-    SerializedFile: str = r'serialized.dat'
+    SerializedFile: str = r'serialized.dat.json'
     EarningStorage: str = 'earnings.dat'
     RevenueFile: str = 'NOEARNINGS'
     IncomeFile: str = 'NOEARNINGS'

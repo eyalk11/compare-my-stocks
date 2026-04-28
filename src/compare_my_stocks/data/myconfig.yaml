@@ -28,7 +28,7 @@ File: !FileConf
   IncomeFile: NOEARNINGS
   JsonFilename: groups.json
   RevenueFile: NOEARNINGS
-  SerializedFile: serialized.dat
+  SerializedFile: serialized.dat.json
 Input: !InputConf
   FullCacheUsage: !UseCache DONT
   DefaultFromDate: 2022-01-01 00:00:00+00:00

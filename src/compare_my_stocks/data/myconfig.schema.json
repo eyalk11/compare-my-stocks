@@ -80,7 +80,7 @@
                     "type": "string"
                 },
                 "SerializedFile": {
-                    "default": "serialized.dat",
+                    "default": "serialized.dat.json",
                     "title": "SerializedFile",
                     "type": "string"
                 },

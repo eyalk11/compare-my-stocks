@@ -21,7 +21,7 @@ exclude = [
 [tool.poetry.dependencies]
 colorlog = ">=6.7.0,<6.8.0"
 django = ">=3.2.9,<3.2.10"
-numpy = [{version = "1.22.4", python = "<3.11"}, {version = "1.26.4", python = ">=3.11"}]
+numpy = "1.26.4"
 "ruamel.yaml" = "^0.17.31"
 pydantic = "^2.3.0"
 
