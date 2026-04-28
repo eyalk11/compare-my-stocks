@@ -144,13 +144,13 @@ class JupyterHandler(FormInterface, JupyterCommonHandler):
 
     def generate_temp(self):
         import tempfile
+        from common.serialization import dump_serialized
         self.remove_file()
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             name = tmp.name
-            import pickle
-            pickle.dump(self.graphObj.serialized_data(), tmp)
-        self.file_name= name
+        dump_serialized(self.graphObj.serialized_data(), name)
+        self.file_name = name
         return True
 
     @simple_exception_handling("launch notebook")

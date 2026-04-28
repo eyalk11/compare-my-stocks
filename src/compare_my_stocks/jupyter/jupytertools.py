@@ -38,8 +38,14 @@ def load_data() -> Serialized:
     if os.path.exists(config.File.DataFilePtr):
         filename = open(config.File.DataFilePtr, 'rt').read().strip()
         if os.path.exists(filename):
-            data: Serialized = pickle.load(open(filename, 'rb'))
-            return data
+            from compare_my_stocks.common.serialization import (
+                load_serialized,
+                is_json_file,
+            )
+            if is_json_file(filename):
+                return load_serialized(filename)
+            # legacy pickle fallback so existing files keep loading
+            return pickle.load(open(filename, 'rb'))
 
     logging.error(('data file not available'))
 

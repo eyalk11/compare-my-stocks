@@ -384,9 +384,8 @@ class DataGenerator(DataGeneratorInterface):
 
     def serialize_me(self, filepath=config.File.SerializedFile):
         logging.debug((f'writing serialized file to {config.File.SerializedFile}'))
-        with open(filepath, 'wb') as f:
-            import pickle
-            pickle.dump(self.serialized_data(), f)
+        from common.serialization import dump_serialized
+        dump_serialized(self.serialized_data(), filepath)
 
     def serialized_data(self):
         return Serialized(self.orig_df, self.bef_rem_data, self.after_filter_data, self.act, self.params,
