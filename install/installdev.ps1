@@ -1,4 +1,4 @@
-param([switch][bool]$currentbranch) 
+param([switch][bool]$currentbranch)
 
 function confirmit ($message, $caption)
 {
@@ -8,7 +8,15 @@ $continue = [System.Windows.MessageBox]::Show($message, $caption, 'YesNo');
 return  ($continue -eq 'Yes')
 }
 
-if ($currentbranch) 
+$ver = & python --version 2>&1
+if ($LASTEXITCODE -ne 0 -or $ver -notlike "*3.11*")
+{
+    Write-Error "Python 3.11 is required, found: $ver"
+    return
+}
+Write-Host "Using $ver"
+
+if ($currentbranch)
 {
     pip install ..[full] 
 }
@@ -16,7 +24,6 @@ else
 {
     pip install compare_my_stocks[full]
 }
-pip install git+https://github.com/csingley/ibflex.git
 
 $path=python -c "import compare_my_stocks;import os;print(os.path.dirname(compare_my_stocks.__file__))" 
 if ($path -eq $null) 

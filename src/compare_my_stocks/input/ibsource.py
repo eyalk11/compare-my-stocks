@@ -203,14 +203,18 @@ class IBSourceRem:
     @make_sure_connected
     def get_current_currency(self, pair):
         logging.debug("get_current_currency {pair}")
-        f = pair[0] + pair[1]
-        contract = Forex(f)
+        rev, contract = self.resolve_forex_pair(pair)
         m = self.get_realtime_contract(contract).markPrice
         if math.isnan(m):
             logging.warn("getting historical data instead of real")
             a = self.reqHistoricalData(contract, datetime.datetime.now(), 1)
             if len(a) > 0:
-                return a[0].close
+                m= a[0].close
+        if rev and m!=0 :
+            return 1 / m
+        else:
+            raise ValueError(f"price is 0 or nan for {pair} with contract {contract}") 
+
 
     def get_realtime_contract(self, contract, additional=False):
         tick = self.ib.reqMktData(contract, "233,221,165" if additional else "233,221")

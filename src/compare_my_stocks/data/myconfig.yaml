@@ -59,7 +59,7 @@ Sources: !SourcesConf
     HostIB: 127.0.0.1
     IBSrvPort: 9091
     MaxIBConnectionRetries: 3
-    PortIB: 7596
+    PortIB: 7496
     RegularAccount: null
     RegularUsername: null
 

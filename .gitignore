@@ -3,15 +3,20 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# MkDocs build output
+/site/
+
 # OSX useful to ignore
 *.DS_Store
 .AppleDouble
 .LSOverride
+*.log
 
 # Thumbnails
 ._*
 
 # Files that might appear in the root of a volume
+.claude
 .DocumentRevisions-V100
 .fseventsd
 .Spotlight-V100
@@ -91,6 +96,7 @@ src/compare_my_stocks/tags
 src/compare_my_stocks/data/.virtual_documents
 venv
 .venv11/
+.venv*
 rr.txt
 mm.py
 src/compare_my_stocks/data/jupyter/.virtual_documents
