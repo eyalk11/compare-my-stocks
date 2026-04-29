@@ -35,7 +35,7 @@ class VoilaStatus(JupyterCommonHandler):
             #use buffer 
             #df remove timezone from al
             #df = k.df.applymap(lambda x: unlocalize_it(x) if type(x) is datetime else x )
-            df = k.df.applymap(lambda x: unlocalize_it(x) if type(x) is Timestamp else x)
+            df = k.df.map(lambda x: unlocalize_it(x) if type(x) is Timestamp else x)
             dic=df.to_dict ()
             import pickle
             buffer=pickle.dumps(dic)

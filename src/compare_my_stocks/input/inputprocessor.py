@@ -194,7 +194,7 @@ class InputProcessor(InputProcessorInterface):
         factor=self._data.get_currency_factor_for_sym(sym)
         currency_df=currency_df.apply(lambda x: 1 / x / factor) #notice that this should be in the hist not here, but same same
         currency_df = currency_df[StandardColumns]
-        hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.NaN)
+        hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.nan)
         if len(set(hist.index) - set(currency_df.index)) > 0:
             logging.debug((log_conv('Not all entiries could be adjusted ', set(hist.index) - (set(currency_df.index)))))
 
@@ -633,7 +633,7 @@ class InputProcessor(InputProcessorInterface):
         _cur_relprofit_bystock = defaultdict(lambda: 0)
         _cur_unrelprofit_bystock = defaultdict(lambda: 0)
         _cur_unrelprofit_bystock_adjusted = defaultdict(lambda: 0)
-        _cur_stock_price = defaultdict(lambda: (numpy.NaN, numpy.NaN))
+        _cur_stock_price = defaultdict(lambda: (numpy.nan, numpy.nan))
         _last_action_time = defaultdict(lambda: None)
         _first_action_time = defaultdict(lambda: None)
         cur_split = defaultdict(lambda: None)
@@ -956,12 +956,12 @@ class InputProcessor(InputProcessorInterface):
             warnings.simplefilter("ignore")
             td= todate - fromdate  
             f= fromdate.date() 
-            df= pd.DataFrame()
-            for f in pd.date_range(fromdate,todate): 
+            rows = []
+            for f in pd.date_range(fromdate,todate):
                 sp=sym.get_date(f.to_pydatetime().date())
                 dic= {'Open':sp,'High':sp,'Low':sp,'Close':sp,'Volume':1}
-                new_row = pd.Series(dic, name=f)
-                df = df.append(new_row)
+                rows.append(pd.Series(dic, name=f))
+            df = pd.concat(rows, axis=1).T if rows else pd.DataFrame()
             return sym.dic, df
 
 
@@ -1139,7 +1139,7 @@ class InputProcessor(InputProcessorInterface):
         for name, dic in zip(self.dicts_names,seldict):
             df = pd.DataFrame(dic, index=combinedindex)
             if name=='alldates':
-                df = df.fillna(method='ffill', axis=0)
+                df = df.ffill(axis=0)
             #df = pd.DataFrame(dic,index=sorted(list(self._data._fset)))
             # combined index is needed to adjust for the df, but maybe can do without... pass to return_df
             #df = pd.DataFrame(dic, index=combinedindex)
@@ -1164,8 +1164,8 @@ class InputProcessor(InputProcessorInterface):
             df_monthly = df.resample('MS').asfreq()
 
             # Forward fill the missing values with a limit of 12
-            df_filled = df_monthly.fillna(method='bfill', limit=12)
-            df_filled = df_filled.fillna(method='ffill', limit=4) #lets fill up to 4 months forward
+            df_filled = df_monthly.bfill(limit=12)
+            df_filled = df_filled.ffill(limit=4) #lets fill up to 4 months forward
             return df_filled
         origdf=df.copy()
         from ordered_set import OrderedSet

@@ -182,7 +182,7 @@ class DataGenerator(DataGeneratorInterface):
             df = df['tot_profit_by_stock']
         else:  # logging.debug(('default!!')) #price
             df = df['alldates']
-            df = df.fillna(method='ffill', axis=0)  # understand more before?
+            df = df.ffill(axis=0)  # understand more before?
             if (unitetyp & UniteType.ADDPROT) and (unitetyp & ~UniteType.ADDTOTALS == 0) and (
                     div & Types.PRECDIFF == 0):  # (div& ~Types.COMPARE) and
                 unitetypeff = unitetypeff & ~UniteType.ADDPROT

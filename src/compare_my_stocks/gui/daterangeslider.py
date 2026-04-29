@@ -2,10 +2,10 @@ import matplotlib
 import matplotlib.dates
 import pandas as pd
 from PySide6.QtCore import Signal
-from superqt.sliders._generic_range_slider import _GenericRangeSlider
+from superqt import QDoubleRangeSlider
 
 
-class QDateRangeSlider(_GenericRangeSlider[float]):
+class QDateRangeSlider(QDoubleRangeSlider):
     dateValueChanged = Signal(tuple)
 
     def __init__(self,*args, **kw):

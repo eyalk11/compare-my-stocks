@@ -63,7 +63,7 @@ def add_change_from(df,data, max=True):
     ndat = ndat[df.columns]
     ndat = ndat.apply(lambda x: "{:.2f}".format(x) + '%')
     ndat = ndat.rename('Change from ' + ('max' if max else 'min'))
-    df = df.append(ndat)
+    df = pandas.concat([df, ndat.to_frame().T])
     return df
 
 d = {
@@ -87,7 +87,7 @@ def human_to_int(s, orig, ret_nan=True):
         return text_to_num(s)
     except:
         if 1:
-            return numpy.NaN
+            return numpy.nan
 
 
 
@@ -100,7 +100,7 @@ def add_target_price_change(df):
     dff = convert_to_dec(convert_to_dec(df)).astype(float)
     x = dff.loc['Target Price', :] / dff.loc['Price', :] * 100 - 100
     x.name = 'Target Price Change'
-    df = df.append(x)
+    df = pandas.concat([df, x.to_frame().T])
 
     return df
 

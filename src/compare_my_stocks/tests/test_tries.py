@@ -433,7 +433,7 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
         p.todate = todt 
         inp.data._symbols_wanted = set()
         inp.process(params=p, partial_symbol_update=[stock])
-        df = DataFrame()
+        rows = []
         for c in InputProcessor.log_info.call_args_list:
             ser=pandas.Series(list(map(str, c.args)), index=sig._parameters.keys())
             try:
@@ -442,8 +442,9 @@ def verify_profit_calc(calls, buydict,dates_set, fromdt, inp, stock, todt,fil):
             except:
                 ser['Cost']= 0
                 ser['Qty']= 0
-            
-            df = df.append(ser, ignore_index=True)
+
+            rows.append(ser)
+        df = pandas.DataFrame(rows).reset_index(drop=True) if rows else DataFrame()
         df.to_clipboard()
 
         logging.debug(df)

@@ -118,7 +118,7 @@ class InputDataImpl(InputDataImplInterface):
 
     @staticmethod
     def returnNan():
-        return numpy.NaN
+        return numpy.nan
 
     @staticmethod
     def init2():

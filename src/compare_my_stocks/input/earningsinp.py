@@ -24,7 +24,7 @@ from pandas import DataFrame
 
 
 def getearnings_int(st, aa):
-    dic = defaultdict(lambda: defaultdict(lambda: numpy.NaN))
+    dic = defaultdict(lambda: defaultdict(lambda: numpy.nan))
     # df=DataFrame.from_records(aa)
     for x, y in zip(st, aa):
         if y != 'cccd' and y != 'aaa' and y!='bbb':

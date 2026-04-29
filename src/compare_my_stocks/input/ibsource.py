@@ -650,7 +650,7 @@ class IBSource(InputSource):
         b, contract = r
         res = self.historicalhelper(startdate, enddate, contract)
         if b and res is not None:
-            res[StandardColumns] = res[StandardColumns].applymap(lambda x: 1 / x)
+            res[StandardColumns] = res[StandardColumns].map(lambda x: 1 / x)
         return res
 
     def get_all_symbols(self):

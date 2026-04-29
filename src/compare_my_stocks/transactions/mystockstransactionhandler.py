@@ -126,12 +126,12 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
             ind=bisect.bisect_left(ll, item)
             if ind>0:
                 return dic.get(ll[ind - 1])
-        dt= pd.DataFrame(columns=self.COLUMNS)
+        rows = []
         index=0
         for t  ,z in sorted(buydict.items()):
             tim = matplotlib.dates.date2num(t)
             if normailze_to_cur:
-                inp = self._manager._inp 
+                inp = self._manager._inp
                 cur=inp._cur_splits.get(z.Symbol)
                 then=loctim(inp._split_by_stock.get(z.Symbol),tim)
                 if cur and then:
@@ -151,12 +151,12 @@ class MyStocksTransactionHandler(TrasnasctionHandler, TransactionHandlerImplemen
                 DisplaySymbol=syminfo.get("DisplaySymbol",z[2]),Currency= currency,Type="Buy" if z[0]>0 else "Sell",Method="FIFO",Notes=z[3],
                 Exchange=syminfo.get("exchange","UNK"),Quantity=abs(z[0]),Cost_Per_Share=z[1],Name=syminfo.get("name",z[2]))
 
-            dt=dt.append(dict(zip(self.COLUMNS,tuple(x))),ignore_index=True)
+            rows.append(dict(zip(self.COLUMNS, tuple(x))))
 
-
+        dt = pd.DataFrame(rows, columns=self.COLUMNS)
         dt.set_index("Id",inplace=True)
-        dt = dt.applymap(lambda x: "" if str(x) == "nan" else x )
-        dt=dt.applymap(lambda x: '"%s"' % x if x != ''  else x)
+        dt = dt.map(lambda x: "" if str(x) == "nan" else x )
+        dt = dt.map(lambda x: '"%s"' % x if x != ''  else x)
         dt.to_csv(file, quoting=csv.QUOTE_NONE,escapechar='\\')
         logging.debug(("saved"))
 
