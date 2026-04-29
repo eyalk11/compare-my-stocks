@@ -4,6 +4,15 @@ multiprocessing.freeze_support()
 from contextvars import ContextVar
 ContextVar('context').set('main')
 
+# Python 3.14 no longer auto-creates an event loop on get_event_loop().
+# eventkit (pulled in via ib_async) calls get_event_loop() at module import,
+# so we install one up-front before any eventkit-loading import runs.
+import asyncio as _asyncio
+try:
+    _asyncio.get_event_loop()
+except RuntimeError:
+    _asyncio.set_event_loop(_asyncio.new_event_loop())
+
 if 'ipykernel_launcher' in sys.argv:
     print(('strangeeee'))
     if sys.path[0] == '':

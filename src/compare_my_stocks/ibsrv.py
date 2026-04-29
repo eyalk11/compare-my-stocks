@@ -1,6 +1,13 @@
 import asyncio
 import logging
 
+# Python 3.14: eventkit (loaded transitively by ib_async) calls get_event_loop()
+# at import time and 3.14 no longer auto-creates one. Install a loop now.
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 import Pyro5.server
 
 if __name__ == "__main__":

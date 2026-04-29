@@ -1,3 +1,9 @@
+import asyncio as _asyncio
+try:
+    _asyncio.get_event_loop()
+except RuntimeError:
+    _asyncio.set_event_loop(_asyncio.new_event_loop())
+
 import config as _cfg
 _cfg.config.Sources.IBSource.PromptOnConnectionFail = False
 _cfg.config.TransactionHandlers.IB.PromptOnQueryFail = False
