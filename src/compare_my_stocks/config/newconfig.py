@@ -91,6 +91,14 @@ class MyStocksConf:
     Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
 
 
+@dataclass
+class IBStatementConf:
+    File: str = r'ibstatement.cache'
+    SrcFile: str = "ib_statement.csv"  # IB Activity Statement CSV (Open Positions)
+    PortofolioName: str = "IB Statement"
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
+
+
 @paramaware
 @dataclass()
 class TransactionHandlersConf:
@@ -113,6 +121,7 @@ class TransactionHandlersConf:
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
+    IBStatement: IBStatementConf = field(default_factory=IBStatementConf)
     IgnoreConf: Dict = field(default_factory=lambda: {})
     CombineStrategy: CombineStrategyEnum = CombineStrategyEnum.PREFERSTOCKS
     IncludeNormalizedOnSave: bool = True
@@ -551,6 +560,7 @@ class ConfigLoader():
         yaml.register_class(TransactionHandlersConf)
         yaml.register_class(StockPricesConf)
         yaml.register_class(MyStocksConf)
+        yaml.register_class(IBStatementConf)
         yaml.register_class(RapidKeyConf)
         yaml.register_class(UIConf)
         yaml.register_class(SourcesConf)

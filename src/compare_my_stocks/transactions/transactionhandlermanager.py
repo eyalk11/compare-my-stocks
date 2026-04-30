@@ -20,6 +20,7 @@ from transactions.earningsproc import EarningProcessor
 
 from transactions.IBtransactionhandler import get_ib_handler
 from transactions.mystockstransactionhandler import get_stock_handler
+from transactions.ibstatementhandler import get_ib_statement_handler
 from transactions.stockprices import StockPrices
 from transactions.transactioninterface import TransactionHandlerInterface, BuyDictItem
 
@@ -31,6 +32,9 @@ class TransactionHandlerManager(TransactionHandlerInterface):
         self._inp =input_processer
         self._buydicforexport={}
         self._handlers= (self._ib, self._stock) = tuple(self.get_handlers())
+        self._ibstatement = self.get_ibstatement_handler()
+        if self._ibstatement is not None:
+            self._handlers = self._handlers + (self._ibstatement,)
         self._buysymbols=set()
         self._StockPrices = StockPrices(self, self.buysymbols)
         self._earnings= EarningProcessor(self,self.buysymbols)
@@ -114,6 +118,15 @@ class TransactionHandlerManager(TransactionHandlerInterface):
             self._buydic = self._ib.buydic
         elif self._stock:
             self._buydic = self._stock.buydic
+        # Layer IBStatement synthetic entries on top (or use them directly
+        # if no other source is configured).
+        if self._ibstatement:
+            if not self._buydic:
+                self._buydic = dict(self._ibstatement.buydic)
+            else:
+                for k, v in self._ibstatement.buydic.items():
+                    if k not in self._buydic:
+                        self._buydic[k] = v
         #split transaction by source all posibilities
 
 
@@ -253,6 +266,11 @@ class TransactionHandlerManager(TransactionHandlerInterface):
                 yield handler
             else:
                 yield None
+
+    def get_ibstatement_handler(self):
+        if (config.TransactionHandlers.TransactionSource & TransactionSourceType.IBStatement) == TransactionSourceType.IBStatement:
+            return get_ib_statement_handler(self)
+        return None
 
     @simple_exception_handling("Error in export_portfolio")
     def export_portfolio(self):

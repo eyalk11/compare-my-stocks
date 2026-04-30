@@ -356,6 +356,7 @@ class TransactionSourceType(Flag):
     IB=auto()
     MyStock=auto()
     Both= IB | MyStock
+    IBStatement=auto()
 
 
 StandardColumns = ['Open', 'High', 'Low', 'Close']
