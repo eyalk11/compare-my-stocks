@@ -7,6 +7,10 @@ Covers:
   pass-through, TOADJUSTLONG sub-panel assembly.
 - DataGenerator.readjust_for_currency: TOADJUST scalar 1/rate scaling and
   TOADJUSTLONG time-series scaling.
+- adjust_for_currency: rate collection for foreign currencies, the
+  heuristic fallback, and (xfail) the inconsistency between
+  get_relevant_currency and adjust_for_currency.
+- get_currency_hist: cache hit, fetch-and-merge on cache miss.
 - Cached-data smoke test that loads ~/.compare_my_stocks/hist_file.cache
   and exercises get_currency_on_certain_time on real ILS history.
 """
@@ -425,3 +429,191 @@ class TestReadjustForCurrency:
                       todate=datetime.datetime(2024, 1, 1))
         result = dg.readjust_for_currency('EUR_NORATE_TEST')
         assert result is None
+
+
+# ============================================================================
+# adjust_for_currency
+# ============================================================================
+
+class TestAdjustForCurrency:
+    """adjust_for_currency walks every non-base currency in symbol_info,
+    asks the input source for the FX rate, stores 1/rate in
+    _relevant_currencies_rates, and falls back to a per-symbol heuristic
+    derived from _alldates_adjusted/_alldates when the live rate is None.
+    """
+
+    def _bare_proc(self, symbol_info, source_rates):
+        """An InputProcessor wired with a mock _data and _inputsource that
+        returns scripted rates per (Basecur, currency) pair."""
+        p = InputProcessor.__new__(InputProcessor)
+        p.data = MagicMock()
+        p.data.symbol_info = symbol_info
+        p.data._alldates_adjusted = {}
+        p.data._alldates = {}
+        p._relevant_currencies_rates = {}
+        p._relevant_currencies_time = None
+        # Mock InputSource.
+        src = MagicMock()
+        src.get_current_currency.side_effect = lambda pair: source_rates.get(
+            pair[1])
+        p._inputsource = src
+        return p
+
+    def test_collects_rates_for_foreign_currencies_only(self):
+        """Skips Basecur (USD) and 'unk', queries everyone else."""
+        proc = self._bare_proc(
+            symbol_info={
+                'AAPL': {'currency': 'USD'},   # Basecur — skipped
+                'BABA': {'currency': 'unk'},   # unknown — skipped
+                'BNTX': {'currency': 'EUR'},
+                'LUMI': {'currency': 'ILS'},
+            },
+            source_rates={'EUR': 0.9, 'ILS': 0.27},
+        )
+        proc.adjust_for_currency()
+        # USD and unk must NOT be in the dict.
+        assert 'USD' not in proc._relevant_currencies_rates
+        assert 'unk' not in proc._relevant_currencies_rates
+        # Foreign currencies are present.
+        assert 'EUR' in proc._relevant_currencies_rates
+        assert 'ILS' in proc._relevant_currencies_rates
+
+    def test_stores_inverse_of_source_rate(self):
+        """adjust_for_currency stores 1/rate (line 1234)."""
+        proc = self._bare_proc(
+            symbol_info={'BNTX': {'currency': 'EUR'}},
+            source_rates={'EUR': 0.9},
+        )
+        proc.adjust_for_currency()
+        assert proc._relevant_currencies_rates['EUR'] == pytest.approx(1 / 0.9)
+
+    def test_heuristic_fallback_used_when_live_rate_is_none(self):
+        """When InputSource returns None for a currency, adjust_for_currency
+        derives a rate from _alldates_adjusted[sym] / _alldates[sym] for the
+        currency's representative symbol (cursymdic mapping)."""
+        proc = self._bare_proc(
+            symbol_info={'BNTX': {'currency': 'EUR'}},
+            source_rates={'EUR': None},
+        )
+        # Recent date so the staleness check passes.
+        import matplotlib.dates
+        recent = matplotlib.dates.date2num(datetime.datetime.now())
+        proc.data._alldates_adjusted = {'BNTX': {recent: 100.0}}
+        proc.data._alldates = {'BNTX': {recent: 110.0}}
+        proc.adjust_for_currency()
+        # Heuristic = 100/110 ≈ 0.909
+        assert proc._relevant_currencies_rates['EUR'] == pytest.approx(100.0 / 110.0)
+
+    def test_heuristic_skipped_when_data_too_stale(self):
+        """If the heuristic data is older than MaxRelevantCurrencyTimeHeur,
+        the rate stays None."""
+        proc = self._bare_proc(
+            symbol_info={'BNTX': {'currency': 'EUR'}},
+            source_rates={'EUR': None},
+        )
+        import matplotlib.dates
+        # 10 years ago — way past any reasonable heuristic window.
+        old = matplotlib.dates.date2num(
+            datetime.datetime.now() - datetime.timedelta(days=3650))
+        proc.data._alldates_adjusted = {'BNTX': {old: 100.0}}
+        proc.data._alldates = {'BNTX': {old: 110.0}}
+        proc.adjust_for_currency()
+        assert proc._relevant_currencies_rates.get('EUR') is None
+
+    @pytest.mark.xfail(reason="Bug: get_relevant_currency stores raw rate, "
+                              "adjust_for_currency stores 1/rate. First "
+                              "writer wins via the `if x not in ...` guard "
+                              "in get_relevant_currency, so the dict's "
+                              "semantics depend on call order.",
+                       strict=True)
+    def test_get_relevant_currency_and_adjust_for_currency_agree(self):
+        """Both writers should leave _relevant_currencies_rates in the same
+        state for the same currency, but they don't (see inputprocessor.py
+        line 1217 vs. line 1234)."""
+        rates = {'EUR': 0.9}
+
+        # Path 1: get_relevant_currency first.
+        p1 = self._bare_proc({'BNTX': {'currency': 'EUR'}}, rates)
+        p1.get_relevant_currency('EUR')
+        v1 = p1._relevant_currencies_rates['EUR']
+
+        # Path 2: adjust_for_currency first.
+        p2 = self._bare_proc({'BNTX': {'currency': 'EUR'}}, rates)
+        p2.adjust_for_currency()
+        v2 = p2._relevant_currencies_rates['EUR']
+
+        # If both writers used the same convention, v1 == v2.
+        assert v1 == pytest.approx(v2)
+
+
+# ============================================================================
+# get_currency_hist
+# ============================================================================
+
+class TestGetCurrencyHist:
+    """get_currency_hist returns FX history for a currency vs. Basecur over
+    a date range, hitting the local cache (currency_hist DataFrame) first
+    and only fetching from the input source for missing days."""
+
+    def _hist_for(self, dates, opens):
+        """Build a multi-index DataFrame matching the on-disk currency_hist
+        shape: outer level is the currency code, inner is OHLCV."""
+        idx = pd.to_datetime(dates)
+        cols = pd.MultiIndex.from_product(
+            [['ILS'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+        df = pd.DataFrame(index=idx, columns=cols, dtype=float)
+        for d, v in zip(idx, opens):
+            df.loc[d, ('ILS', 'Open')] = v
+            df.loc[d, ('ILS', 'High')] = v
+            df.loc[d, ('ILS', 'Low')] = v
+            df.loc[d, ('ILS', 'Close')] = v
+            df.loc[d, ('ILS', 'Volume')] = 1
+        return df
+
+    def _proc_with_cache(self, currency_hist, source_returns=None):
+        p = InputProcessor.__new__(InputProcessor)
+        p.data = MagicMock()
+        p.data.currency_hist = currency_hist
+        src = MagicMock()
+        src.get_current_currency = MagicMock(return_value=None)
+        if source_returns is not None:
+            src.get_currency_history = MagicMock(return_value=source_returns)
+        p._inputsource = src
+        return p
+
+    def test_returns_cached_slice_within_range(self, proc):
+        """When the cache covers the requested range, no fetch happens."""
+        cache = self._hist_for(
+            ['2024-06-01', '2024-06-02', '2024-06-03', '2024-06-04', '2024-06-05'],
+            [3.6, 3.62, 3.65, 3.63, 3.61],
+        )
+        p = self._proc_with_cache(cache)
+        df = p.get_currency_hist(
+            'ILS',
+            datetime.datetime(2024, 6, 2),
+            datetime.datetime(2024, 6, 4),
+            minimal=True,
+        )
+        # Should not have called the input source — cache had everything.
+        p._inputsource.get_currency_history.assert_not_called()
+        # And df is non-empty within the asked range.
+        assert df is not None and len(df) >= 3
+
+    def test_fetches_when_cache_is_missing_currency(self):
+        """Missing currency in cache → falls back to InputSource fetch."""
+        cache = self._hist_for(['2024-06-01'], [3.6])  # only ILS in cache
+        # source_returns mocks a successful fetch for some other currency.
+        fetched = pd.DataFrame(
+            {'Open': [1.1], 'High': [1.1], 'Low': [1.1],
+             'Close': [1.1], 'Volume': [1]},
+            index=pd.to_datetime(['2024-06-02']),
+        )
+        p = self._proc_with_cache(cache, source_returns=fetched)
+        # EUR isn't in the cache → must hit the source.
+        p.get_currency_hist(
+            'EUR',
+            datetime.datetime(2024, 6, 2),
+            datetime.datetime(2024, 6, 3),
+            minimal=True,
+        )
+        p._inputsource.get_currency_history.assert_called()

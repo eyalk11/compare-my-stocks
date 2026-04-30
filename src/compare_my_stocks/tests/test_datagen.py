@@ -737,3 +737,128 @@ class TestActOnDataIntegration:
 
         # Verify result shape
         assert final.shape == (5, 3)
+
+
+# ============================================================================
+# DataGenerator.unite_groups
+# ============================================================================
+
+from common.common import UniteType
+from processing.datagenerator import DataGenerator
+
+
+def _make_unite_dg(params_groups, group_members, used_unitetype,
+                   df, *, weighted_for_portfolio=False, portfolio=None,
+                   required_syms_result=None):
+    """Build a minimal DataGenerator that exercises only unite_groups."""
+    dg = DataGenerator.__new__(DataGenerator)
+    eng = MagicMock()
+    eng.Groups = group_members
+    eng.required_syms = MagicMock(return_value=required_syms_result or set())
+    eng.input_processor.get_portfolio_stocks = MagicMock(
+        return_value=list(portfolio or []))
+    eng.params.groups = params_groups
+    eng.params.weighted_for_portfolio = weighted_for_portfolio
+    dg._eng = eng
+    dg.used_unitetype = used_unitetype
+    return dg
+
+
+class TestUniteGroups:
+    """unite_groups collapses each group's stocks into a single per-group
+    column. With non-trivial unite (SUM/AVG/...), ndf starts empty and
+    only the unite columns plus required_syms are kept. With trivial
+    unite (just ADDTOTALS), ndf keeps every original column and just
+    appends 'All' or 'Portfolio'."""
+
+    def _df(self, dates, stock_values):
+        """stock_values: dict[stock_name → list[value]]"""
+        return pd.DataFrame(stock_values, index=pd.to_datetime(dates))
+
+    def test_sum_yields_column_per_group(self):
+        df = self._df(['2024-01-01', '2024-01-02'],
+                      {'A': [10.0, 11.0], 'B': [20.0, 22.0],
+                       'C': [5.0, 6.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1', 'G2'],
+            group_members={'G1': ['A', 'B'], 'G2': ['C']},
+            used_unitetype=UniteType.SUM, df=df,
+        )
+        ndf, cols = dg.unite_groups(df)
+        assert 'G1' in ndf.columns
+        assert 'G2' in ndf.columns
+        # G1 = A + B = [30, 33]; G2 = C = [5, 6]
+        assert list(ndf['G1']) == [30.0, 33.0]
+        assert list(ndf['G2']) == [5.0, 6.0]
+
+    def test_avg_yields_mean_per_group(self):
+        df = self._df(['2024-01-01'],
+                      {'A': [10.0], 'B': [20.0], 'C': [30.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1'],
+            group_members={'G1': ['A', 'B', 'C']},
+            used_unitetype=UniteType.AVG, df=df,
+        )
+        ndf, _ = dg.unite_groups(df)
+        # mean of [10, 20, 30] = 20
+        assert ndf['G1'].iloc[0] == pytest.approx(20.0)
+
+    def test_addtotal_appends_all_column_with_sum(self):
+        """Trivial unite (ADDTOTAL only) keeps every original stock column
+        AND appends 'All' = sum of required_syms."""
+        df = self._df(['2024-01-01'], {'A': [10.0], 'B': [20.0]})
+        dg = _make_unite_dg(
+            params_groups=[], group_members={},
+            used_unitetype=UniteType.ADDTOTAL, df=df,
+            required_syms_result={'A', 'B'},
+        )
+        ndf, _ = dg.unite_groups(df)
+        # Original cols preserved.
+        assert 'A' in ndf.columns
+        assert 'B' in ndf.columns
+        # 'All' appended with sum.
+        assert 'All' in ndf.columns
+        assert ndf['All'].iloc[0] == pytest.approx(30.0)
+
+    def test_sum_handles_overlapping_groups(self):
+        """Stock present in multiple groups counted in each group's sum."""
+        df = self._df(['2024-01-01'],
+                      {'A': [10.0], 'B': [20.0], 'C': [30.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1', 'G2'],
+            group_members={'G1': ['A', 'B'], 'G2': ['B', 'C']},
+            used_unitetype=UniteType.SUM, df=df,
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert ndf['G1'].iloc[0] == pytest.approx(30.0)  # A+B
+        assert ndf['G2'].iloc[0] == pytest.approx(50.0)  # B+C
+
+    def test_missing_stock_in_group_is_silently_skipped(self):
+        """If a group references a stock that isn't in df, it just gets
+        dropped from that group's sum (no exception)."""
+        df = self._df(['2024-01-01'], {'A': [10.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1'],
+            group_members={'G1': ['A', 'B_MISSING']},  # B is not in df
+            used_unitetype=UniteType.SUM, df=df,
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert ndf['G1'].iloc[0] == pytest.approx(10.0)
+
+    @pytest.mark.xfail(reason="Bug: unite_groups only implements SUM and "
+                              "AVG (datagenerator.py:236-247). UniteType.MIN "
+                              "and UniteType.MAX are defined in common.py:175-176 "
+                              "but no codepath sets ndf[gr], so the column "
+                              "never appears. Probably dead UI options.",
+                       strict=True)
+    def test_min_yields_per_date_minimum(self):
+        df = self._df(['2024-01-01'],
+                      {'A': [10.0], 'B': [20.0], 'C': [30.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1'],
+            group_members={'G1': ['A', 'B', 'C']},
+            used_unitetype=UniteType.MIN, df=df,
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert 'G1' in ndf.columns
+        assert ndf['G1'].iloc[0] == pytest.approx(10.0)
