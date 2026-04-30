@@ -949,20 +949,31 @@ class InputProcessor(InputProcessorInterface):
             self._save_data_proc.command.emit(TaskParams(params=tuple()))
 
 
-    def get_special_symbol_hist(self,sym,fromdate,todate):
-        #fill dates by days, do for on days
-        #assyme datetime 
+    def get_special_symbol_hist(self, sym, fromdate, todate):
+        # Build an OHLCV series for a SpecialSymbol (#XYZ). For a foreign
+        # currency we plot its exchange rate against config.Symbols.Basecur
+        # over the requested range; for the base currency itself we plot a
+        # flat 1.0 line (degenerate but useful as a no-change baseline).
         with warnings.catch_warnings():
-        # Ignore all warnings
             warnings.simplefilter("ignore")
-            td= todate - fromdate  
-            f= fromdate.date() 
-            df= pd.DataFrame()
-            for f in pd.date_range(fromdate,todate): 
-                sp=sym.get_date(f.to_pydatetime().date())
-                dic= {'Open':sp,'High':sp,'Low':sp,'Close':sp,'Volume':1}
-                new_row = pd.Series(dic, name=f)
-                df = df.append(new_row)
+            rows = {}
+            last_val = None
+            is_base = sym.currency == config.Symbols.Basecur
+            for f in pd.date_range(fromdate, todate):
+                if is_base:
+                    val = 1.0
+                else:
+                    res = self.get_currency_on_certain_time(
+                        sym.currency, f.to_pydatetime(), cache_only=False
+                    )
+                    val = res[0] if res is not None else None
+                    if val in (None, 'err'):
+                        val = last_val  # forward-fill weekends / missing dates
+                if val is None:
+                    continue
+                last_val = val
+                rows[f] = {'Open': val, 'High': val, 'Low': val, 'Close': val, 'Volume': 1}
+            df = pd.DataFrame.from_dict(rows, orient='index')
             return sym.dic, df
 
 

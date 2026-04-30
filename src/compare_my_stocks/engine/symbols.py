@@ -100,9 +100,6 @@ class SpecialSymbol(AbstractSymbol):
     def __init__(self, currency):
         self.currency=currency
 
-    def get_date(self, date):
-        return 100
-        
     @property
     def dic(self):
         return {'currency':self.currency}

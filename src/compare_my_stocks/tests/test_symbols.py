@@ -337,13 +337,6 @@ class TestSpecialSymbolBehavior:
         symbol = SpecialSymbol("GBP")
         assert symbol.symbol == f"{config.Symbols.SpecialSymbols}GBP"
 
-    def test_special_symbol_get_date(self):
-        """Test SpecialSymbol get_date method."""
-        symbol = SpecialSymbol("USD")
-        # get_date always returns 100
-        assert symbol.get_date(None) == 100
-        assert symbol.get_date("2023-01-01") == 100
-
     def test_special_symbol_hashing(self):
         """Test SpecialSymbol hashing behavior."""
         symbol1 = SpecialSymbol("USD")
