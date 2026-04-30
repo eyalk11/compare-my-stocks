@@ -74,7 +74,14 @@ class FormInitializer(FormObserver, FormInitializerInterface):
                 rad.setChecked(bool(limit_by & getattr(LimitType,name)))
             elif name.startswith('unite'):
                 name = name[len('unite') + 1:]
-                rad.setChecked( bool(unite &  getattr(UniteType,name)))
+                flag = getattr(UniteType, name)
+                if flag == UniteType.NONE:
+                    # NONE has no bit, so & always yields 0 — treat it as
+                    # "checked iff no exclusive base-mode bit is set".
+                    EXCLUSIVES = UniteType.SUM | UniteType.AVG | UniteType.MIN | UniteType.MAX
+                    rad.setChecked((unite & EXCLUSIVES) == 0)
+                else:
+                    rad.setChecked(bool(unite & flag))
             else:
                 try:
                     rad.setChecked(bool(type & getattr(Types, name)))
