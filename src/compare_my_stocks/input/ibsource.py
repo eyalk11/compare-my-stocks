@@ -201,19 +201,20 @@ class IBSourceRem:
 
     @Pyro5.server.expose
     @make_sure_connected
-    def get_current_currency(self, pair):
-        logging.debug("get_current_currency {pair}")
-        rev, contract = self.resolve_forex_pair(pair)
+    def get_current_currency_for_contract(self, contractdic):
+        # Caller (IBSource.get_current_currency) resolves & qualifies the
+        # contract via _resolve_forex_contract, so contractdic already has
+        # a conId and can be used by ib_async without re-qualification.
+        contract = Contract(**contractdic) if not isinstance(contractdic, Contract) else contractdic
         m = self.get_realtime_contract(contract).markPrice
         if math.isnan(m):
-            logging.warn("getting historical data instead of real")
+            logging.warning("getting historical data instead of real")
             a = self.reqHistoricalData(contract, datetime.datetime.now(), 1)
             if len(a) > 0:
-                m= a[0].close
-        if rev and m!=0 :
-            return 1 / m
-        else:
-            raise ValueError(f"price is 0 or nan for {pair} with contract {contract}") 
+                m = a[0].close
+        if m is None or (isinstance(m, float) and math.isnan(m)) or m == 0:
+            return None
+        return m
 
 
     def get_realtime_contract(self, contract, additional=False):
@@ -372,15 +373,21 @@ class IBSource(InputSource):
         err_description="get currenct currency", return_succ=None, never_throw=True
     )
     def get_current_currency(self, pair):
+        # Resolve forex pair to a fully-qualified Contract (with conId) on
+        # the client side via contract details, then ship the contract dict
+        # to the sidecar. resolve_forex_pair already tries both directions
+        # of the pair and tells us whether the price needs inverting.
+        r = self.resolve_forex_pair(pair)
+        if r is None:
+            return None
+        reverse, contract = r
         try:
-            res = self.ibrem.get_current_currency(pair)
+            res = self.ibrem.get_current_currency_for_contract(asdict(contract))
         except RequestError:
             res = None
         if res is None:
-            res = self.ibrem.get_current_currency(tuple(pair[::-1]))
-            if res is not None:
-                res = 1 / res
-        return res
+            return None
+        return 1 / res if reverse else res
 
     # def get_current_currency(self,pair):
     # self.get_current_currency_int.cache_remove_if( lambda user_function_arguments, user_function_result, is_alive: user_function_result is None)

@@ -434,6 +434,82 @@ class TestHandleCompare:
         assert hasattr(aod, 'handle_compare')
         assert callable(aod.handle_compare)
 
+    def test_handle_compare_diff(self, mock_input_data):
+        """COMPARE | DIFF: result is (stock_price - benchmark_price) per row."""
+        # 3 stocks, 5 timestamps each
+        arr = np.array([
+            [100.0, 110.0, 120.0, 130.0, 140.0],   # A
+            [50.0, 55.0, 60.0, 65.0, 70.0],        # B
+            [200.0, 210.0, 220.0, 230.0, 240.0],   # C
+        ])
+        df = pd.DataFrame({'A': np.zeros(5), 'B': np.zeros(5), 'C': np.zeros(5)})
+        # benchmark series, length == number of timestamps
+        compit_arr = np.array([100.0, 105.0, 110.0, 115.0, 120.0])
+        fulldf = pd.DataFrame({'QQQ': compit_arr})
+
+        aod = ActOnData(
+            arr=arr, df=df, type=Types.COMPARE | Types.DIFF,
+            fulldf=fulldf, compare_with='QQQ', inputData=mock_input_data,
+        )
+        aod.do()
+
+        # ign=False for plain COMPARE (no PRECENTAGE) → handle_operation runs
+        # AFTER handle_compare overwrites transpose_arr with (stock - benchmark).
+        # refarr was computed before handle_compare: first column [100, 50, 200].
+        # First row: (stock-benchmark) - refarr = [0,-50,100] - [100,50,200] = [-100,-100,-100]
+        # Last row: [20,-50,120] - [100,50,200] = [-80,-100,-80]
+        np.testing.assert_array_almost_equal(aod.newarr[0], [-100.0, -100.0, -100.0])
+        np.testing.assert_array_almost_equal(aod.newarr[-1], [-80.0, -100.0, -80.0])
+
+    def test_handle_compare_percentage(self, mock_input_data):
+        """COMPARE | PRECENTAGE: relative outperformance vs benchmark, in %."""
+        arr = np.array([
+            [100.0, 110.0, 120.0],   # A: +20%
+            [200.0, 220.0, 260.0],   # B: +30%
+        ])
+        df = pd.DataFrame({'A': np.zeros(3), 'B': np.zeros(3)})
+        compit_arr = np.array([100.0, 105.0, 110.0])  # benchmark: +10%
+        fulldf = pd.DataFrame({'QQQ': compit_arr})
+
+        aod = ActOnData(
+            arr=arr, df=df, type=Types.COMPARE | Types.PRECENTAGE,
+            fulldf=fulldf, compare_with='QQQ', inputData=mock_input_data,
+        )
+        aod.do()
+
+        # ign=True path: newarr = ((arr/refarr) / (compit/compit_initial) - 1) * 100
+        # refarr defaults to first column ([100, 200]); compit_initial = 100.
+        # First row: ((100/100)/(100/100) - 1)*100 = 0 for both → [0, 0]
+        np.testing.assert_array_almost_equal(aod.newarr[0], [0.0, 0.0])
+        # Last row A: ((120/100)/(110/100) - 1)*100 = (1.2/1.1 - 1)*100 ≈ 9.0909
+        # Last row B: ((260/200)/(110/100) - 1)*100 = (1.3/1.1 - 1)*100 ≈ 18.1818
+        np.testing.assert_array_almost_equal(
+            aod.newarr[-1], [9.0909090909, 18.1818181818], decimal=6
+        )
+
+    def test_handle_compare_percentage_diff(self, mock_input_data):
+        """COMPARE | PRECENTAGE | DIFF: difference of percent changes."""
+        arr = np.array([
+            [100.0, 110.0, 120.0],   # +20%
+            [200.0, 220.0, 260.0],   # +30%
+        ])
+        df = pd.DataFrame({'A': np.zeros(3), 'B': np.zeros(3)})
+        compit_arr = np.array([100.0, 105.0, 110.0])  # +10%
+        fulldf = pd.DataFrame({'QQQ': compit_arr})
+
+        aod = ActOnData(
+            arr=arr, df=df,
+            type=Types.COMPARE | Types.PRECENTAGE | Types.DIFF,
+            fulldf=fulldf, compare_with='QQQ', inputData=mock_input_data,
+        )
+        aod.do()
+
+        # newarr = (arr/refarr - compit/compit_initial) * 100
+        # Last row A: (120/100 - 110/100)*100 = 10
+        # Last row B: (260/200 - 110/100)*100 = (1.3 - 1.1)*100 = 20
+        np.testing.assert_array_almost_equal(aod.newarr[0], [0.0, 0.0])
+        np.testing.assert_array_almost_equal(aod.newarr[-1], [10.0, 20.0])
+
 
 # ============================================================================
 # Tests for fixinf
