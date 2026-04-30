@@ -13,6 +13,9 @@ P&L, and sector groupings. Market data from **Interactive Brokers** or
 - :material-rocket-launch: **[Quick start](QUICKSTART.md)** \
   Install, point the app at IB or Polygon, plot your first graph in 10 minutes.
 
+- :material-window-maximize: **[UI reference](UI.md)** \
+  Field guide to every control, list, and toggle in the main window.
+
 - :material-cog: **[Configuration reference](CONFIGURATION.md)** \
   Every field in `myconfig.yaml`, what it does, and the default value.
 
