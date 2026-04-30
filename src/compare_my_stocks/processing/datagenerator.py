@@ -259,14 +259,18 @@ class DataGenerator(DataGeneratorInterface):
     def generate_data(self):
         # self.params.use_ext=True #Will be changed by func
 
+        logging.debug(f"generate_data: type={self.params.type!r} unite={self.params.unite_by_group!r}")
         self.get_data_by_type(self.params.type, self.params.compare_with)
+        logging.debug("generate_data: get_data_by_type done")
         self.cols = self.df.columns
         if self.df.isnull().all(axis=None):
             raise NoDataException("Dataframe is empty")
 
         b = self.update_ranges()
+        logging.debug("generate_data: update_ranges done")
 
         self.filter_ranges(b)
+        logging.debug("generate_data: filter_ranges done")
         self.finalcols=self.df.columns
         self.df_before_act = self.df_before_act [ self.df.columns]
 
@@ -274,6 +278,7 @@ class DataGenerator(DataGeneratorInterface):
             df.rename({y: matplotlib.dates.num2date(y) for y in df.index}, axis=0, inplace=1)  # problematicline
         conv_index(self.df)
         conv_index(self.df_before_act)
+        logging.debug("generate_data: conv_index done")
 
 
     def filter_ranges(self,  b):

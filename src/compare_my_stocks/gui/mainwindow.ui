@@ -94,6 +94,9 @@
                  <layout class="QGridLayout" name="gridLayout_21">
                   <item row="0" column="0">
                    <widget class="QComboBox" name="addstock">
+                    <property name="toolTip">
+                     <string>Type or pick a ticker. Lists every symbol the app currently knows about (cache + portfolio).</string>
+                    </property>
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="MinimumExpanding">
                       <horstretch>3</horstretch>
@@ -292,6 +295,9 @@
                       <enum>Qt::Vertical</enum>
                      </property>
                      <widget class="QPushButton" name="addtoref">
+                      <property name="toolTip">
+                       <string>Move highlighted entries from Selected to Reference (always-drawn benchmarks).</string>
+                      </property>
                       <property name="minimumSize">
                        <size>
                         <width>16</width>
@@ -309,6 +315,9 @@
                       </property>
                      </widget>
                      <widget class="QPushButton" name="deletebtn">
+                      <property name="toolTip">
+                       <string>Delete highlighted entries from whichever list has focus.</string>
+                      </property>
                       <property name="minimumSize">
                        <size>
                         <width>16</width>
@@ -326,6 +335,9 @@
                       </property>
                      </widget>
                      <widget class="QPushButton" name="addtosel">
+                      <property name="toolTip">
+                       <string>Move highlighted entries from Reference to Selected.</string>
+                      </property>
                       <property name="maximumSize">
                        <size>
                         <width>16777215</width>
@@ -526,6 +538,9 @@
                   </property>
                   <item row="0" column="0">
                    <widget class="QRadioButton" name="limit_RANGE">
+                    <property name="toolTip">
+                     <string>Filter: each stock's [min,max] must lie inside the Value range.</string>
+                    </property>
                     <property name="text">
                      <string>Range</string>
                     </property>
@@ -533,6 +548,9 @@
                   </item>
                   <item row="0" column="1">
                    <widget class="QRadioButton" name="limit_MAX">
+                    <property name="toolTip">
+                     <string>Filter: only the stock's max value must lie inside the Value range.</string>
+                    </property>
                     <property name="text">
                      <string>Max</string>
                     </property>
@@ -540,6 +558,9 @@
                   </item>
                   <item row="0" column="2">
                    <widget class="QRadioButton" name="limit_MIN">
+                    <property name="toolTip">
+                     <string>Filter: only the stock's min value must lie inside the Value range.</string>
+                    </property>
                     <property name="text">
                      <string> Min</string>
                     </property>
@@ -594,6 +615,9 @@
                <layout class="QGridLayout" name="gridLayout_19">
                 <item row="0" column="0">
                  <widget class="QRadioButton" name="minimal_mode">
+                  <property name="toolTip">
+                   <string>Compact layout - collapse bottom controls for more chart area.</string>
+                  </property>
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -604,6 +628,9 @@
                 </item>
                 <item row="0" column="1">
                  <widget class="QRadioButton" name="jupyter_mode">
+                  <property name="toolTip">
+                   <string>Replace/augment the chart with the embedded notebook.</string>
+                  </property>
                   <property name="text">
                    <string>Jupyter Mode</string>
                   </property>
@@ -611,6 +638,9 @@
                 </item>
                 <item row="0" column="2">
                  <widget class="QRadioButton" name="nojpy_mode">
+                  <property name="toolTip">
+                   <string>Hide the embedded notebook entirely.</string>
+                  </property>
                   <property name="text">
                    <string>No Jupyter</string>
                   </property>
@@ -618,6 +648,9 @@
                 </item>
                 <item row="0" column="3">
                  <widget class="QRadioButton" name="full_mode">
+                  <property name="toolTip">
+                   <string>Show everything (default).</string>
+                  </property>
                   <property name="text">
                    <string>Full Mode</string>
                   </property>
@@ -718,6 +751,9 @@
                          <layout class="QVBoxLayout" name="verticalLayout_3">
                           <item>
                            <widget class="QRadioButton" name="PRICE">
+                            <property name="toolTip">
+                             <string>Y-axis = close (or adjusted close) price per day.</string>
+                            </property>
                             <property name="text">
                              <string>Price</string>
                             </property>
@@ -728,6 +764,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="PRICESELLS">
+                            <property name="toolTip">
+                             <string>Y-axis = price-to-sales ratio.</string>
+                            </property>
                             <property name="text">
                              <string>Price/Sells</string>
                             </property>
@@ -745,6 +784,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="PERATIO">
+                            <property name="toolTip">
+                             <string>Y-axis = price/earnings ratio (needs earnings data).</string>
+                            </property>
                             <property name="enabled">
                              <bool>true</bool>
                             </property>
@@ -769,6 +811,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="PROFIT">
+                            <property name="toolTip">
+                             <string>Y-axis = unrealized (mark-to-market) profit on shares still held.</string>
+                            </property>
                             <property name="text">
                              <string>Unrealized Profit</string>
                             </property>
@@ -776,6 +821,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="RELPROFIT">
+                            <property name="toolTip">
+                             <string>Y-axis = realized profit on shares already sold.</string>
+                            </property>
                             <property name="text">
                              <string>Realized</string>
                             </property>
@@ -783,6 +831,9 @@
                           </item>
                           <item>
                            <widget class="QRadioButton" name="THEORTICAL_PROFIT">
+                            <property name="toolTip">
+                             <string>What-if benchmark: same dollar amount held in 'Compare With' instead.</string>
+                            </property>
                             <property name="text">
                              <string>Theortical</string>
                             </property>
@@ -815,6 +866,9 @@
                      <layout class="QVBoxLayout" name="verticalLayout_6">
                       <item>
                        <widget class="QRadioButton" name="ABS">
+                        <property name="toolTip">
+                         <string>Plot the raw value, untransformed.</string>
+                        </property>
                         <property name="text">
                          <string>Absolute</string>
                         </property>
@@ -878,6 +932,9 @@
                        <layout class="QVBoxLayout" name="verticalLayout_4">
                         <item>
                          <widget class="QRadioButton" name="RELTOSTART">
+                          <property name="toolTip">
+                           <string>Anchor: first date in visible range.</string>
+                          </property>
                           <property name="text">
                            <string>Start Time</string>
                           </property>
@@ -888,6 +945,9 @@
                         </item>
                         <item>
                          <widget class="QRadioButton" name="RELTOEND">
+                          <property name="toolTip">
+                           <string>Anchor: last date in visible range.</string>
+                          </property>
                           <property name="text">
                            <string>End Time</string>
                           </property>
@@ -898,6 +958,9 @@
                         </item>
                         <item>
                          <widget class="QRadioButton" name="RELTOMAX">
+                          <property name="toolTip">
+                           <string>Anchor: each stock's own peak in the range (use with Percentage for drawdown-from-peak).</string>
+                          </property>
                           <property name="text">
                            <string>Max</string>
                           </property>
@@ -905,6 +968,9 @@
                         </item>
                         <item>
                          <widget class="QRadioButton" name="RELTOMIN">
+                          <property name="toolTip">
+                           <string>Anchor: each stock's own trough in the range.</string>
+                          </property>
                           <property name="text">
                            <string>Min</string>
                           </property>
@@ -938,6 +1004,9 @@
                      <layout class="QVBoxLayout" name="verticalLayout_11">
                       <item>
                        <widget class="QRadioButton" name="unite_NONE">
+                        <property name="toolTip">
+                         <string>Don't unite groups - every constituent stock is drawn separately.</string>
+                        </property>
                         <property name="text">
                          <string>None</string>
                         </property>
@@ -948,6 +1017,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="unite_MAX">
+                        <property name="toolTip">
+                         <string>Each group's line = highest stock in the group, per date.</string>
+                        </property>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
@@ -958,6 +1030,9 @@
                       </item>
                       <item>
                        <widget class="QRadioButton" name="unite_MIN">
+                        <property name="toolTip">
+                         <string>Each group's line = lowest stock in the group, per date.</string>
+                        </property>
                         <property name="enabled">
                          <bool>false</bool>
                         </property>
@@ -1165,6 +1240,9 @@
                       </item>
                       <item row="2" column="3">
                        <widget class="QPushButton" name="open_statusbtn">
+                        <property name="toolTip">
+                         <string>Open a window listing every ticker with its data-fetch status (good / bad / partial / cached date).</string>
+                        </property>
                         <property name="enabled">
                          <bool>true</bool>
                         </property>
@@ -1178,6 +1256,9 @@
                    </item>
                    <item row="0" column="2">
                     <widget class="QCheckBox" name="checkBox_showtrans">
+                     <property name="toolTip">
+                      <string>Overlay buy/sell markers on the chart.</string>
+                     </property>
                      <property name="text">
                       <string>Show Transactions</string>
                      </property>
@@ -1229,6 +1310,9 @@
                    </item>
                    <item row="0" column="1">
                     <widget class="QCheckBox" name="unite_ADDPROT">
+                     <property name="toolTip">
+                      <string>Add an extra line: value-weighted sum of your current portfolio.</string>
+                     </property>
                      <property name="enabled">
                       <bool>true</bool>
                      </property>
@@ -1260,6 +1344,9 @@
                    </item>
                    <item row="1" column="0">
                     <widget class="QCheckBox" name="filter_zeros">
+                     <property name="toolTip">
+                      <string>Drop stocks whose values are all zero or NaN.</string>
+                     </property>
                      <property name="text">
                       <string>Filter zero values </string>
                      </property>
@@ -1273,6 +1360,9 @@
                    </item>
                    <item row="2" column="0">
                     <widget class="QCheckBox" name="unite_ADDTOTAL">
+                     <property name="toolTip">
+                      <string>Add an extra line: sum of every visible ticker.</string>
+                     </property>
                      <property name="enabled">
                       <bool>true</bool>
                      </property>
@@ -1367,6 +1457,9 @@
                <layout class="QGridLayout" name="gridLayout_17">
                 <item row="0" column="0">
                  <widget class="QPushButton" name="reload_notebook">
+                  <property name="toolTip">
+                   <string>Re-execute the embedded notebook (defaultnotebook.ipynb).</string>
+                  </property>
                   <property name="text">
                    <string>Reload</string>
                   </property>
@@ -1374,6 +1467,9 @@
                 </item>
                 <item row="0" column="1">
                  <widget class="QPushButton" name="debug_btn">
+                  <property name="toolTip">
+                   <string>Launch the notebook in a real Jupyter window (better for editing).</string>
+                  </property>
                   <property name="text">
                    <string>Open In Jupyter</string>
                   </property>
@@ -1381,6 +1477,9 @@
                 </item>
                 <item row="0" column="2">
                  <widget class="QPushButton" name="pushButton">
+                  <property name="toolTip">
+                   <string>Swap to a different .ipynb file.</string>
+                  </property>
                   <property name="enabled">
                    <bool>false</bool>
                   </property>
@@ -1435,6 +1534,9 @@
                 </item>
                 <item>
                  <widget class="QPushButton" name="edit_groupBtn">
+                  <property name="toolTip">
+                   <string>Open the group editor (rename groups, add/remove tickers, reorder).</string>
+                  </property>
                   <property name="text">
                    <string>Edit Groups</string>
                   </property>
@@ -1492,6 +1594,9 @@
                    </item>
                    <item row="1" column="1">
                     <widget class="QComboBox" name="comparebox">
+                     <property name="toolTip">
+                      <string>Benchmark ticker used when 'Do Comparison' is on. Try QQQ, SPY, or pseudo-symbols like #USD/#EUR.</string>
+                     </property>
                      <property name="editable">
                       <bool>true</bool>
                      </property>
@@ -1570,6 +1675,9 @@
                    </item>
                    <item>
                     <widget class="QCheckBox" name="WEIGHTED">
+                     <property name="toolTip">
+                      <string>Use value-weighted (instead of equal-weighted) aggregation for Sum unite / Portfolio line.</string>
+                     </property>
                      <property name="text">
                       <string>Weighted avg for portfolio</string>
                      </property>
@@ -1597,6 +1705,9 @@
                    </item>
                    <item>
                     <widget class="QPushButton" name="clearBtn">
+                     <property name="toolTip">
+                      <string>Wipe the saved graphs list (asks first).</string>
+                     </property>
                      <property name="text">
                       <string>Clear all</string>
                      </property>

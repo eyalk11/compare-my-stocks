@@ -164,11 +164,14 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
     def call_data_generator(self, auto_reprocess=True):
         b = 0
         for tries in range(2):
+            logging.debug(f"call_data_generator try={tries}")
             if not self._datagen.verify_conditions():
                 self.statusChanges.emit("Graph Invalid! Check parameters")
                 return False
             try:
+                logging.debug("call_data_generator: generate_data start")
                 self._datagen.generate_data()
+                logging.debug("call_data_generator: generate_data end")
                 return 1 + b
             except NoDataException:
                 if auto_reprocess:
@@ -183,6 +186,8 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
             except Exception as e:
                 self.statusChanges.emit(f"Exception in generation: {e}")
                 raise
+        logging.debug("call_data_generator: exhausted retries without return")
+        return False
 
     def call_graph_generator(
         self, df, just_upd, type, orig_data, adjust_date=False, additional_df=None
@@ -211,6 +216,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 logging.error("failed to get transaction data for graph")
 
         try:
+            logging.debug("call_graph_generator: gen_actual_graph start")
             self._generator.gen_actual_graph(
                 list(df.columns),
                 df,
@@ -224,6 +230,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 plot_data=plot_data,
                 additional_df=additional_df,
             )
+            logging.debug("call_graph_generator: gen_actual_graph end")
             if self._inp.failed_to_get_new_data:
                 upd("Generated Graph with old data  (  Query failed :() ")
             else:
