@@ -1,8 +1,9 @@
 """Tests for the IB Activity Statement CSV importer.
 
-Uses a real statement file (C:/Users/ekarni/Downloads/U6644097_20260429.csv)
-when present, plus a synthetic fixture exercising the closed-out
-L/T-realized fallback path.
+The real-statement tests are gated on the ``IB_STATEMENT_CSV`` env var
+(point it at any IB Activity Statement export) — the file itself is not
+committed because it contains an account number. A synthetic fixture
+covers the closed-out L/T-realized fallback path unconditionally.
 """
 import datetime
 import os
@@ -16,12 +17,13 @@ sys.path.insert(0, str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
 from transactions.ibstatementhandler import parse_ib_statement
 
 
-REAL_STATEMENT = Path(r"C:/Users/ekarni/Downloads/U6644097_20260429.csv")
+_REAL_PATH = os.environ.get("IB_STATEMENT_CSV")
+REAL_STATEMENT = Path(_REAL_PATH) if _REAL_PATH else None
 
 
-@pytest.mark.skipif(not REAL_STATEMENT.exists(), reason="real IB statement not present")
+@pytest.mark.skipif(not (REAL_STATEMENT and REAL_STATEMENT.exists()), reason="real IB statement not present")
 class TestRealStatementParse:
-    """Parse the real U6644097_20260429.csv and verify the structural claims
+    """Parse the env-pointed real statement and verify the structural claims
     we make in the importer."""
 
     @classmethod
@@ -62,7 +64,7 @@ class TestRealStatementParse:
         )
 
 
-@pytest.mark.skipif(not REAL_STATEMENT.exists(), reason="real IB statement not present")
+@pytest.mark.skipif(not (REAL_STATEMENT and REAL_STATEMENT.exists()), reason="real IB statement not present")
 class TestRealStatementBuydict:
     """End-to-end: real CSV -> populated buydict via the handler.
 
