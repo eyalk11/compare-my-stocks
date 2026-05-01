@@ -247,6 +247,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         reprocess = 1 if (not self.input_processor._alldates) else 0
 
         params.increase_fig = False
+        logging.info(f"update_graph called with params: {params!r}")
         self.gen_graph(params, just_upd=1, reprocess=reprocess)
 
 

@@ -167,7 +167,14 @@ class InputProcessor(InputProcessorInterface):
 
 
     def resolve_currency(self, sym, l, hist):
-        #very inefficient . but for few..
+        # ExchangeCurrency wins over whatever the data source reports — used to
+        # patch IB's "London=GBP" lie (LSE prices are in GBp/pence). Set
+        # ExchangeCurrency: {London: GBp} + CurrencyFactor: {GBp: 100} to fix.
+        exchange = l.get('exchange', 'unk') if l else 'unk'
+        override = config.Symbols.ExchangeCurrency.get(exchange)
+        if override:
+            return override
+
         if 'Currency' in hist:
             currency = hist['Currency'][0]
         else:
@@ -177,8 +184,6 @@ class InputProcessor(InputProcessorInterface):
         if currency == 'unk':
             logging.debug((f'resolving currency for {sym}'))
             currency = config.Symbols.StockCurrency.get(sym, 'unk')
-        if currency == 'unk':
-            currency = config.Symbols.ExchangeCurrency.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             logging.debug((f'unk currency for {sym}'))
         return currency
@@ -1086,11 +1091,19 @@ class InputProcessor(InputProcessorInterface):
         if l is None:
             logging.warn("no info for %s , using default " % sym)
             currency =  'unk'
-        elif not (sym in self._data.symbol_info and ('currency' in self._data.symbol_info[sym] ) and self._data.get_currency_for_sym(sym)) :
-            currency = self.resolve_currency(sym, l, hist)
-            self._data.symbol_info[sym].update( {'currency': currency})
         else:
-            currency= self._data.get_currency_for_sym(sym)
+            # Re-apply ExchangeCurrency override even if a transaction handler
+            # (e.g. IBStatement) already wrote a currency tag — the override is
+            # the source of truth for pence/agorot quirks.
+            override = config.Symbols.ExchangeCurrency.get(l.get('exchange', 'unk'))
+            if override:
+                currency = override
+                self._data.symbol_info[sym]['currency'] = currency
+            elif not (sym in self._data.symbol_info and ('currency' in self._data.symbol_info[sym] ) and self._data.get_currency_for_sym(sym)) :
+                currency = self.resolve_currency(sym, l, hist)
+                self._data.symbol_info[sym].update( {'currency': currency})
+            else:
+                currency= self._data.get_currency_for_sym(sym)
 
         if currency != config.Symbols.Basecur and currency != 'unk':
             adjusted =  self.get_adjusted_df_for_currency(currency, maxdate, mindate, hist, sym)

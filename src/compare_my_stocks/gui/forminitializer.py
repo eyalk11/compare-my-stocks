@@ -170,6 +170,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             minmax = (minmax[0],minmax[0]+0.1)
         self.window.min_crit.setRange(minmax[0], minmax[1])
         self.window.min_crit.setValue(minmax)
+        self.graphObj.params.valuerange = list(minmax)
         self.disable_slider_values_updates = False
 
     def update_range_num(self,nuofoptions):
@@ -178,6 +179,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.disable_slider_values_updates=True
         self.window.max_num.setRange(0, nuofoptions)
         self.window.max_num.setValue((0, nuofoptions))
+        self.graphObj.params.numrange = (None, None)
         self.disable_slider_values_updates = False
 
     def update_ranges(self,reset_type=ResetRanges.IfAPROP):
@@ -201,6 +203,8 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         if reset_type==ResetRanges.FORCE:
             self.window.max_num.setValue((0, nuofoptions))
             self.window.min_crit.setValue((self.graphObj.minValue, self.graphObj.maxValue))
+            self.graphObj.params.valuerange = [self.graphObj.minValue, self.graphObj.maxValue]
+            self.graphObj.params.numrange = (None, None)
         self.disable_slider_values_updates = False
 
     @simple_exception_handling(err_description="Error in adding items")

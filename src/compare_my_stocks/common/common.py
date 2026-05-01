@@ -101,7 +101,17 @@ def to_yaml(enum_class):
 
     def from_yaml(loader, node):
         #x=loader.construct_scalar(node)
-        return enum_class[node.value]
+        val = node.value
+        if '|' in val:
+            result = None
+            for part in val.split('|'):
+                part = part.strip()
+                if not part:
+                    continue
+                member = enum_class[part]
+                result = member if result is None else result | member
+            return result
+        return enum_class[val]
     def add_stuff(yaml):
     # add the representer to the yaml serializer
         #yaml.add_representer(enum_class, to_yaml_inner)
@@ -355,8 +365,8 @@ class TransactionSourceType(Flag):
     Cache=0
     IB=auto()
     MyStock=auto()
-    Both= IB | MyStock
     IBStatement=auto()
+    All= IB | MyStock | IBStatement
 
 
 StandardColumns = ['Open', 'High', 'Low', 'Close']

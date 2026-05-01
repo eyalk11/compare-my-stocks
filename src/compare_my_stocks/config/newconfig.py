@@ -112,7 +112,7 @@ class TransactionHandlersConf:
 
     '''
     JustFromTheEndOfMyStock : bool = False
-    TransactionSource:  TransactionSourceType = TransactionSourceType.Both
+    TransactionSource:  TransactionSourceType = TransactionSourceType.All
     TrackStockDict : Dict[str,Set[datetime.datetime]] = field(default_factory=dict)
     Earnings: EarningsConf= field(default_factory=EarningsConf)
     ReadjustJustIB : bool = False
