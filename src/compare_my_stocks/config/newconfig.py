@@ -77,6 +77,7 @@ class IBConf:
     FlexQuery: Optional[str] = None
     QueryIfOlderThan: datetime.timedelta = datetime.timedelta(days=3)
     PromptOnQueryFail: bool = True  # if FlexToken is set and a query fails (e.g. token expired, code 1012), prompt for a new token on stdin and retry
+    OnlyNewerThanIBStatement: bool = False  # ignore IB Flex trades dated <= IBStatement.WhenGenerated, both when fetching into cache and when reading from cache
 
 @paramaware 
 @dataclass 

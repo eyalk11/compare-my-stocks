@@ -28,7 +28,7 @@ class TestRealStatementParse:
 
     @classmethod
     def setup_class(cls):
-        cls.period, cls.opens, cls.realized = parse_ib_statement(str(REAL_STATEMENT))
+        cls.period, cls.when_generated, cls.opens, cls.realized = parse_ib_statement(str(REAL_STATEMENT))
 
     def test_period_extracted(self):
         assert self.period.date() == datetime.date(2026, 4, 29)

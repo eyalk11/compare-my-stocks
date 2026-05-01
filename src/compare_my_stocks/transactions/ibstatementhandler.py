@@ -58,15 +58,49 @@ def _to_float(s, default=0.0):
         return default
 
 
+def _parse_when_generated(raw):
+    """Parse a WhenGenerated value like '2026-04-30, 13:59:00 EDT'. Returns
+    a datetime (naive — tz abbreviation is dropped to keep comparisons
+    consistent with the naive datetimes ibflex emits) or None on failure."""
+    if not raw:
+        return None
+    try:
+        return _dateparser.parse(raw, ignoretz=True)
+    except (ValueError, TypeError):
+        return None
+
+
+def read_ib_statement_when_generated(path):
+    """Lightweight scan for the WhenGenerated row only. Returns a naive
+    datetime or None if the row is missing/unparseable."""
+    try:
+        with open(path, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if (
+                    row
+                    and row[0] == "Statement"
+                    and len(row) >= 4
+                    and row[2] == "WhenGenerated"
+                ):
+                    return _parse_when_generated(row[3])
+    except OSError:
+        return None
+    return None
+
+
 def parse_ib_statement(path):
-    """Parse the CSV at *path* and return ``(period_date, open_positions, realized_rows)``.
+    """Parse the CSV at *path* and return ``(period_date, when_generated, open_positions, realized_rows)``.
 
     *open_positions* is a list of OpenPosition for stocks only.
     *realized_rows* is a list of RealizedRow for stocks only.
     *period_date* is a ``datetime`` (UTC-naive, midnight) — falls back to today
     if the *Period* field is absent.
+    *when_generated* is a naive ``datetime`` (or None) — the time the statement
+    was produced, useful as a cutoff against other transaction sources.
     """
     period_date = None
+    when_generated = None
     opens = []
     realized = []
 
@@ -84,6 +118,8 @@ def parse_ib_statement(path):
                     period_date = _dateparser.parse(last)
                 except (ValueError, TypeError):
                     period_date = None
+            elif section == "Statement" and len(row) >= 4 and row[2] == "WhenGenerated":
+                when_generated = _parse_when_generated(row[3])
             elif section == "Open Positions" and len(row) >= 3 and row[1] == "Data":
                 # Skip Total rows; only consume Data rows.
                 payload = row[2:]
@@ -106,7 +142,7 @@ def parse_ib_statement(path):
         period_date = datetime.datetime.utcnow().replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-    return period_date, opens, realized
+    return period_date, when_generated, opens, realized
 
 
 class IBStatementTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator):
@@ -137,7 +173,8 @@ class IBStatementTransactionHandler(TrasnasctionHandler, TransactionHandlerImple
 
     @simple_exception_handling("read_ib_statement")
     def read_statement(self, path):
-        period_date, opens, realized = parse_ib_statement(path)
+        period_date, when_generated, opens, realized = parse_ib_statement(path)
+        self.when_generated = when_generated
 
         symbols_with_open = set()
         # Open Positions → one synthetic buy per symbol at the cost basis.
