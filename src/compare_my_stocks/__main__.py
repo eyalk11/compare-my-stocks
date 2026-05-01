@@ -31,6 +31,27 @@ from compare_my_stocks import MainClass
 import subprocess
 
 
+def _check_single_instance():
+    import sys
+    import ctypes
+    _MUTEX_NAME = "Global\\CompareMyStocks_SingleInstance"
+    _ERROR_ALREADY_EXISTS = 183
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _mutex = kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+    if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
+        try:
+            from PySide6.QtWidgets import QApplication, QMessageBox
+            _app = QApplication.instance() or QApplication(sys.argv)
+            QMessageBox.warning(None, "Already Running",
+                                "Compare My Stocks is already running.\n"
+                                "Only one instance is allowed at a time.")
+        except Exception:
+            print("Compare My Stocks is already running. Only one instance is allowed.", flush=True)
+        sys.exit(1)
+    # Keep _mutex referenced so it is not GC'd before the process exits
+    _check_single_instance._mutex = _mutex
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -58,4 +79,5 @@ if __name__ == "__main__":
     if args.ibsrv:
         from compare_my_stocks import ibsrv
     else:
+        _check_single_instance()
         MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui,args.noprompt)

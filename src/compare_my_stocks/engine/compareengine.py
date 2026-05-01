@@ -187,6 +187,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 self.statusChanges.emit(f"Exception in generation: {e}")
                 raise
         logging.debug("call_data_generator: exhausted retries without return")
+        self.statusChanges.emit("No Data For Graph! (retries exhausted)")
         return False
 
     def call_graph_generator(

@@ -89,6 +89,7 @@ class DataGenerator(DataGeneratorInterface):
             cols = set(df.columns)
         #if fulldf is empty, raise exception
         if len(fulldf) == 0:
+            logging.error(f"generate_initial_data: Fulldf empty after date filter (unite={self.used_unitetype!r}, type={self.used_type!r}, cols={list(df.columns)[:5]})")
             raise NoDataException("Fulldf is empty")
 
             ##else we need everything...
@@ -118,6 +119,7 @@ class DataGenerator(DataGeneratorInterface):
         arr = np.array(df).transpose()  # will just work with arr
 
         if len(arr) == 0:
+            logging.error(f"generate_initial_data: arr empty (unite={self.used_unitetype!r}, type={self.used_type!r}, fulldf_cols={list(fulldf.columns)[:5]}, fulldf_rows={len(fulldf)})")
             raise NoDataException("arr is empty")
 
         self.tmp_colswithoutext = set(colswithoutext).intersection(df.columns)
@@ -231,6 +233,7 @@ class DataGenerator(DataGeneratorInterface):
             if incomplete:
                 logging.warn(f'Incomplete unite {gr} - {set(df.columns)} {stocks}')
             if len(arr)==0:
+                logging.error(f"unite_groups: no data for group {gr!r} (stocks={stocks}, df_cols={sorted(set(df.columns))[:10]})")
                 return ndf,[]
 
             if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
