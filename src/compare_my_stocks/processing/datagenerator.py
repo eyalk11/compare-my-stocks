@@ -15,7 +15,15 @@ from engine.symbolsinterface import SymbolsInterface
 from input.inputprocessorinterface import InputProcessorInterface
 from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
-from common.common import lmap 
+from common.common import lmap
+
+# Reserved synthetic group names. Their members are computed at unite time
+# rather than looked up in self._eng.Groups:
+#   'Portfolio' -> input_processor.get_portfolio_stocks()
+#   'All'       -> required_syms(True)
+# Selecting one in params.groups unites those stocks; ADDTOTALS adds the
+# same synthetic group implicitly when not already selected.
+SPECIAL_GROUP_NAMES = frozenset({'Portfolio', 'All'})
 
 
 class DataGenerator(DataGeneratorInterface):
@@ -200,7 +208,24 @@ class DataGenerator(DataGeneratorInterface):
                 print(x - set(df.columns))
             return list(x.intersection(set(df.columns)))
 
-        items = [(g, self._eng.Groups[g]) for g in self.params.groups]
+        def _members_for_special(name):
+            if name == 'Portfolio':
+                return filt(set(self._eng.input_processor.get_portfolio_stocks()), df)
+            if name == 'All':
+                return filt(set(self._eng.required_syms(True)), df)
+            return None
+
+        items = []
+        special_already_added = set()
+        for g in self.params.groups:
+            if g in SPECIAL_GROUP_NAMES:
+                items.append((g, _members_for_special(g)))
+                special_already_added.add(g)
+                continue
+            if g not in self._eng.Groups:
+                logging.warning(f'unite_groups: skipping unknown group {g!r}')
+                continue
+            items.append((g, self._eng.Groups[g]))
         if (self.used_unitetype & ~UniteType.ADDTOTALS):  # Non trivial unite. groups
             reqsym = self._eng.required_syms(want_unite_symbols=True, only_unite=True).intersection(set(df.columns))
             if len(reqsym) > 0:
@@ -212,11 +237,11 @@ class DataGenerator(DataGeneratorInterface):
 
         if self.used_unitetype & UniteType.ADDTOTALS:
             if self.used_unitetype & UniteType.ADDPROT:
-                x = set(self._eng.input_processor.get_portfolio_stocks())
-                items += [('Portfolio', filt(x, df))]
+                if 'Portfolio' not in special_already_added:
+                    items += [('Portfolio', _members_for_special('Portfolio'))]
             else:  # add TOTAL
-                x = set(self._eng.required_syms(True))
-                items += [('All', filt(x, df))]
+                if 'All' not in special_already_added:
+                    items += [('All', _members_for_special('All'))]
 
         for gr, stocks in items:
             rel=list(set(df.columns).intersection(stocks))

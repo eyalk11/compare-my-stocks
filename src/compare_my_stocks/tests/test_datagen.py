@@ -845,6 +845,35 @@ class TestUniteGroups:
         ndf, _ = dg.unite_groups(df)
         assert ndf['G1'].iloc[0] == pytest.approx(10.0)
 
+    def test_portfolio_in_params_groups_unites_portfolio_stocks(self):
+        """Selecting 'Portfolio' as a group unites get_portfolio_stocks(),
+        not Groups['Portfolio'] (which doesn't exist) — regression for
+        KeyError: 'Portfolio'."""
+        df = self._df(['2024-01-01'],
+                      {'A': [10.0], 'B': [20.0], 'C': [30.0]})
+        dg = _make_unite_dg(
+            params_groups=['Portfolio'],
+            group_members={},  # 'Portfolio' is NOT a real group
+            used_unitetype=UniteType.SUM, df=df,
+            portfolio=['A', 'B'],
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert 'Portfolio' in ndf.columns
+        assert ndf['Portfolio'].iloc[0] == pytest.approx(30.0)  # A+B
+
+    def test_unknown_group_is_skipped_not_raised(self):
+        """A stale group name in params.groups that's not in Groups is
+        skipped with a warning rather than raising KeyError."""
+        df = self._df(['2024-01-01'], {'A': [10.0], 'B': [20.0]})
+        dg = _make_unite_dg(
+            params_groups=['G1', 'GhostGroup'],
+            group_members={'G1': ['A']},
+            used_unitetype=UniteType.SUM, df=df,
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert 'G1' in ndf.columns
+        assert 'GhostGroup' not in ndf.columns
+
     @pytest.mark.xfail(reason="Bug: unite_groups only implements SUM and "
                               "AVG (datagenerator.py:236-247). UniteType.MIN "
                               "and UniteType.MAX are defined in common.py:175-176 "
