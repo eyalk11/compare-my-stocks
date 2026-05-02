@@ -124,6 +124,42 @@ You don't need transactions just to plot prices, but you do need them for
        FlexQuery: "YOUR_QUERY_ID"
    ```
 
+### From an IB Activity Statement (no Flex token)
+
+If you can't or don't want to set up a Flex Query, you can seed your
+portfolio from a downloaded **IB Activity Statement** CSV. This source
+has no per-trade history — it only carries end-of-period state — but it
+is enough to plot current holdings P&L and to record realized P&L on
+closed positions.
+
+1. In IB Account Management → *Reports → Activity*, run an Activity
+   Statement covering the period you care about and download it as
+   **CSV** (the format that has section headers like *Open Positions*,
+   *Realized & Unrealized Performance Summary*, and *Statement*).
+2. Save it into the data dir (default `~/.compare_my_stocks/`) as
+   `ib_statement.csv`, or change `SrcFile` in config.
+3. Enable the source in `myconfig.yaml`:
+
+   ```yaml
+   TransactionHandlers: !TransactionHandlersConf
+     TransactionSource: !TransactionSourceType All        # IB | MyStock | IBStatement | All
+     IBStatement: !IBStatementConf
+       SrcFile: ib_statement.csv
+   ```
+
+What gets imported:
+
+- **Open Positions** (stocks only) → one synthetic *buy* per symbol at
+  the statement's cost-price, dated at the statement's *Period* end.
+- **Realized & Unrealized Performance Summary** → for stocks that are
+  fully closed (no open position), one synthetic *sell* with `Qty=0`
+  carrying the net **long-term** realized P&L.
+
+Combining with IB Flex: if you use both, set
+`IB.OnlyNewerThanIBStatement: true` so IB Flex trades dated at or
+before the statement's `WhenGenerated` are dropped, and the statement
+acts as the historical baseline while Flex carries newer trades.
+
 ---
 
 ## 5. Make your first graph

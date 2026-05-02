@@ -135,12 +135,13 @@ in dev). Set to `null` to disable autospawn.
 
 ## `TransactionHandlers`
 
-Where your portfolio history comes from. The app supports IB Flex and
-*My Stocks Portfolio* CSVs simultaneously.
+Where your portfolio history comes from. The app supports IB Flex,
+*My Stocks Portfolio* CSVs, and IB Activity Statement CSVs
+simultaneously.
 
 ```yaml
 TransactionHandlers: !TransactionHandlersConf
-  TransactionSource: !TransactionSourceType Both    # IB | MyStocks | Both
+  TransactionSource: !TransactionSourceType All     # IB | MyStock | IBStatement | All (bitmask)
   CombineStrategy: !CombineStrategyEnum PREFERSTOCKS
   IB: !IBConf
     FlexToken: null            # paste your IB Flex token
@@ -150,15 +151,47 @@ TransactionHandlers: !TransactionHandlersConf
     Use: !UseCache USEIFAVAILABLE
     CacheSpan: 5h
     PromptOnQueryFail: true
+    OnlyNewerThanIBStatement: false  # see IBStatement section below
   MyStocks: !MyStocksConf
     SrcFile: example_mystock.csv
     PortofolioName: My Portfolio
     File: buydicnk.cache
+  IBStatement: !IBStatementConf
+    SrcFile: ib_statement.csv  # IB Activity Statement CSV (Open Positions section)
+    PortofolioName: IB Statement
+    File: ibstatement.cache
+    Use: !UseCache USEIFAVAILABLE
   StockPrices: !StockPricesConf
     Use: !UseCache USEIFAVAILABLE
     File: stocksplit.cache     # split cache so holdings are split-adjusted
   MaxPercDiffIbStockWarn: 0.2  # warn when IB and CSV disagree by >20%
 ```
+
+### IBStatement source
+
+Use this when you don't have an IB Flex Query/Token but can download
+an **Activity Statement** from IB Account Management as CSV. The
+handler does not produce trade-level history; it synthesizes:
+
+- one buy per symbol from the *Open Positions* section (stocks only),
+  priced at the statement's cost-price and timestamped at the
+  *Period* end date;
+- one zero-qty sell per fully-closed stock from the *Realized &
+  Unrealized Performance Summary*, carrying the net **long-term**
+  realized P&L.
+
+To use it as the sole transaction source, set
+`TransactionSource: !TransactionSourceType IBStatement`. The bitmask
+`All` includes it alongside `IB` and `MyStock`.
+
+`IB.OnlyNewerThanIBStatement` (default `false`): when both the IB
+Flex source and the IBStatement source are active, drop any IB Flex
+trade dated at or before the statement's `WhenGenerated` timestamp
+— both when querying new trades and when reading the cached ones.
+This lets the statement act as a baseline and reserves IB Flex for
+trades that occurred after it was produced. Requires the
+`IBStatement` bit to be set in `TransactionSource` and a readable
+`IBStatement.SrcFile`.
 
 ### Combine strategies
 
