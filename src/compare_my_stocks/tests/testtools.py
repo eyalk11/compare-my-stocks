@@ -79,7 +79,7 @@ def inpb(IBSourceSess):
     config.TransactionHandlers.SaveCaches=False
     tr=TransactionHandlerManager(None)
     tmpinp = InputProcessor(eng, tr,InputSource)
-    tmpinp.data= InputDataImpl()
+    tmpinp.data= InputDataImpl(semaphore=tmpinp._semaphore)
     tr._inp=tmpinp
     tmpinp.process_params= copy(eng.params)
     tmpinp.process_params.use_cache=UseCache.FORCEUSE

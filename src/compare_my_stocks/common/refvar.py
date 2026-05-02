@@ -47,6 +47,19 @@ class RefVar():
 def gen(cls,k, selff, *x, **y):
     print(cls,k, selff,x, (y))
     return (getattr(cls, k))(getattr(selff,'value'), *x, **y)
+
+
+def _make_gen_method(cls, k):
+    # Plain function so Python's descriptor protocol binds it to the
+    # *instance* at attribute lookup. partial(...) bound via MethodType to
+    # the class would bind to the class itself, leaving no way to reach the
+    # instance's `value`.
+    def method(self, *x, **y):
+        return gen(cls, k, self, *x, **y)
+    method.__name__ = k
+    return method
+
+
 class GenRefVar(Generic[T]):
 
     def __call__(self,value=None):
@@ -57,7 +70,7 @@ class GenRefVar(Generic[T]):
 
         nt= type('RefVarInst', (RefVar,), {})
 
-        d={k:  types.MethodType(partial(gen,cls,k),nt) for k in dir(cls) if callable(getattr(cls,k)) and not inspect.ismethod(getattr(cls,k)) }
+        d={k: _make_gen_method(cls, k) for k in dir(cls) if callable(getattr(cls,k)) and not inspect.ismethod(getattr(cls,k)) }
         d.pop('__new__')
         d.pop ('__setattr__')
         d.pop('__class__')

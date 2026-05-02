@@ -72,6 +72,18 @@ def qcoreapp(_qcoreapp_session):
     _qcoreapp_session.processEvents()
 
 
+@_pytest.fixture(autouse=True)
+def _qcoreapp_for_integration(request):
+    # Integration tests construct real engine/input objects that pull in
+    # QSemaphore/QThread; without a QCoreApplication the process crashes on
+    # GC at session end (0xC0000409). Auto-apply the qcoreapp fixture only
+    # for tests carrying the `integration` marker so unit tests stay free of
+    # Qt setup.
+    if request.node.get_closest_marker("integration"):
+        request.getfixturevalue("qcoreapp")
+    yield
+
+
 import config as _cfg
 _cfg.config.Sources.IBSource.PromptOnConnectionFail = False
 _cfg.config.TransactionHandlers.IB.PromptOnQueryFail = False

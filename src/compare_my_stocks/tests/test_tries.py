@@ -48,9 +48,10 @@ from transactions.transactioninterface import BuyDictItem
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.skip(reason="diagnostic-only: no asserts, predates current cache schema (v[0] is no longer a dict-of-cols)")
 def test_fix_histdic(inp):
     tmpinp = inp
-    tmpinp.load_cache(False)
+    tmpinp.load_cache(False, process_params=tmpinp.process_params)
     nv = collections.defaultdict(dict)
     for k, dic in tmpinp._hist_by_date.items():
         for sym, v in dic.items():

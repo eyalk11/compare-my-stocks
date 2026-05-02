@@ -46,7 +46,6 @@ ib-insync = {version="^0.9.85", optional= true}
 ib-async = {version="*", optional= true}
 pywin32 = {version="*", optional= true, markers = "sys_platform == 'win32'"}
 frozendict = {version="*", optional= true}
-yfinance = {version="*", optional= true}
 pyro5 = {version=">=5.14,<6.0", optional= true}
 ibflex = {git = "https://github.com/eyalk11/ibflex.git", optional = true}
 six = {version=">=1.16.0,<1.17.0", optional= true}
@@ -75,10 +74,10 @@ python-composition = {git = "https://github.com/eyalk11/composition.git", rev = 
 numerize = {version="*", optional= true}
 
 [tool.poetry.extras]
-full = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'ib-insync', 'ib-async', 'pywin32', 'frozendict', 'yfinance', 'pyro5', 'ibflex', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
+full = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'ib-insync', 'ib-async', 'pywin32', 'frozendict', 'pyro5', 'ibflex', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
 mini = ['colorlog','django','numpy','ruamel.yaml']
 jupyter = ['ipydatagrid','colorlog','django','numpy','ruamel.yaml','voila','ipykernel','pandas','voila','joblib','matplotlib','jupyter','pyro5','numerize','numpy','pytz']
-full_no_ib = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'pywin32', 'frozendict', 'yfinance', 'pyro5', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
+full_no_ib = ['requests', 'pyside6', 'matplotlib', 'pandas', 'python-dateutil', 'pytz', 'qtvoila', 'superqt', 'mplcursors', 'pywin32', 'frozendict', 'pyro5', 'six', 'psutil', 'dataconf', 'toml', 'pytest', 'ipykernel', 'setuptools', 'nbformat', 'memoization', 'notebook', 'json-editor-pyside6', 'qt-collapsible-section-pyside6', 'jupyter-server', 'ipydatagrid', 'joblib', 'polygon-api-client', 'multimethod', 'ordered-set', 'voila', 'python-composition', 'django', 'colorlog', 'numpy', 'ruamel.yaml', 'numerize']
 [tool.uv.extra-build-dependencies]
 pandas = ["pkg_resources"]
 [build-system]
