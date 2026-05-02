@@ -24,6 +24,11 @@ import numpy
 from unittest.mock import patch
 
 from tests.testtools import *
+
+# Tests in this file talk to a live IB Gateway / Polygon / IB sidecar; mark
+# the whole module so the default `pytest` run skips them. Run them via:
+#   pytest -m integration src/compare_my_stocks/tests/test_it.py
+pytestmark = pytest.mark.integration
 @pytest.mark.parametrize("useinp", [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT, UseInput.WITHINPUT,
                                     UseInput.LOADDEFAULTCONFIG])
 def test_realengine(mock_config_to_default,realeng,useinp):

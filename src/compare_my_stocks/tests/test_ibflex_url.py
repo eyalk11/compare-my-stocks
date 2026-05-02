@@ -6,6 +6,7 @@ from pathlib import Path
 
 import ibflex
 import ibflex.client as ibclient
+import pytest
 
 
 CONFIG = Path.home() / ".compare_my_stocks" / "myconfig.yaml"
@@ -31,6 +32,7 @@ def test_request_statement_url_is_correct():
     )
 
 
+@pytest.mark.integration
 def test_request_statement_live():
     """Hit IB live: configured token+query should yield a ReferenceCode."""
     token, query_id = _load_flex_creds()

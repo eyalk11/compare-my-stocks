@@ -86,6 +86,7 @@ def test_get_hist_split_empty_when_no_splits(monkeypatch):
     assert list(sp.get_hist_split("NOSPLITS")) == []
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not _HAS_YF, reason="yfinance not installed")
 def test_get_hist_split_live_tsla():
     """Live test: yfinance must return the two well-known TSLA splits:
@@ -97,6 +98,7 @@ def test_get_hist_split_live_tsla():
     assert by_date.get("2022-08-25") == 3.0
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not _HAS_YF, reason="yfinance not installed")
 def test_populate_buydic_live_tsla():
     """End-to-end: populate_buydic on TSLA should yield both splits, sorted."""

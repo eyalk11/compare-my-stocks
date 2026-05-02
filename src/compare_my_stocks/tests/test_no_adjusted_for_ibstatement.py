@@ -29,7 +29,26 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from PySide6.QtCore import QSemaphore
+# Real QSemaphore would need a running QApplication to be safe; without one,
+# letting GC reap them mid-session corrupts Qt internals on Windows
+# (STATUS_STACK_BUFFER_OVERRUN). Use a thread-safe Python stand-in that
+# exposes the QSemaphore API the project actually uses: acquire(n) / release(n)
+# with a default of 1.
+import threading as _threading
+
+
+class QSemaphore:  # noqa: N801 — drop-in for PySide6.QtCore.QSemaphore in tests
+    def __init__(self, n=0):
+        self._sem = _threading.Semaphore(n)
+        self._n = n
+
+    def acquire(self, n=1):
+        for _ in range(n):
+            self._sem.acquire()
+
+    def release(self, n=1):
+        for _ in range(n):
+            self._sem.release()
 
 from common.common import InputSourceType
 from config import config as live_config
@@ -68,6 +87,11 @@ def _build_processor(symbol_currency: dict[str, str]) -> InputProcessor:
     symb = MagicMock()
     txh = MagicMock()
     proc = InputProcessor(symb, txh, inputsource=None)
+    # InputProcessor spawns a DoLongProcessSlots QThread for background saves.
+    # The tests don't exercise that path, so close it immediately — leaking it
+    # across tests crashes the interpreter on Windows (QThread
+    # destroyed-while-running → STATUS_STACK_BUFFER_OVERRUN).
+    proc.close()
     proc.data = InputDataImpl(semaphore=QSemaphore(100))
     for sym, curr in symbol_currency.items():
         proc.data.symbol_info[sym] = {"currency": curr}
@@ -83,7 +107,7 @@ def _filter_items(buydic, symbols):
             yield (t, v)
 
 
-def test_wizz_not_in_no_adjusted_for_when_currency_known():
+def test_wizz_not_in_no_adjusted_for_when_currency_known(qcoreapp):
     """Sanity: if WIZZ.currency = 'GBP' (≠ Basecur USD) AND the currency
     lookup succeeds, WIZZ ends up *not* in _no_adjusted_for."""
     buydic = _load_ibstatement_cache()
@@ -105,7 +129,7 @@ def test_wizz_not_in_no_adjusted_for_when_currency_known():
     assert "WIZZ" not in proc._data._no_adjusted_for
 
 
-def test_wizz_routed_to_no_adjusted_when_currency_lookup_fails():
+def test_wizz_routed_to_no_adjusted_when_currency_lookup_fails(qcoreapp):
     """Pin down the fix for the silent-drop bug: when the FX lookup raises,
     the BuyOp must still be yielded (with currency=None) and the symbol must
     land in _no_adjusted_for, so the per-symbol write loop in process_buys
@@ -138,7 +162,7 @@ def test_wizz_routed_to_no_adjusted_when_currency_lookup_fails():
     assert "WIZZ" in proc._data._no_adjusted_for
 
 
-def test_tsla_when_currency_is_basecur():
+def test_tsla_when_currency_is_basecur(qcoreapp):
     """TSLA in USD (==Basecur) lands in _no_adjusted_for; that is fine
     because the elif trivial_currency branch in the per-symbol write loop
     will populate _avg_cost_by_stock_adjusted from _cur_avg_cost_bystock.
@@ -185,7 +209,7 @@ def test_default_translatecurrency_maps_pence_to_pound():
     )
 
 
-def test_get_currency_for_sym_translates_gbp_when_default_loaded():
+def test_get_currency_for_sym_translates_gbp_when_default_loaded(qcoreapp):
     """End-to-end: with the default mapping in place,
     InputProcessor.get_buy_operations_with_adjusted classifies a 'GBp'
     symbol as a regular non-base currency ('GBP'), not as a trip-the-bug

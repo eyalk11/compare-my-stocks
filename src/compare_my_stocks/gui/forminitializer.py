@@ -211,13 +211,12 @@ class FormInitializer(FormObserver, FormInitializerInterface):
     def update_stock_list(self,isinitial=0,justorgs=False):
             org: QListWidget = self.window.orgstocks  # type:
             
-            if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
-                if self.graphObj.params.use_groups:
-                    org.clear()
-                    additems(org,self.graphObj.get_options_from_groups(self.graphObj.params.groups))
-                elif isinitial:
-                    org.clear()
-                    additems(org,self.graphObj.params.selected_stocks)
+            if self.graphObj.params.use_groups:
+                org.clear()
+                additems(org,self.graphObj.get_options_from_groups(self.graphObj.params.groups))
+            elif isinitial:
+                org.clear()
+                additems(org,self.graphObj.params.selected_stocks)
             
             if justorgs:
                 return

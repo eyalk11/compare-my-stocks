@@ -177,6 +177,22 @@ class TestRequiredSyms:
         assert 'META' not in result
         assert 'AAPL' not in result
 
+    def test_only_unite_preserves_selected_stocks_when_use_groups_off(self):
+        """With use_groups=False the user is hand-picking stocks, so unite
+        must NOT erase them — they should survive as individual columns
+        alongside any group sums produced downstream."""
+        eng = _bare_engine(
+            type_=Types.PRICE | Types.COMPARE, unite_by_group=UniteType.SUM,
+            compare_with='QQQ', use_groups=False,
+            ext=['SPY'], selected_stocks=['TSLA', 'WIZZ'],
+            group_members={'FANG': ['META', 'AAPL']},
+        )
+        result = eng.required_syms(want_unite_symbols=True, only_unite=True)
+        # compare_with + ext + selected_stocks; group members still excluded.
+        assert result == {'QQQ', 'SPY', 'TSLA', 'WIZZ'}
+        assert 'META' not in result
+        assert 'AAPL' not in result
+
 
 # ============================================================================
 # SymbolsHandler.get_options_from_groups

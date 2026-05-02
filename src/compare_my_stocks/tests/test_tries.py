@@ -41,6 +41,12 @@ from transactions.transactioninterface import BuyDictItem
 
 #cfg.StopExceptionInDebug = True
 
+# Most tests in this module use the live IB / cache fixtures (`inp`,
+# `IBSourceSess`, `realeng`, `realenghookinp`); they need a populated cache
+# and/or a running IB Gateway. Mark the module so the default `pytest` run
+# skips them.
+pytestmark = pytest.mark.integration
+
 
 def test_fix_histdic(inp):
     tmpinp = inp

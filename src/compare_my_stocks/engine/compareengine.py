@@ -89,6 +89,10 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
             if (
                 only_unite
             ):  # it is a bit of cheating but we don't need to specify require data symbols in that case
+                if not self.params.use_groups:
+                    # When the user is hand-picking stocks (not expanding groups),
+                    # preserve them as individual lines under unite instead of erasing.
+                    return selected.union(self.params.selected_stocks)
                 return selected
         if self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))

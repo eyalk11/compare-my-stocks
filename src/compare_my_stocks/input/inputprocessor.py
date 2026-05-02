@@ -158,6 +158,12 @@ class InputProcessor(InputProcessorInterface):
 
         a=1
 
+    def close(self):
+        """Stop the background save-data worker. Idempotent."""
+        proc = getattr(self, "_save_data_proc", None)
+        if proc is not None and hasattr(proc, "close"):
+            proc.close()
+
     @property
     def initialized(self):
         return self.data is not None
