@@ -15,7 +15,7 @@ from engine.symbolsinterface import SymbolsInterface
 from input.inputprocessorinterface import InputProcessorInterface
 from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
-from common.common import lmap
+from common.common import lmap, cache_if_not_none
 
 # Reserved synthetic group names. Their members are computed at unite time
 # rather than looked up in self._eng.Groups:
@@ -371,6 +371,7 @@ class DataGenerator(DataGeneratorInterface):
         return (ncurrency, self.params.fromdate, self.params.todate)
 
     #TODO: use cached with smart key based on params
+    @cache_if_not_none
     @cached(custom_key_maker=key_maker,ttl=300)
     def readjust_for_currency(self, ncurrency):
         '''

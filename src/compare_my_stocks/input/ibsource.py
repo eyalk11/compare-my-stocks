@@ -632,6 +632,7 @@ class IBSource(InputSource):
             return None
         return self.get_contract(details[0])
 
+    @cache_if_not_none
     @cached  # type: ignore
     def resolve_forex_pair(self, pair):
         """Resolve a currency pair to (reverse, contract).

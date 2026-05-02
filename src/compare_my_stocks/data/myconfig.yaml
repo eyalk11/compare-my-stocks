@@ -98,8 +98,11 @@ Symbols: !SymbolsConf
   - ISLAND
   - XERTA
   - LSE
-  CurrencyFactor: {"ILS":100.0,"ILA":100.0}
-  TranslateCurrency: {"ILA":"ILS"}
+  CurrencyFactor: {"ILS":100.0,"ILA":100.0,"GBp":100.0}
+  # GBp/ILA are display "currencies" (pence/agorot) with no real FX pair.
+  # Translate them to GBP/ILS at the boundary so historical-rate lookups
+  # succeed; CurrencyFactor handles the 100x divisor in price math.
+  TranslateCurrency: {"ILA":"ILS","GBp":"GBP"}
 
 TransactionHandlers: !TransactionHandlersConf
   TransactionSource:  !TransactionSourceType Both 
