@@ -1,3 +1,6 @@
+# Local Claude instructions — committed copy lives at clauderepo.md
+CLAUDE.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
