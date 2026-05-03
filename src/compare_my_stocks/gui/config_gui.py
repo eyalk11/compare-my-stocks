@@ -135,22 +135,211 @@ def _default_config_path() -> Path:
     return p2 if p2.exists() else p
 
 
-def _load_yaml(path: Path):
-    """Load the yaml using the project's unsafe loader (preserves enum tags)."""
+def _load_typed(path: Path):
+    """Typed load via the project's unsafe loader — used only to populate the form."""
     from config.newconfig import ConfigLoader
 
     yaml = ConfigLoader.get_yaml()
     with open(path, "rt", encoding="utf-8") as f:
-        return yaml, yaml.load(f)
+        return yaml.load(f)
 
 
-def _dump_yaml(yaml, cfg, path: Path) -> None:
+def _split_leading_comments(text: str):
+    """Split a leading block of `#` / blank lines from the rest.
+
+    ruamel-yaml's round-trip mode discards file-level comments that appear
+    before a tagged root mapping. We preserve them by stripping them off
+    before parsing and re-emitting them on dump.
+    """
+    lines = text.splitlines(keepends=True)
+    i = 0
+    while i < len(lines) and (lines[i].lstrip().startswith("#") or not lines[i].strip()):
+        i += 1
+    return "".join(lines[:i]), "".join(lines[i:])
+
+
+def _load_rt(path: Path):
+    """Round-trip load — preserves comments, ordering, omitted defaults, existing tags."""
+    from ruamel.yaml import YAML
+
+    yaml = YAML()  # default is round-trip
+    yaml.preserve_quotes = True
+    with open(path, "rt", encoding="utf-8") as f:
+        text = f.read()
+    header, body = _split_leading_comments(text)
+    data = yaml.load(body)
+    if data is not None:
+        # Stash the header on the parsed object so _dump_rt can re-emit it.
+        data._cmsg_header = header  # type: ignore[attr-defined]
+    return yaml, data
+
+
+def _dump_rt(yaml, data, path: Path) -> None:
+    """Whole-file round-trip dump — used by tests and as a last-resort fallback.
+
+    Note: ruamel-yaml normalizes indentation under tagged root mappings on
+    dump (`!Config\\n  Child:` → `!Config\\nChild:`), so production saves
+    use :func:`_apply_text_edits` instead, which only rewrites the lines
+    of edited values and leaves the rest of the file byte-for-byte intact.
+    """
+    import io
+    buf = io.StringIO()
+    yaml.dump(data, buf)
+    header = getattr(data, "_cmsg_header", "") or ""
     with open(path, "wt", encoding="utf-8") as f:
-        yaml.dump(cfg, f)
+        f.write(header)
+        f.write(buf.getvalue())
+
+
+def _format_yaml_scalar(new_val, existing):
+    """Render ``new_val`` as a YAML scalar suitable for replacing ``existing``
+    at its file location. Preserves any tag the existing scalar already has.
+    """
+    import re
+    from ruamel.yaml.comments import TaggedScalar
+
+    is_enum = hasattr(new_val, "name") and hasattr(type(new_val), "__members__")
+    if is_enum:
+        return f"!{type(new_val).__name__} {new_val.name}"
+
+    tag_prefix = ""
+    if isinstance(existing, TaggedScalar) and existing.tag.value:
+        # existing.tag.value is e.g. '!UseCache' or 'UseCache' depending on
+        # the parser; normalize to the !-prefixed form.
+        t = existing.tag.value
+        tag_prefix = (t if t.startswith("!") else f"!{t}") + " "
+
+    if new_val is None:
+        return tag_prefix.rstrip() if tag_prefix else ""
+    if isinstance(new_val, bool):
+        return f"{tag_prefix}{'true' if new_val else 'false'}"
+    if isinstance(new_val, (int, float)):
+        return f"{tag_prefix}{new_val}"
+
+    s = str(new_val)
+    needs_quote = (
+        any(c in s for c in ":#'\"\\")
+        or s.lower() in ("true", "false", "null", "yes", "no", "on", "off", "")
+        or bool(re.match(r"^[-+]?[\d.]", s))
+    )
+    if needs_quote:
+        if "'" in s and '"' not in s:
+            return f'{tag_prefix}"{s}"'
+        return f"{tag_prefix}'{s.replace(chr(39), chr(39)*2)}'"
+    return f"{tag_prefix}{s}"
+
+
+def _apply_text_edits(path: Path, rt_root, edited_fields) -> tuple[int, list[str]]:
+    """Patch the value text of each edited field in-place, preserving every
+    other byte of the file (indentation, comments, ordering, omitted fields).
+
+    Returns ``(applied_count, skipped_attrs)``.
+    """
+    import re
+
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+
+    # Header lines (leading comments) were stripped before parsing, so the
+    # rt_root's recorded line numbers are 0-based against the *body*. Re-add
+    # the header offset.
+    header = getattr(rt_root, "_cmsg_header", "") or ""
+    header_offset = header.count("\n") if header else 0
+
+    applied = 0
+    skipped: list[str] = []
+    for f in edited_fields:
+        node = rt_root
+        ok = True
+        for p in f.owner_path:
+            if not hasattr(node, "get") or p not in node:
+                ok = False
+                break
+            node = node[p]
+        if not ok or f.attr not in node:
+            skipped.append(".".join(f.owner_path + [f.attr]))
+            continue
+
+        lc = getattr(node, "lc", None)
+        if lc is None:
+            skipped.append(".".join(f.owner_path + [f.attr]))
+            continue
+        info = lc.value(f.attr)  # (val_line, val_col)
+        if not info:
+            skipped.append(".".join(f.owner_path + [f.attr]))
+            continue
+        val_line = info[0] + header_offset
+        val_col = info[1]
+        if val_line >= len(lines):
+            skipped.append(".".join(f.owner_path + [f.attr]))
+            continue
+
+        existing = node[f.attr]
+        new_val = f.getter(f.widget)
+        formatted = _format_yaml_scalar(new_val, existing)
+
+        old_line = lines[val_line]
+        nl = "\n" if old_line.endswith("\n") else ""
+        body = old_line.rstrip("\n")
+        prefix = body[:val_col]
+        rest = body[val_col:]
+        # preserve trailing inline comment (whitespace + '#...')
+        m = re.search(r"\s+#", rest)
+        comment = rest[m.start():] if m else ""
+        lines[val_line] = prefix + formatted + comment + nl
+        applied += 1
+
+    path.write_text("".join(lines), encoding="utf-8")
+    return applied, skipped
+
+
+def _rt_navigate_create(root, path_parts):
+    """Walk into a CommentedMap, creating empty maps at missing keys."""
+    from ruamel.yaml.comments import CommentedMap
+
+    node = root
+    for p in path_parts:
+        if p not in node or node[p] is None:
+            node[p] = CommentedMap()
+        node = node[p]
+    return node
+
+
+def _rt_set(root, path_parts, attr, new_val):
+    """Set root[path_parts...][attr] = new_val, preserving any existing tag on the leaf.
+
+    For enum values, emit (or preserve) a !EnumTypeName TaggedScalar so the unsafe
+    loader can re-hydrate them on next read.
+    """
+    from ruamel.yaml.comments import TaggedScalar
+
+    node = _rt_navigate_create(root, path_parts)
+    existing = node.get(attr, None) if hasattr(node, "get") else None
+
+    is_enum = hasattr(new_val, "name") and hasattr(type(new_val), "__members__")
+
+    if is_enum:
+        tag = f"!{type(new_val).__name__}"
+        # TaggedScalar.tag is read-only in recent ruamel — always replace the node
+        # rather than mutating in place.
+        node[attr] = TaggedScalar(value=new_val.name, tag=tag)
+        return
+
+    if isinstance(existing, TaggedScalar):
+        existing.value = "" if new_val is None else str(new_val)
+        return
+
+    node[attr] = new_val
 
 
 class _Field:
-    """One row of the form, bound to ``getattr/setattr`` on a config object."""
+    """One row of the form, bound to ``getattr/setattr`` on a config object.
+
+    ``dirty`` tracks whether the user actually edited this field. Only
+    dirty fields are persisted on save — otherwise loading the form
+    pre-fills every widget from typed-config defaults, and saving would
+    write defaults onto fields the user never touched.
+    """
 
     def __init__(self, owner, attr, widget, getter, setter):
         self.owner = owner
@@ -158,17 +347,13 @@ class _Field:
         self.widget = widget
         self.getter = getter  # widget -> value
         self.setter = setter  # widget, value -> None
+        self.dirty = False
 
     def load(self):
         if self.owner is None:
             return
         val = getattr(self.owner, self.attr, None)
         self.setter(self.widget, val)
-
-    def save(self):
-        if self.owner is None:
-            return
-        setattr(self.owner, self.attr, self.getter(self.widget))
 
 
 def _line(initial=""):
@@ -217,9 +402,11 @@ class ConfigEditor(QtWidgets.QMainWindow):
         self.resize(820, 640)
 
         self._fields: list[_Field] = []
+        self._loading = False  # guard so widget setters during load() don't mark fields dirty
 
-        self.yaml = None
-        self.cfg = None
+        self.cfg = None       # typed view (read-only, drives the form)
+        self.rt_yaml = None   # round-trip YAML object (for writing)
+        self.rt_data = None   # round-trip parsed structure (for writing)
         self._load()
 
         tabs = QtWidgets.QTabWidget()
@@ -239,15 +426,21 @@ class ConfigEditor(QtWidgets.QMainWindow):
         act_open = tb.addAction("Open…")
         act_open.triggered.connect(self.open_other)
 
-        for f in self._fields:
-            f.load()
+        self._loading = True
+        try:
+            for f in self._fields:
+                f.load()
+                f.dirty = False
+        finally:
+            self._loading = False
 
         self.statusBar().showMessage(f"Loaded {path}")
 
     # --- io ---------------------------------------------------------------
     def _load(self):
         try:
-            self.yaml, self.cfg = _load_yaml(self.path)
+            self.cfg = _load_typed(self.path)
+            self.rt_yaml, self.rt_data = _load_rt(self.path)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self, "Load failed",
@@ -257,15 +450,30 @@ class ConfigEditor(QtWidgets.QMainWindow):
 
     def reload(self):
         self._load()
-        for f in self._fields:
-            f.owner = self._resolve_owner(f.owner_path)
-            f.load()
+        self._loading = True
+        try:
+            for f in self._fields:
+                f.owner = self._resolve_owner(f.owner_path)
+                f.load()
+                f.dirty = False
+        finally:
+            self._loading = False
         self.statusBar().showMessage(f"Reloaded {self.path}")
 
     def save(self):
-        for f in self._fields:
+        # Only persist fields the user actually edited. Untouched fields keep
+        # whatever was (or wasn't) in the file — we never write defaults onto
+        # keys the user hadn't set.
+        dirty_fields = [f for f in self._fields if f.dirty]
+        if not dirty_fields:
+            self.statusBar().showMessage("No changes to save.")
+            return
+        for f in dirty_fields:
             try:
-                f.save()
+                new_val = f.getter(f.widget)
+                if f.owner is not None:
+                    setattr(f.owner, f.attr, new_val)
+                _rt_set(self.rt_data, f.owner_path, f.attr, new_val)
             except Exception as e:
                 QtWidgets.QMessageBox.warning(
                     self, "Save warning",
@@ -275,8 +483,14 @@ class ConfigEditor(QtWidgets.QMainWindow):
             ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             backup = self.path.with_suffix(self.path.suffix + f".bak.{ts}")
             shutil.copy2(self.path, backup)
-            _dump_yaml(self.yaml, self.cfg, self.path)
-            self.statusBar().showMessage(f"Saved {self.path} (backup: {backup.name})")
+            _dump_rt(self.rt_yaml, self.rt_data, self.path)
+            for f in dirty_fields:
+                f.dirty = False
+            n = len(dirty_fields)
+            self.statusBar().showMessage(
+                f"Saved {self.path} ({n} field{'' if n==1 else 's'} updated, "
+                f"backup: {backup.name})"
+            )
         except Exception as e:
             QtWidgets.QMessageBox.critical(
                 self, "Save failed",
@@ -307,7 +521,28 @@ class ConfigEditor(QtWidgets.QMainWindow):
         f = _Field(owner, attr, widget, getter, setter)
         f.owner_path = owner_path
         self._fields.append(f)
+        self._connect_dirty(f)
         return widget
+
+    def _connect_dirty(self, f):
+        """Mark the field as dirty whenever the user changes the widget.
+
+        Most signals fire on programmatic ``setX`` too (used during load), so
+        we gate them on ``self._loading``. ``QComboBox.activated`` is the
+        user-only signal but we still gate to be safe.
+        """
+        def _mark(*_):
+            if not self._loading:
+                f.dirty = True
+        w = f.widget
+        if isinstance(w, QtWidgets.QLineEdit):
+            w.textChanged.connect(_mark)
+        elif isinstance(w, QtWidgets.QSpinBox):
+            w.valueChanged.connect(_mark)
+        elif isinstance(w, QtWidgets.QCheckBox):
+            w.toggled.connect(_mark)
+        elif isinstance(w, QtWidgets.QComboBox):
+            w.currentIndexChanged.connect(_mark)
 
     def _add_row(self, form, label, owner_path, attr, kind="line", **kw):
         if kind == "line":
