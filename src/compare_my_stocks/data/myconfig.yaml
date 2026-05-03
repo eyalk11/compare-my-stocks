@@ -105,7 +105,7 @@ Symbols: !SymbolsConf
   TranslateCurrency: {"ILA":"ILS","GBp":"GBP"}
 
 TransactionHandlers: !TransactionHandlersConf
-  TransactionSource:  !TransactionSourceType Both 
+  TransactionSource:  !TransactionSourceType All
   BothSymbols: []
   CombineStrategy: !CombineStrategyEnum PREFERSTOCKS
   IB: !IBConf
