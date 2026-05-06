@@ -78,7 +78,16 @@ class MainWindow(FormInitializer,QMainWindow):
             import ctypes
             myappid = 'MyOrganization.MyGui.1.0.0' # arbitrary string
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        self.wind.configure_btn.clicked.connect(self._open_config_editor)
         self.after_load()
+
+    def _open_config_editor(self):
+        from gui.config_gui import ConfigEditor, _default_config_path
+        if getattr(self, "_cfg_editor", None) is None:
+            self._cfg_editor = ConfigEditor(_default_config_path())
+        self._cfg_editor.show()
+        self._cfg_editor.raise_()
+        self._cfg_editor.activateWindow()
 
 
 

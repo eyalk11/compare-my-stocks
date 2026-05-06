@@ -1219,12 +1219,12 @@
                        </widget>
                       </item>
                       <item row="2" column="2">
-                       <widget class="QPushButton" name="vis_to_selectedBtn">
+                       <widget class="QPushButton" name="configure_btn">
                         <property name="toolTip">
-                         <string>Visible stocks in graph become the selected stock in list. Only if use groups is off.</string>
+                         <string>Open the configuration editor (myconfig.yaml).</string>
                         </property>
                         <property name="text">
-                         <string>Visible to selected</string>
+                         <string>Edit Config…</string>
                         </property>
                        </widget>
                       </item>
@@ -1690,6 +1690,16 @@
                      </property>
                      <property name="text">
                       <string>Select All/None</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="vis_to_selectedBtn">
+                     <property name="toolTip">
+                      <string>Visible stocks in graph become the selected stock in list. Only if use groups is off.</string>
+                     </property>
+                     <property name="text">
+                      <string>Visible to selected</string>
                      </property>
                     </widget>
                    </item>
