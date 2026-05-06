@@ -249,11 +249,14 @@ class InputDataImpl(InputDataImplInterface):
                     )
                     self.cached_used = False
                 # log the current hist_by_date status, include max date,min date,num of entries
-                logging.debug(
-                    (
-                        f"hist_by_date status: max date {max(self._hist_by_date.keys())}, min date {min(self._hist_by_date.keys())}, num of entries {len(self._hist_by_date)}"
+                if self._hist_by_date:
+                    logging.debug(
+                        (
+                            f"hist_by_date status: max date {max(self._hist_by_date.keys())}, min date {min(self._hist_by_date.keys())}, num of entries {len(self._hist_by_date)}"
+                        )
                     )
-                )
+                else:
+                    logging.debug("hist_by_date status: empty")
                 if config.Running.Debug:
                     from common.composition import C
                     #set(reduce(lambda x,y:x+y, [list(s.keys()) for s in self._hist_by_date.values()]) )
@@ -305,15 +308,33 @@ class InputDataImpl(InputDataImplInterface):
     def save_data(self):
         # The difference between the regular cache and fullcache is that fullcache doesn't know how to handle transactions diffs .
         def show_message_box():
-            from PySide6.QtWidgets import QMessageBox
-            reply = QMessageBox.question(
-                None,
-                "Confirmation",
-                "Saving data without using cache! Can earse data! Are you sure you want to do this?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            return reply == QMessageBox.StandardButton.Yes
+            from PySide6.QtWidgets import QMessageBox, QApplication
+            from PySide6.QtCore import QObject, QMetaObject, Qt, QThread, Slot
+
+            class _Asker(QObject):
+                result = False
+
+                @Slot()
+                def ask(self):
+                    reply = QMessageBox.question(
+                        None,
+                        "Confirmation",
+                        "Saving data without using cache! Can earse data! Are you sure you want to do this?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No,
+                    )
+                    self.result = reply == QMessageBox.StandardButton.Yes
+
+            asker = _Asker()
+            app = QApplication.instance()
+            if app is None or QThread.currentThread() == app.thread():
+                asker.ask()
+            else:
+                asker.moveToThread(app.thread())
+                QMetaObject.invokeMethod(
+                    asker, "ask", Qt.ConnectionType.BlockingQueuedConnection
+                )
+            return asker.result
 
         if not self.cached_used:
             logging.warn("Cache wasnt used! (possibly first time)")
