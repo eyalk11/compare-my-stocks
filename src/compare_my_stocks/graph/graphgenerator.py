@@ -91,7 +91,7 @@ def show_annotation(sel, cls, ax, generation):
             vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
             sel.extras.append(vertical_line)
             date = matplotlib.dates.num2date(xi)
-            names = [k._label for k in ax.legend_.legendHandles]
+            names = [k._label for k in (getattr(ax.legend_, 'legend_handles', None) or ax.legend_.legendHandles)]
             if cls.typ & (Types.PRECENTAGE | Types.DIFF):
                 ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
                 vals_orig = [numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
@@ -139,7 +139,7 @@ class GraphGenerator:
     def get_visible_cols(self):
         ax = self._axes
         vis = [l.get_visible() for l in ax.lines]
-        names = [k._label for k in ax.legend_.legendHandles]
+        names = [k._label for k in (getattr(ax.legend_, 'legend_handles', None) or ax.legend_.legendHandles)]
         l = filter(lambda x: x[1], zip(names, vis))
         return list(map(lambda x: x[0], l))
 
@@ -466,18 +466,17 @@ class GraphGenerator:
             self.ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
 
             if just_upd:
-
                 self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
-                if adjust_date or self.first_time:
-                    mind = matplotlib.dates.date2num(min(dt.index))
-                    maxd = matplotlib.dates.date2num(max(dt.index))
-                    if mind < maxd:
-                        self._axes.set_xlim([mind, maxd])
-
-                    mfig.canvas.draw_idle()
             elif self.params.show_graph:
                 logging.debug('strange')
                 pass  # plt.show()
+
+            mind = matplotlib.dates.date2num(min(dt.index))
+            maxd = matplotlib.dates.date2num(max(dt.index))
+            if mind < maxd:
+                self._axes.set_xlim([mind, maxd])
+            ar.relim()
+            ar.autoscale_view(scalex=False, scaley=True)
             if plot_data and self.params.show_transactions_graph:
                 #special if not a price graph
                 self.plot_transaction_info(ar, plot_data, special=
@@ -509,7 +508,7 @@ class GraphGenerator:
             if isline:
                 self.handle_line(ar, starthidden, just_upd)
 
-
+            mfig.canvas.draw_idle()
 
         finally:
             self.first_time = False
