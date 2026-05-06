@@ -1,6 +1,10 @@
 # Local Claude instructions — committed copy lives at clauderepo.md
 CLAUDE.md
 
+# Runtime/test artifacts produced by run_tests.ps1 and integration runs
+test_logs/
+test_data_dir/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
