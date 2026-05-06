@@ -258,11 +258,13 @@ class InputDataImpl(InputDataImplInterface):
                 else:
                     logging.debug("hist_by_date status: empty")
                 if config.Running.Debug and self._hist_by_date:
-                    from common.composition import C
-                    #set(reduce(lambda x,y:x+y, [list(s.keys()) for s in self._hist_by_date.values()]) )
-                    s=C / set / reduce % (lambda x,y:x+y) @ (C /  self._hist_by_date.values() << (lambda s: list(s.keys())) )
-
-                    logging.debug(f"hist_by_date_sym: {s }")
+                    try:
+                        s = set()
+                        for d in self._hist_by_date.values():
+                            s.update(d.keys())
+                        logging.debug(f"hist_by_date_sym: {s}")
+                    except Exception as _e:
+                        logging.debug(f"hist_by_date_sym log skipped: {_e}")
 
                 self.update_usable_symbols()
                 logging.debug((f"cache symbols used {sorted(list(self._usable_symbols))}"))
