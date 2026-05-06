@@ -152,6 +152,8 @@ class IBSourceConf:
     UsePythonIfNotResolve: bool = True
     DefaultExchange: Optional[str] = "SMART"
     PromptOnConnectionFail: bool = True  # if the IB sidecar (ibsrv) fails to start, prompt on stdin before falling back to cache
+    PreflightTimeoutSec: float = 2.0  # TCP probe timeout for IB pre-flight check
+    PreflightFailCacheSec: float = 40.0  # if pre-flight failed within this window, skip and assume IB still down
 @paramaware
 @dataclass
 class UIConf:
