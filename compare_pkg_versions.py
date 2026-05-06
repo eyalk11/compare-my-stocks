@@ -43,7 +43,7 @@ def main():
     different = []
     missing = []
 
-    for pkg in PACKAGES:
+    for pkg in sorted(PACKAGES, key=str.lower):
         key = pkg.lower().replace("_", "-")
         ver39 = v39.get(key, "—")
         ver311 = v311.get(key, "—")

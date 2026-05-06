@@ -4,7 +4,9 @@ import logging
 import math
 import multiprocessing
 import random
+import socket
 import threading
+import time
 from dataclasses import asdict
 from functools import lru_cache, partial
 from typing import Dict, Optional
@@ -44,6 +46,57 @@ import sys
 sys.modules['ib_insync'] = sys.modules['ib_async']
 WRONG_EXCHANGE = 200
 HISTORY_ERROR = 162
+
+_ib_check_started_ts: float = 0.0
+_ib_check_failed: bool = False
+
+
+def _ib_preflight(host, port):
+    """TCP probe to (host, port). If a recent attempt failed within
+    config.Sources.IBSource.PreflightFailCacheSec, raise immediately without
+    re-checking. Raises ConnectionRefusedError on failure."""
+    global _ib_check_started_ts, _ib_check_failed
+    cache_sec = getattr(config.Sources.IBSource, 'PreflightFailCacheSec', 40.0)
+    timeout = getattr(config.Sources.IBSource, 'PreflightTimeoutSec', 2.0)
+    now = time.time()
+    if _ib_check_failed and (now - _ib_check_started_ts) < cache_sec:
+        raise ConnectionRefusedError(
+            f"IB pre-flight skipped: last check {now - _ib_check_started_ts:.0f}s ago failed"
+        )
+    _ib_check_started_ts = now
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            pass
+    except ConnectionRefusedError:
+        _ib_check_failed = True
+        raise
+    except (OSError, socket.timeout) as e:
+        _ib_check_failed = True
+        raise ConnectionRefusedError(f"IB pre-flight to {host}:{port} failed: {e}") from e
+    _ib_check_failed = False
+
+
+def skip_if_ib_down(func):
+    """Short-circuit the call with ConnectionRefusedError if a recent IB attempt
+    failed within PreflightFailCacheSec. After the window expires, calls are
+    let through; a fresh ConnectionRefusedError re-arms the gate."""
+    def wrapper(*args, **kwargs):
+        global _ib_check_started_ts, _ib_check_failed
+        cache_sec = getattr(config.Sources.IBSource, 'PreflightFailCacheSec', 40.0)
+        now = time.time()
+        if _ib_check_failed:
+            if (now - _ib_check_started_ts) < cache_sec:
+                raise ConnectionRefusedError(
+                    f"IB known down (cached {now - _ib_check_started_ts:.0f}s ago)"
+                )
+            _ib_check_failed = False  # window expired, allow retry
+        try:
+            return func(*args, **kwargs)
+        except ConnectionRefusedError:
+            _ib_check_started_ts = time.time()
+            _ib_check_failed = True
+            raise
+    return wrapper
 
 
 # class MyIBSourceProxy(Pyro5.api.Proxy):
@@ -326,6 +379,7 @@ class IBSource(InputSource):
         else:
             self.ibrem = IBSourceRem(host, port, clientId, readonly)
         try:
+            _ib_preflight(host, port)
             self.ibrem.init()
         except ConnectionRefusedError:
             logging.error("TWS not connected!")
@@ -350,6 +404,7 @@ class IBSource(InputSource):
         self.ibrem.connected = False
 
     @simple_exception_handling("get_positions", return_succ=[], never_throw=True)
+    @skip_if_ib_down
     def get_positions(self):
         logging.debug("positions")
         y = self.ibrem.reqPositions()
@@ -372,6 +427,7 @@ class IBSource(InputSource):
     @simple_exception_handling(
         err_description="get currenct currency", return_succ=None, never_throw=True
     )
+    @skip_if_ib_down
     def get_current_currency(self, pair):
         # Resolve forex pair to a fully-qualified Contract (with conId) on
         # the client side via contract details, then ship the contract dict
@@ -398,6 +454,7 @@ class IBSource(InputSource):
     @simple_exception_handling(
         err_description="error in resolve symbol", return_succ=None, never_throw=True
     )
+    @skip_if_ib_down
     def get_matching_symbols(self, sym, results=10):
         def tmp(x):
             try:
@@ -460,6 +517,7 @@ class IBSource(InputSource):
         return_succ=(None, []),
         never_throw=False, #to change
     )
+    @skip_if_ib_down
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
         with SimpleExceptionContext(
             "error resolving symbol",
@@ -616,6 +674,7 @@ class IBSource(InputSource):
     @simple_exception_handling(
         err_description="resolve_forex_contract", return_succ=None, never_throw=True
     )
+    @skip_if_ib_down
     def _resolve_forex_contract(self, pair_str):
         """Look up a full Forex contract (with conId) via IB contract details.
 
