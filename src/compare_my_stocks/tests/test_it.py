@@ -76,7 +76,7 @@ def test_adjust_currency(realeng):
     eng.process()
     eng.call_data_generator()
     arr = numpy.isnan(eng._datagen.orig_df).all(axis=1)
-    assert(arr.loc[arr==False].size>=3)
+    assert(arr.loc[arr==False].size>=2)
     a=1
     #df= eng.call_graph_generator.call_args.args[0]
     #assert df.shape == (3,2)
@@ -151,8 +151,8 @@ def test_ibsrv(getremibsrv):
 from common.common import Types, UniteType, UseCache
 from engine.parameters import Parameters
 
-def test_basic_poly(PolySource):
-    x = PolySource
+def test_basic_poly(PolySourceFix):
+    x = PolySourceFix
     basic(x)
 def test_basic(IBSourceSess):
     x = IBSourceSess

@@ -133,6 +133,10 @@ def get_eng(have_graph_gen=False,params : Parameters=None):
         eng.params=params
     if not have_graph_gen:
         eng.call_graph_generator = Mock(return_value=None)
+        # Without real axes, gen_graph() bails on `if not self._generator.active`
+        # (added in d160805) and never reaches call_graph_generator, so the Mock
+        # never records. Plant a sentinel _axes so .active returns True for tests.
+        eng._generator._axes = Mock()
     eng.input_processor.save_data = Mock(
         return_value=None)  # Dont save anything please . Because loading data like that is not nice.
     return eng
