@@ -1,5 +1,7 @@
+import atexit
 import logging
 import threading
+import weakref
 from functools import partial
 
 
@@ -27,6 +29,20 @@ class DoLongProcessSlots(QObject):
         self.thread.start()
         self.mutex=QRecursiveMutex()
         self.command_waiting=0
+        # Without this, an interpreter shutdown / GC of this object while the
+        # OS thread is still running causes Qt to abort the process on Windows
+        # ("QThread: Destroyed while thread '' is still running"). atexit runs
+        # before the QApplication is torn down; the weakref keeps us from
+        # pinning the object alive.
+        _self_ref = weakref.ref(self)
+
+        def _cleanup():
+            obj = _self_ref()
+            if obj is not None:
+                obj.close()
+
+        atexit.register(_cleanup)
+        self._atexit_cleanup = _cleanup
 
         #self.thread.data_generated.connect(self.run)
         #self.finished.connect(self.thread.quit)
@@ -49,8 +65,18 @@ class DoLongProcessSlots(QObject):
         thread = getattr(self, "thread", None)
         if thread is None:
             return
-        thread.quit()
-        thread.wait(timeout_ms)
+        try:
+            thread.quit()
+            thread.wait(timeout_ms)
+        except RuntimeError:
+            # C++ side already gone (e.g. QApplication torn down before us).
+            pass
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
     @Slot(tuple)
     def process_command(self, taskparams):

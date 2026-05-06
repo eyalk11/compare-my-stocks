@@ -257,6 +257,20 @@ class CInst(Generic[P,T]):
         try:
             s = signature(self.func)
         except ValueError:
+            s = None
+
+        # Python 3.14+ now returns a real signature for builtins like zip,
+        # map, filter — `(*iterables, ...)`. Spreading `other` into that
+        # binds each element of the iterable as a separate positional arg,
+        # which is wrong: the user means to pass the whole iterable as one
+        # positional. Detect leading VAR_POSITIONAL and route through the
+        # closure path the same way the ValueError branch did pre-3.14.
+        if s is not None:
+            params = list(s.parameters.values())
+            if params and params[0].kind == _ParameterKind.VAR_POSITIONAL:
+                s = None
+
+        if s is None:
             if (type(other) is tuple):
                 def func():
                     return self.func(*other)

@@ -53,7 +53,7 @@ pywin32 = {version = "*", optional = true, markers = "sys_platform == 'win32'"}
 frozendict = {version = "*", optional = true}
 yfinance = {version = "*", optional = true}
 pyro5 = {version = "^5.14", optional = true}
-ibflex = {git = "https://github.com/csingley/ibflex.git", optional = true}
+ibflex = {git = "https://github.com/eyalk11/ibflex.git", optional = true}
 six = {version = "^1.16", optional = true}
 psutil = {version = "^5.9", optional = true}
 dataconf = {version = "^3.2", optional = true}
