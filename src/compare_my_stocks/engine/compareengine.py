@@ -89,6 +89,10 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
             if (
                 only_unite
             ):  # it is a bit of cheating but we don't need to specify require data symbols in that case
+                if not self.params.use_groups:
+                    # When the user is hand-picking stocks (not expanding groups),
+                    # preserve them as individual lines under unite instead of erasing.
+                    return selected.union(self.params.selected_stocks)
                 return selected
         if self.params.use_groups:
             return selected.union(self.get_options_from_groups(self.params.groups))
@@ -164,11 +168,14 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
     def call_data_generator(self, auto_reprocess=True):
         b = 0
         for tries in range(2):
+            logging.debug(f"call_data_generator try={tries}")
             if not self._datagen.verify_conditions():
                 self.statusChanges.emit("Graph Invalid! Check parameters")
                 return False
             try:
+                logging.debug("call_data_generator: generate_data start")
                 self._datagen.generate_data()
+                logging.debug("call_data_generator: generate_data end")
                 return 1 + b
             except NoDataException:
                 if auto_reprocess:
@@ -183,6 +190,9 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
             except Exception as e:
                 self.statusChanges.emit(f"Exception in generation: {e}")
                 raise
+        logging.debug("call_data_generator: exhausted retries without return")
+        self.statusChanges.emit("No Data For Graph! (retries exhausted)")
+        return False
 
     def call_graph_generator(
         self, df, just_upd, type, orig_data, adjust_date=False, additional_df=None
@@ -211,6 +221,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 logging.error("failed to get transaction data for graph")
 
         try:
+            logging.debug("call_graph_generator: gen_actual_graph start")
             self._generator.gen_actual_graph(
                 list(df.columns),
                 df,
@@ -224,6 +235,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 plot_data=plot_data,
                 additional_df=additional_df,
             )
+            logging.debug("call_graph_generator: gen_actual_graph end")
             if self._inp.failed_to_get_new_data:
                 upd("Generated Graph with old data  (  Query failed :() ")
             else:
@@ -239,6 +251,7 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         reprocess = 1 if (not self.input_processor._alldates) else 0
 
         params.increase_fig = False
+        logging.info(f"update_graph called with params: {params!r}")
         self.gen_graph(params, just_upd=1, reprocess=reprocess)
 
 

@@ -169,6 +169,11 @@ class MainClass:
         from config import config
         self.config = config
 
+        if not getattr(config.Jupyter, 'RapidYFinanaceKey', ''):
+            logging.warning(
+                "Jupyter.RapidYFinanaceKey is not set in myconfig.yaml; "
+                "stock-split lookups (StockPrices) will be skipped."
+            )
 
         self.UseWX, self.UseWEB, self.UseQT, self.SimpleMode \
         = config.UI.UseWX, config.UI.UseWEB, config.UI.UseQT, config.UI.SimpleMode

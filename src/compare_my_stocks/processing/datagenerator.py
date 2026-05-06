@@ -15,7 +15,15 @@ from engine.symbolsinterface import SymbolsInterface
 from input.inputprocessorinterface import InputProcessorInterface
 from processing.actondata import ActOnData
 from processing.datageneratorinterface import DataGeneratorInterface
-from common.common import lmap 
+from common.common import lmap, cache_if_not_none
+
+# Reserved synthetic group names. Their members are computed at unite time
+# rather than looked up in self._eng.Groups:
+#   'Portfolio' -> input_processor.get_portfolio_stocks()
+#   'All'       -> required_syms(True)
+# Selecting one in params.groups unites those stocks; ADDTOTALS adds the
+# same synthetic group implicitly when not already selected.
+SPECIAL_GROUP_NAMES = frozenset({'Portfolio', 'All'})
 
 
 class DataGenerator(DataGeneratorInterface):
@@ -89,6 +97,7 @@ class DataGenerator(DataGeneratorInterface):
             cols = set(df.columns)
         #if fulldf is empty, raise exception
         if len(fulldf) == 0:
+            logging.error(f"generate_initial_data: Fulldf empty after date filter (unite={self.used_unitetype!r}, type={self.used_type!r}, cols={list(df.columns)[:5]})")
             raise NoDataException("Fulldf is empty")
 
             ##else we need everything...
@@ -118,6 +127,7 @@ class DataGenerator(DataGeneratorInterface):
         arr = np.array(df).transpose()  # will just work with arr
 
         if len(arr) == 0:
+            logging.error(f"generate_initial_data: arr empty (unite={self.used_unitetype!r}, type={self.used_type!r}, fulldf_cols={list(fulldf.columns)[:5]}, fulldf_rows={len(fulldf)})")
             raise NoDataException("arr is empty")
 
         self.tmp_colswithoutext = set(colswithoutext).intersection(df.columns)
@@ -198,7 +208,24 @@ class DataGenerator(DataGeneratorInterface):
                 print(x - set(df.columns))
             return list(x.intersection(set(df.columns)))
 
-        items = [(g, self._eng.Groups[g]) for g in self.params.groups]
+        def _members_for_special(name):
+            if name == 'Portfolio':
+                return filt(set(self._eng.input_processor.get_portfolio_stocks()), df)
+            if name == 'All':
+                return filt(set(self._eng.required_syms(True)), df)
+            return None
+
+        items = []
+        special_already_added = set()
+        for g in self.params.groups:
+            if g in SPECIAL_GROUP_NAMES:
+                items.append((g, _members_for_special(g)))
+                special_already_added.add(g)
+                continue
+            if g not in self._eng.Groups:
+                logging.warning(f'unite_groups: skipping unknown group {g!r}')
+                continue
+            items.append((g, self._eng.Groups[g]))
         if (self.used_unitetype & ~UniteType.ADDTOTALS):  # Non trivial unite. groups
             reqsym = self._eng.required_syms(want_unite_symbols=True, only_unite=True).intersection(set(df.columns))
             if len(reqsym) > 0:
@@ -210,11 +237,11 @@ class DataGenerator(DataGeneratorInterface):
 
         if self.used_unitetype & UniteType.ADDTOTALS:
             if self.used_unitetype & UniteType.ADDPROT:
-                x = set(self._eng.input_processor.get_portfolio_stocks())
-                items += [('Portfolio', filt(x, df))]
+                if 'Portfolio' not in special_already_added:
+                    items += [('Portfolio', _members_for_special('Portfolio'))]
             else:  # add TOTAL
-                x = set(self._eng.required_syms(True))
-                items += [('All', filt(x, df))]
+                if 'All' not in special_already_added:
+                    items += [('All', _members_for_special('All'))]
 
         for gr, stocks in items:
             rel=list(set(df.columns).intersection(stocks))
@@ -231,6 +258,7 @@ class DataGenerator(DataGeneratorInterface):
             if incomplete:
                 logging.warn(f'Incomplete unite {gr} - {set(df.columns)} {stocks}')
             if len(arr)==0:
+                logging.error(f"unite_groups: no data for group {gr!r} (stocks={stocks}, df_cols={sorted(set(df.columns))[:10]})")
                 return ndf,[]
 
             if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
@@ -259,14 +287,18 @@ class DataGenerator(DataGeneratorInterface):
     def generate_data(self):
         # self.params.use_ext=True #Will be changed by func
 
+        logging.debug(f"generate_data: type={self.params.type!r} unite={self.params.unite_by_group!r}")
         self.get_data_by_type(self.params.type, self.params.compare_with)
+        logging.debug("generate_data: get_data_by_type done")
         self.cols = self.df.columns
         if self.df.isnull().all(axis=None):
             raise NoDataException("Dataframe is empty")
 
         b = self.update_ranges()
+        logging.debug("generate_data: update_ranges done")
 
         self.filter_ranges(b)
+        logging.debug("generate_data: filter_ranges done")
         self.finalcols=self.df.columns
         self.df_before_act = self.df_before_act [ self.df.columns]
 
@@ -274,6 +306,7 @@ class DataGenerator(DataGeneratorInterface):
             df.rename({y: matplotlib.dates.num2date(y) for y in df.index}, axis=0, inplace=1)  # problematicline
         conv_index(self.df)
         conv_index(self.df_before_act)
+        logging.debug("generate_data: conv_index done")
 
 
     def filter_ranges(self,  b):
@@ -338,6 +371,7 @@ class DataGenerator(DataGeneratorInterface):
         return (ncurrency, self.params.fromdate, self.params.todate)
 
     #TODO: use cached with smart key based on params
+    @cache_if_not_none
     @cached(custom_key_maker=key_maker,ttl=300)
     def readjust_for_currency(self, ncurrency):
         '''

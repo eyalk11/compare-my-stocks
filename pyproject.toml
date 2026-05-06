@@ -1,12 +1,17 @@
 
 [tool.pytest.ini_options]
+timeout=300
 log_cli = true
 log_cli_level = "DEBUG"
 log_cli_format = "%(asctime)s | %(filename)s:%(lineno)d:%(function)s | %(levelname)s | %(message)s"
+markers = [
+    "integration: requires a live network/IB/Polygon connection (skipped by default)",
+]
+addopts = "-m 'not integration'"
 
 [tool.poetry]
 name = "compare-my-stocks"
-version = "1.0.9"
+version = "1.1.1"
 description = "A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib."
 authors = ["eyalk5"]
 readme = "README.md"

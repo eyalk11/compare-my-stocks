@@ -15,6 +15,7 @@ import collections
 import logging
 import math
 import time
+import warnings
 from collections import defaultdict
 # from datetime import datetime
 import datetime
@@ -157,6 +158,12 @@ class InputProcessor(InputProcessorInterface):
 
         a=1
 
+    def close(self):
+        """Stop the background save-data worker. Idempotent."""
+        proc = getattr(self, "_save_data_proc", None)
+        if proc is not None and hasattr(proc, "close"):
+            proc.close()
+
     @property
     def initialized(self):
         return self.data is not None
@@ -166,7 +173,16 @@ class InputProcessor(InputProcessorInterface):
 
 
     def resolve_currency(self, sym, l, hist):
-        #very inefficient . but for few..
+        # ExchangeCurrency wins over whatever the data source reports — used to
+        # patch IB's "LSE=GBP" lie (LSE prices are in GBp/pence). Set
+        # ExchangeCurrency: {LSE: GBp} + CurrencyFactor: {GBp: 100} to fix.
+        # IB sometimes returns exchange='' with the real venue in
+        # primaryExchange — check both.
+        exchange = (l.get('exchange') or l.get('primaryExchange') or 'unk') if l else 'unk'
+        override = config.Symbols.ExchangeCurrency.get(exchange)
+        if override:
+            return override
+
         if 'Currency' in hist:
             currency = hist['Currency'][0]
         else:
@@ -176,8 +192,6 @@ class InputProcessor(InputProcessorInterface):
         if currency == 'unk':
             logging.debug((f'resolving currency for {sym}'))
             currency = config.Symbols.StockCurrency.get(sym, 'unk')
-        if currency == 'unk':
-            currency = config.Symbols.ExchangeCurrency.get(l.get('exchange', 'unk'), 'unk')
         if currency == 'unk':
             logging.debug((f'unk currency for {sym}'))
         return currency
@@ -246,7 +260,7 @@ class InputProcessor(InputProcessorInterface):
                 raise KeyError("not minimal")#lets avoid checks here and let get_range_gap handle it
         except: 
             if cache_only:
-                raise ValueError("cant get currency to adjust")
+                raise ValueError(f"no recorded FX for {currency} (cache_only, range {fromdate}..{enddate})")
             ls = (self.get_range_gap(get_good_keys(), fromdate, enddate) if self._data.currency_hist is not None  and currency in self._data.currency_hist else [(fromdate,enddate)])
             ls =list(ls)
             if len(ls) == 0:
@@ -265,7 +279,7 @@ class InputProcessor(InputProcessorInterface):
                     self.update_currency_hist(currency,tmpdf)
                     self.save_data_at_end()
             if not currency in self._data.currency_hist:
-                raise ValueError("cant get currency to adjust")
+                raise ValueError(f"no live FX for {currency} (source returned no data for {pair} {fromdate}..{enddate})")
         if queried is not None:
             queried.value= didquery
 
@@ -328,18 +342,30 @@ class InputProcessor(InputProcessorInterface):
                 self._data._no_adjusted_for.add(v.Symbol) #TODO reverse the logic
                 yield BuyOp(date=localize_it(t),currency=None,buydic=v)
             else:
+                # If the historical FX lookup throws, we MUST still yield a BuyOp,
+                # otherwise process_buys never enters the per-symbol write loop for
+                # this symbol and _avg_cost_by_stock_adjusted[sym] is never created.
+                # Downstream that breaks build_adjust_panel's avg_cost_panel and
+                # readjust_for_currency raises KeyError on the missing column.
+                # Route the failed buy through the no-adjustment path: drop into
+                # _no_adjusted_for so trivial_currency / fallback writes still run.
+                failed = False
+                val = None
+                queried = False
                 try:
-                    with SimpleExceptionContext(err_description= f"error getting currency for transaction {v.Symbol}", detailed=False):
-                        val, queried = self.get_currency_on_certain_time(curr, t)
-                        if queried == True:
-                            gok=True
-                        if val == 'err':
-                            self._data._err_transactions.add(v.Symbol)
-                        
-                        yield BuyOp(date=localize_it(t),currency=val ,buydic=v)
-
-                except KeyError as e:
-                    logging.error(str(e))
+                    val, queried = self.get_currency_on_certain_time(curr, t)
+                except Exception as e:
+                    logging.error(f"error getting currency for transaction {v.Symbol}: {e}")
+                    failed = True
+                if failed:
+                    self._data._no_adjusted_for.add(v.Symbol)
+                    yield BuyOp(date=localize_it(t), currency=None, buydic=v)
+                else:
+                    if queried == True:
+                        gok=True
+                    if val == 'err':
+                        self._data._err_transactions.add(v.Symbol)
+                    yield BuyOp(date=localize_it(t), currency=val, buydic=v)
         if gok:
             self.save_data_at_end()
         logging.debug("end get_buy")
@@ -722,6 +748,12 @@ class InputProcessor(InputProcessorInterface):
                             sym] if config.Input.AdjustUnrelProfitToReflectSplits else _cur_avg_cost_bystock_adjusted[sym]
                     elif self.trivial_currency(sym):
                         self._data._avg_cost_by_stock_adjusted[sym][tim] =_cur_avg_cost_bystock[sym]
+                    else:
+                        # FX rate unavailable for this sym (lookup raised in
+                        # get_buy_operations_with_adjusted). Write NaN so the
+                        # avg_cost_panel column exists and readjust_for_currency
+                        # does not KeyError on a missing ('avg_cost_by_stock', sym).
+                        self._data._avg_cost_by_stock_adjusted[sym][tim] = numpy.nan
 
                     self._data._split_by_stock[sym][tim] = _cur_splited_bystock[sym]
                 if mini:
@@ -948,20 +980,31 @@ class InputProcessor(InputProcessorInterface):
             self._save_data_proc.command.emit(TaskParams(params=tuple()))
 
 
-    def get_special_symbol_hist(self,sym,fromdate,todate):
-        #fill dates by days, do for on days
-        #assyme datetime 
+    def get_special_symbol_hist(self, sym, fromdate, todate):
+        # Build an OHLCV series for a SpecialSymbol (#XYZ). For a foreign
+        # currency we plot its exchange rate against config.Symbols.Basecur
+        # over the requested range; for the base currency itself we plot a
+        # flat 1.0 line (degenerate but useful as a no-change baseline).
         with warnings.catch_warnings():
-        # Ignore all warnings
             warnings.simplefilter("ignore")
-            td= todate - fromdate  
-            f= fromdate.date() 
-            rows = []
-            for f in pd.date_range(fromdate,todate):
-                sp=sym.get_date(f.to_pydatetime().date())
-                dic= {'Open':sp,'High':sp,'Low':sp,'Close':sp,'Volume':1}
-                rows.append(pd.Series(dic, name=f))
-            df = pd.concat(rows, axis=1).T if rows else pd.DataFrame()
+            rows = {}
+            last_val = None
+            is_base = sym.currency == config.Symbols.Basecur
+            for f in pd.date_range(fromdate, todate):
+                if is_base:
+                    val = 1.0
+                else:
+                    res = self.get_currency_on_certain_time(
+                        sym.currency, f.to_pydatetime(), cache_only=False
+                    )
+                    val = res[0] if res is not None else None
+                    if val in (None, 'err'):
+                        val = last_val  # forward-fill weekends / missing dates
+                if val is None:
+                    continue
+                last_val = val
+                rows[f] = {'Open': val, 'High': val, 'Low': val, 'Close': val, 'Volume': 1}
+            df = pd.DataFrame.from_dict(rows, orient='index')
             return sym.dic, df
 
 
@@ -1074,11 +1117,19 @@ class InputProcessor(InputProcessorInterface):
         if l is None:
             logging.warn("no info for %s , using default " % sym)
             currency =  'unk'
-        elif not (sym in self._data.symbol_info and ('currency' in self._data.symbol_info[sym] ) and self._data.get_currency_for_sym(sym)) :
-            currency = self.resolve_currency(sym, l, hist)
-            self._data.symbol_info[sym].update( {'currency': currency})
         else:
-            currency= self._data.get_currency_for_sym(sym)
+            # Re-apply ExchangeCurrency override even if a transaction handler
+            # (e.g. IBStatement) already wrote a currency tag — the override is
+            # the source of truth for pence/agorot quirks.
+            override = config.Symbols.ExchangeCurrency.get(l.get('exchange') or l.get('primaryExchange') or 'unk')
+            if override:
+                currency = override
+                self._data.symbol_info[sym]['currency'] = currency
+            elif not (sym in self._data.symbol_info and ('currency' in self._data.symbol_info[sym] ) and self._data.get_currency_for_sym(sym)) :
+                currency = self.resolve_currency(sym, l, hist)
+                self._data.symbol_info[sym].update( {'currency': currency})
+            else:
+                currency= self._data.get_currency_for_sym(sym)
 
         if currency != config.Symbols.Basecur and currency != 'unk':
             adjusted =  self.get_adjusted_df_for_currency(currency, maxdate, mindate, hist, sym)

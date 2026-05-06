@@ -5,7 +5,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from common.common import InputSourceType, lmap
+from common.common import InputSourceType, lmap, cache_if_not_none
 from common.simpleexceptioncontext import simple_exception_handling
 from config import config
 from engine.symbols import AbstractSymbol
@@ -77,6 +77,7 @@ class InputSource(InputSourceInterface):
         return True
 
     @simple_exception_handling(err_description='error in resolving symbol', never_throw=True)
+    @cache_if_not_none
     @cached(ttl=config.Symbols.CacheTTL)
     def resolve_symbol(self,sym):
         if self.can_handle_dict(sym) : #and (isinstance(sym, AbstractSymbol)  and sym.dic!=None) or type(sym)==dict
@@ -107,8 +108,15 @@ class InputSource(InputSourceInterface):
             logging.debug((f'using unmatch sym.  {l["symbol"]} o: {sym} l:{l} '))
         return l
 
-    @cached(max_size=2000,thread_safe=True)
     def get_best_matches(self, sym, results=10, strict=True):
+        try:
+            return self._get_best_matches_inner(sym, results, strict)
+        except Exception as e:
+            logging.debug(f"get_best_matches: {e}")
+            return [], 0, 0
+
+    @cached(max_size=2000,thread_safe=True)
+    def _get_best_matches_inner(self, sym, results=10, strict=True):
         def fix_valid_Exchanges(l):
             def upd(v):
                 l['exchange'] = v
@@ -139,9 +147,8 @@ class InputSource(InputSourceInterface):
         ss=self.get_matching_symbols(sym, results)
         logging.debug((f'end resolving {sym}'))
         if ss is None:
-            ls=[]
-        else:
-            ls= list(ss)
+            raise ValueError(f"get_matching_symbols returned None for {sym} (transient?)")
+        ls= list(ss)
 
         ls = filter(lambda x: not(x is None or 'symbol' not in x), ls)
 

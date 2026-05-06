@@ -75,6 +75,10 @@ class EarningProcessor(TrasnasctionHandler,RapidApi,TransactionHandlerImplementa
             return df_monthly
 
         aa = [self.get_dfs(k) for k in self.gen(ls,force=force)]
+        if not aa:
+            if not dontsave:
+                self.save_cache()
+            return
         allrev, allinc = tuple(map(adjust,zip(*aa)))
 
         if self.revdf is not None:

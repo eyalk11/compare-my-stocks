@@ -74,7 +74,14 @@ class FormInitializer(FormObserver, FormInitializerInterface):
                 rad.setChecked(bool(limit_by & getattr(LimitType,name)))
             elif name.startswith('unite'):
                 name = name[len('unite') + 1:]
-                rad.setChecked( bool(unite &  getattr(UniteType,name)))
+                flag = getattr(UniteType, name)
+                if flag == UniteType.NONE:
+                    # NONE has no bit, so & always yields 0 — treat it as
+                    # "checked iff no exclusive base-mode bit is set".
+                    EXCLUSIVES = UniteType.SUM | UniteType.AVG | UniteType.MIN | UniteType.MAX
+                    rad.setChecked((unite & EXCLUSIVES) == 0)
+                else:
+                    rad.setChecked(bool(unite & flag))
             else:
                 try:
                     rad.setChecked(bool(type & getattr(Types, name)))
@@ -163,6 +170,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             minmax = (minmax[0],minmax[0]+0.1)
         self.window.min_crit.setRange(minmax[0], minmax[1])
         self.window.min_crit.setValue(minmax)
+        self.graphObj.params.valuerange = list(minmax)
         self.disable_slider_values_updates = False
 
     def update_range_num(self,nuofoptions):
@@ -171,6 +179,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.disable_slider_values_updates=True
         self.window.max_num.setRange(0, nuofoptions)
         self.window.max_num.setValue((0, nuofoptions))
+        self.graphObj.params.numrange = (None, None)
         self.disable_slider_values_updates = False
 
     def update_ranges(self,reset_type=ResetRanges.IfAPROP):
@@ -194,19 +203,20 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         if reset_type==ResetRanges.FORCE:
             self.window.max_num.setValue((0, nuofoptions))
             self.window.min_crit.setValue((self.graphObj.minValue, self.graphObj.maxValue))
+            self.graphObj.params.valuerange = [self.graphObj.minValue, self.graphObj.maxValue]
+            self.graphObj.params.numrange = (None, None)
         self.disable_slider_values_updates = False
 
     @simple_exception_handling(err_description="Error in adding items")
     def update_stock_list(self,isinitial=0,justorgs=False):
             org: QListWidget = self.window.orgstocks  # type:
             
-            if  self.window.unite_NONE.isChecked() or not self.graphObj.params.use_groups:
-                if self.graphObj.params.use_groups:
-                    org.clear()
-                    additems(org,self.graphObj.get_options_from_groups(self.graphObj.params.groups))
-                elif isinitial:
-                    org.clear()
-                    additems(org,self.graphObj.params.selected_stocks)
+            if self.graphObj.params.use_groups:
+                org.clear()
+                additems(org,self.graphObj.get_options_from_groups(self.graphObj.params.groups))
+            elif isinitial:
+                org.clear()
+                additems(org,self.graphObj.params.selected_stocks)
             
             if justorgs:
                 return

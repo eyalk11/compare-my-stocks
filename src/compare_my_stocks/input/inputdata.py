@@ -91,7 +91,7 @@ class InputDataImpl(InputDataImplInterface):
         self.maxdate = None
         self._usable_symbols = set()
         self._symbols_wanted = set()
-        self.symbol_info = collections.defaultdict(lambda: dict())
+        self.symbol_info = collections.defaultdict(dict)
         self.cached_used = None
         self._current_status = None
         self._no_adjusted_for = set()
@@ -338,7 +338,7 @@ class InputDataImpl(InputDataImplInterface):
                     self._hist_by_date,
                     dict(self.symbol_info),
                     datetime.datetime.now(),
-                    self.currency_hist.to_dict(),
+                    self.currency_hist.to_dict() if self.currency_hist is not None else None,
                     None,
                 ),
                 open(config.File.HistF, "wb"),

@@ -3,9 +3,9 @@ import collections
 import pickle
 from datetime import datetime, timedelta
 
-from common.common import UseCache, ifnn
+from common.common import UseCache, ifnn, TransactionSourceType
 from common.simpleexceptioncontext import SimpleExceptionContext
-from config import config
+from config import config, resolvefile
 from transactions.transactioninterface import TransactionHandlerImplementator, BuyDictItem, TransactionSource
 from ibflex import client, parser, Trade
 from ibflex.client import ResponseCodeError
@@ -99,7 +99,36 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             logging.debug((e))
 
 
+    @staticmethod
+    def _trade_dt_naive(dt):
+        if dt is None:
+            return None
+        if getattr(dt, 'tzinfo', None) is not None:
+            return dt.replace(tzinfo=None)
+        return dt
+
+    def _ibstatement_cutoff(self):
+        """Returns a naive datetime cutoff (WhenGenerated) when the
+        OnlyNewerThanIBStatement option is on and the IBStatement source is
+        configured; otherwise None. Trades with dateTime <= cutoff are
+        ignored both on fetch and on cache load."""
+        if not getattr(config.TransactionHandlers.IB, 'OnlyNewerThanIBStatement', False):
+            return None
+        if (config.TransactionHandlers.TransactionSource & TransactionSourceType.IBStatement) != TransactionSourceType.IBStatement:
+            return None
+        from transactions.ibstatementhandler import read_ib_statement_when_generated
+        ok, path = resolvefile(config.TransactionHandlers.IBStatement.SrcFile, use_alternative=config.Running.UseAlterantiveLocation)
+        if not ok:
+            logging.warning(f"OnlyNewerThanIBStatement set but IBStatement SrcFile {config.TransactionHandlers.IBStatement.SrcFile} not found")
+            return None
+        wg = read_ib_statement_when_generated(path)
+        if wg is None:
+            logging.warning(f"OnlyNewerThanIBStatement set but WhenGenerated could not be read from {path}")
+            return None
+        return wg
+
     def populate_buydic(self):
+        cutoff = self._ibstatement_cutoff()
         n=None
         last_date=None
         last_date_cache = max([d.dateTime for d in self._tradescache.values()]) if len(self._tradescache)>0 else None
@@ -130,7 +159,11 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             n=0
             min_date = datetime.now()
             max_date = datetime.fromtimestamp(0)
+            fetch_skipped=0
             for x in newres:
+                if cutoff is not None and self._trade_dt_naive(x.dateTime) <= cutoff:
+                    fetch_skipped += 1
+                    continue
                 if x.tradeID not in self._tradescache:
                     self._tradescache[x.tradeID]=x
                     if x.dateTime < min_date:
@@ -138,6 +171,8 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
                     if x.dateTime > max_date:
                         max_date = x.dateTime
                     n+=1
+            if fetch_skipped:
+                logging.info(f"Skipped {fetch_skipped} queried IB trades older than IBStatement WhenGenerated {cutoff}")
             if not last_date:
                 last_date=last_date_cache
             if n > 0:
@@ -148,7 +183,11 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             elif (not ( not usecache or self.TryToQueryAnyway)) and self._tradescache:
                 logging.info(f"Didnt query cache. Last trade {last_date}")
 
+        cache_skipped=0
         for z in self._tradescache.values():
+            if cutoff is not None and self._trade_dt_naive(z.dateTime) <= cutoff:
+                cache_skipped += 1
+                continue
             date=z.dateTime
             z : Trade
             while date in self._buydic:
@@ -159,6 +198,8 @@ class IBTransactionHandler(TrasnasctionHandler, TransactionHandlerImplementator)
             self.update_sym_property(z.symbol, z.currency)
             self.update_sym_property(z.symbol, z.conid,'conId')
             self.update_sym_property(z.symbol, z.exchange, 'exchange')
+        if cache_skipped:
+            logging.info(f"Excluded {cache_skipped} cached IB trades older than IBStatement WhenGenerated {cutoff}")
         a=1
 
 

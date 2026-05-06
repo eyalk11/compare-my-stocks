@@ -77,6 +77,7 @@ class IBConf:
     FlexQuery: Optional[str] = None
     QueryIfOlderThan: datetime.timedelta = datetime.timedelta(days=3)
     PromptOnQueryFail: bool = True  # if FlexToken is set and a query fails (e.g. token expired, code 1012), prompt for a new token on stdin and retry
+    OnlyNewerThanIBStatement: bool = False  # ignore IB Flex trades dated <= IBStatement.WhenGenerated, both when fetching into cache and when reading from cache
 
 @paramaware 
 @dataclass 
@@ -88,6 +89,14 @@ class MyStocksConf:
     File: str = r'buydicnk.cache'
     SrcFile: str = "example_mystock.csv"
     PortofolioName: str = "My Portfolio"
+    Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
+
+
+@dataclass
+class IBStatementConf:
+    File: str = r'ibstatement.cache'
+    SrcFile: str = "ib_statement.csv"  # IB Activity Statement CSV (Open Positions)
+    PortofolioName: str = "IB Statement"
     Use: Union[UseCache, int] = UseCache.USEIFAVAILABLE
 
 
@@ -103,7 +112,7 @@ class TransactionHandlersConf:
 
     '''
     JustFromTheEndOfMyStock : bool = False
-    TransactionSource:  TransactionSourceType = TransactionSourceType.Both
+    TransactionSource:  TransactionSourceType = TransactionSourceType.All
     TrackStockDict : Dict[str,Set[datetime.datetime]] = field(default_factory=dict)
     Earnings: EarningsConf= field(default_factory=EarningsConf)
     ReadjustJustIB : bool = False
@@ -113,6 +122,7 @@ class TransactionHandlersConf:
     StockPrices: StockPricesConf = field(default_factory=StockPricesConf)
     IB: IBConf = field(default_factory=IBConf)
     MyStocks: MyStocksConf = field(default_factory=MyStocksConf)
+    IBStatement: IBStatementConf = field(default_factory=IBStatementConf)
     IgnoreConf: Dict = field(default_factory=lambda: {})
     CombineStrategy: CombineStrategyEnum = CombineStrategyEnum.PREFERSTOCKS
     IncludeNormalizedOnSave: bool = True
@@ -551,6 +561,7 @@ class ConfigLoader():
         yaml.register_class(TransactionHandlersConf)
         yaml.register_class(StockPricesConf)
         yaml.register_class(MyStocksConf)
+        yaml.register_class(IBStatementConf)
         yaml.register_class(RapidKeyConf)
         yaml.register_class(UIConf)
         yaml.register_class(SourcesConf)

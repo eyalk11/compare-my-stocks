@@ -78,4 +78,5 @@ function main
 }
 
 try { main }
+catch { Write-Host "You can always install it from  $($PSScriptRoot) by running this script again after fixing the issue: $_"} 
 finally { cmd /c "pause" }

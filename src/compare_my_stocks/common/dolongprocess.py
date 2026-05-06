@@ -44,6 +44,14 @@ class DoLongProcessSlots(QObject):
     def is_started(self):
         return self.started
 
+    def close(self, timeout_ms=2000):
+        """Stop the worker thread. Safe to call multiple times."""
+        thread = getattr(self, "thread", None)
+        if thread is None:
+            return
+        thread.quit()
+        thread.wait(timeout_ms)
+
     @Slot(tuple)
     def process_command(self, taskparams):
         #import asyncio

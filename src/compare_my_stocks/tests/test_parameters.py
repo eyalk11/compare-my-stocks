@@ -621,3 +621,75 @@ class TestParametersError:
         with pytest.raises(ParameterError) as exc_info:
             raise ParameterError(msg)
         assert str(exc_info.value) == msg
+
+
+class TestParametersHelperResolveHack:
+    """Parameters.helper() (called by selected_stocks/ext setters) inspects
+    each input. If it's an AbstractSymbol carrying a non-empty .dic of
+    contract info, it auto-stashes the rich symbol into resolve_hack so the
+    InputProcessor can use the contract details later."""
+
+    def _rich_symbol(self, sym, dic):
+        """A SimpleSymbol with its private _dic populated."""
+        s = SimpleSymbol(sym)
+        s._dic = dic
+        return s
+
+    def test_string_input_does_not_populate_resolve_hack(self):
+        p = Parameters()
+        p.selected_stocks = ['AAPL', 'MSFT']
+        assert p.resolve_hack == {}
+        assert p.selected_stocks == ['AAPL', 'MSFT']
+
+    def test_abstract_symbol_without_dic_does_not_populate(self):
+        """A SimpleSymbol with no dic falls into the else branch
+        (yield str(l)) and does not enter resolve_hack."""
+        p = Parameters()
+        p.selected_stocks = [SimpleSymbol('AAPL')]
+        assert 'AAPL' not in p.resolve_hack
+        assert p.selected_stocks == ['AAPL']
+
+    def test_rich_symbol_populates_resolve_hack(self):
+        """A SimpleSymbol with a populated .dic gets stashed into
+        resolve_hack[symbol_str] = sym_object."""
+        p = Parameters()
+        rich = self._rich_symbol(
+            'AAPL',
+            {'symbol': 'AAPL', 'exchange': 'NASDAQ', 'conId': 265598})
+        p.selected_stocks = [rich]
+        assert 'AAPL' in p.resolve_hack
+        # Stored object is the rich symbol itself, not just the string.
+        assert p.resolve_hack['AAPL'] is rich
+        # The list still ends up as plain strings.
+        assert p.selected_stocks == ['AAPL']
+
+    def test_ext_setter_populates_resolve_hack_too(self):
+        """The ext setter also runs through helper() (parameters.py:74-76).
+        Same auto-population rules apply."""
+        p = Parameters()
+        rich = self._rich_symbol(
+            'QQQ',
+            {'symbol': 'QQQ', 'exchange': 'NASDAQ', 'conId': 320227571})
+        p.ext = [rich]
+        assert 'QQQ' in p.resolve_hack
+        assert p.resolve_hack['QQQ'] is rich
+        assert p.ext == ['QQQ']
+
+    def test_helper_is_idempotent_within_one_setter_call(self):
+        """Setting selected_stocks twice with the same rich symbol leaves
+        only one entry per key; the dict isn't reset between sets but
+        re-assigning the same key is harmless."""
+        p = Parameters()
+        rich = self._rich_symbol('AAPL', {'symbol': 'AAPL', 'conId': 1})
+        p.selected_stocks = [rich]
+        p.selected_stocks = [rich]
+        assert list(p.resolve_hack.keys()) == ['AAPL']
+
+    def test_mixed_inputs_split_correctly(self):
+        """A list mixing plain strings and rich symbols: only the rich
+        ones populate resolve_hack."""
+        p = Parameters()
+        rich = self._rich_symbol('AAPL', {'symbol': 'AAPL', 'conId': 1})
+        p.selected_stocks = ['MSFT', rich, 'NVDA']
+        assert set(p.resolve_hack.keys()) == {'AAPL'}
+        assert p.selected_stocks == ['MSFT', 'AAPL', 'NVDA']

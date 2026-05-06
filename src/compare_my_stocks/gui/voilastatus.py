@@ -28,7 +28,9 @@ class VoilaStatus(JupyterCommonHandler):
         qtvoila = QtVoila()
 
         qtvoila.max_voila_wait = config.Voila.MaxVoilaWait
-        self.resolve_voila(qtvoila)
+        ok, qtvoila.python_process_path = self.resolve_voila()
+        if not ok:
+            return
         for k in dfs:
             qtvoila.add_notebook_cell(dict(), f"#{k.df_name}",cell_type='markdown')
             qtvoila.add_notebook_cell(dict(), f"{k.df_desc}",cell_type='markdown')
@@ -39,17 +41,15 @@ class VoilaStatus(JupyterCommonHandler):
             dic=df.to_dict ()
             import pickle
             buffer=pickle.dumps(dic)
-            code=f'''
-            from io import StringIO
-            import pandas as pd
-            from ipydatagrid import DataGrid
+            code=f'''from io import StringIO
+import pandas as pd
+from ipydatagrid import DataGrid
 import pickle
 dic=pickle.loads({str(buffer)})
-            df = pd.DataFrame(dic)
-            dd=DataGrid(df)
-            dd.auto_fit_columns=True
-            dd
-            '''
+df = pd.DataFrame(dic)
+dd=DataGrid(df)
+dd.auto_fit_columns=True
+dd'''
         # Add a notebook cell for example
             qtvoila.add_notebook_cell(dict(), code )
 

@@ -27,7 +27,7 @@ def unite_if_needed(x,data,query_func=query_symbol):
         df=convert_to_dec(convert_to_dec(df))
         df=df.astype(float)
         df=df.mean(axis=1,skipna = True)
-        df=df.apply(lambda x: numerize(x) if not math.isnan(x) else x)
+        df=df.apply(lambda x: numerize.numerize(x) if not math.isnan(x) else x)
         return df.to_dict()
     else:
         return query_func(x)

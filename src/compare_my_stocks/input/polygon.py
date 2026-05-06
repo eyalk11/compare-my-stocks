@@ -7,7 +7,7 @@ import polygon
 from memoization import cached
 from polygon.rest.models import TickerDetails
 
-from common.common import c, lmap
+from common.common import c, lmap, cache_if_not_none
 from common.simpleexceptioncontext import simple_exception_handling, excp_handler
 from config import config
 from input.inputsource import InputSource
@@ -36,8 +36,9 @@ class PolySource(InputSource):
 
     @simple_exception_handling(err_description='error in resolve symbol',return_succ=None,never_throw=True)
     @excp_handler(polygon.exceptions.BadResponse, handler=excphandler)
+    @cache_if_not_none
     @cached
-    def resolve_symbol(self, sym): 
+    def resolve_symbol(self, sym):
         return c(self.convert_sym_dic,self.client.get_ticker_details)(sym)
 
 

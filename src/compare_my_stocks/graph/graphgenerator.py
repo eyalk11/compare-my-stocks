@@ -474,7 +474,7 @@ class GraphGenerator:
                     if mind < maxd:
                         self._axes.set_xlim([mind, maxd])
 
-                    plt.draw()
+                    mfig.canvas.draw_idle()
             elif self.params.show_graph:
                 logging.debug('strange')
                 pass  # plt.show()

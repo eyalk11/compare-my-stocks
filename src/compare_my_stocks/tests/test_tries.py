@@ -41,10 +41,17 @@ from transactions.transactioninterface import BuyDictItem
 
 #cfg.StopExceptionInDebug = True
 
+# Most tests in this module use the live IB / cache fixtures (`inp`,
+# `IBSourceSess`, `realeng`, `realenghookinp`); they need a populated cache
+# and/or a running IB Gateway. Mark the module so the default `pytest` run
+# skips them.
+pytestmark = pytest.mark.integration
 
+
+@pytest.mark.skip(reason="diagnostic-only: no asserts, predates current cache schema (v[0] is no longer a dict-of-cols)")
 def test_fix_histdic(inp):
     tmpinp = inp
-    tmpinp.load_cache(False)
+    tmpinp.load_cache(False, process_params=tmpinp.process_params)
     nv = collections.defaultdict(dict)
     for k, dic in tmpinp._hist_by_date.items():
         for sym, v in dic.items():
