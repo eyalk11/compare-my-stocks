@@ -260,9 +260,20 @@ class GraphGenerator:
             #see https://stackoverflow.com/questions/14827650/pyplot-scatter-plot-marker-size
             #want to make same trasactions same size.
             sizes = [(s*3.14/4)  if (q < 0) else s for q,s in zip(qtys,sizes)]
+            try:
+                _yarr = np.asarray(yval, dtype='float64')
+                logging.log(TRACELEVEL, '[gg-tx] yield sym=%s n=%d special=%s yval[min,max]=(%s,%s) finiteY=%d',
+                                symbol, len(mpl_dates), special,
+                                (np.nanmin(_yarr) if _yarr.size else None),
+                                (np.nanmax(_yarr) if _yarr.size else None),
+                                int(np.isfinite(_yarr).sum()) if _yarr.size else 0)
+            except Exception as _e:
+                logging.log(TRACELEVEL, '[gg-tx] yield trace failed sym=%s: %r', symbol, _e)
             yield m,sizes, mpl_dates, yval, symbol,cost, adjustedpr, qtys, sources
     @timeit
     def plot_transaction_info(self, ax, plot_data,special=False):
+        logging.log(TRACELEVEL, '[gg-tx] plot_transaction_info ENTER special=%s n_syms=%s',
+                        special, len(plot_data) if plot_data else 0)
 
         # def gencolors(num):
         #     phi = np.linspace(0, 2 * np.pi, 60)
@@ -442,7 +453,29 @@ class GraphGenerator:
 
                 # logging.debug (('calledreomve!'))
             ar = self._axes
-            dt.plot.line(reuse_plot=True, ax=ar, grid=True, **additional_options)
+            try:
+                _nonnan = {c: int(dt[c].notna().sum()) for c in dt.columns}
+                logging.log(TRACELEVEL, '[gg] PRE-plot dt shape=%s cols=%s nonnan=%s idx[0..1]=%s..%s',
+                             dt.shape, list(dt.columns), _nonnan,
+                             dt.index[0] if len(dt.index) else None,
+                             dt.index[-1] if len(dt.index) else None)
+                logging.log(TRACELEVEL, '[gg] PRE-plot ax.lines=%d ax has legend=%s xlim=%s ylim=%s',
+                             len(ar.lines), ar.legend_ is not None, ar.get_xlim(), ar.get_ylim())
+            except Exception as _e:
+                logging.log(TRACELEVEL, '[gg] PRE-plot trace failed: %r', _e)
+            dt.plot.line(reuse_plot=True, ax=ar, grid=True, x_compat=True, **additional_options)
+            try:
+                _line_info = []
+                for _l in ar.lines[:8]:
+                    try:
+                        _xy = _l.get_xydata()
+                        _line_info.append((_l.get_label(), _l.get_visible(), len(_xy),
+                                           bool(np.isfinite(_xy[:, 1]).any()) if len(_xy) else False))
+                    except Exception as _ee:
+                        _line_info.append((_l.get_label(), 'err', repr(_ee)))
+                logging.log(TRACELEVEL, '[gg] POST-plot ax.lines=%d sample=%s', len(ar.lines), _line_info)
+            except Exception as _e:
+                logging.log(TRACELEVEL, '[gg] POST-plot trace failed: %r', _e)
 
             if just_upd or self.first_time:
                 if UseQT:
@@ -475,8 +508,26 @@ class GraphGenerator:
             maxd = matplotlib.dates.date2num(max(dt.index))
             if mind < maxd:
                 self._axes.set_xlim([mind, maxd])
+            try:
+                logging.log(TRACELEVEL, '[gg] PRE-relim xlim=%s ylim=%s dataLim=%s',
+                             ar.get_xlim(), ar.get_ylim(), ar.dataLim.bounds)
+            except Exception:
+                pass
             ar.relim()
             ar.autoscale_view(scalex=False, scaley=True)
+            try:
+                logging.log(TRACELEVEL, '[gg] POST-autoscale xlim=%s ylim=%s dataLim=%s vis_lines=%d/%d',
+                             ar.get_xlim(), ar.get_ylim(), ar.dataLim.bounds,
+                             sum(1 for _l in ar.lines if _l.get_visible()), len(ar.lines))
+            except Exception:
+                pass
+            try:
+                logging.log(TRACELEVEL, '[gg-tx] plot_data?=%s show_tx=%s n_keys=%s sample_lens=%s',
+                                bool(plot_data), getattr(self.params, 'show_transactions_graph', None),
+                                (len(plot_data) if plot_data else 0),
+                                ([(k, len(v)) for k, v in list((plot_data or {}).items())[:5]]))
+            except Exception as _e:
+                logging.log(TRACELEVEL, '[gg-tx] trace failed: %r', _e)
             if plot_data and self.params.show_transactions_graph:
                 #special if not a price graph
                 self.plot_transaction_info(ar, plot_data, special=
@@ -508,6 +559,13 @@ class GraphGenerator:
             if isline:
                 self.handle_line(ar, starthidden, just_upd)
 
+            try:
+                _hidden = [_l.get_label() for _l in ar.lines if not _l.get_visible()]
+                logging.log(TRACELEVEL, '[gg] FINAL ax.lines=%d hidden=%d hidden_labels=%s xlim=%s ylim=%s',
+                             len(ar.lines), len(_hidden), _hidden[:10],
+                             ar.get_xlim(), ar.get_ylim())
+            except Exception:
+                pass
             mfig.canvas.draw_idle()
 
         finally:
