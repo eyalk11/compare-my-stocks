@@ -89,6 +89,10 @@ function Get-PytestArgs {
                 'src/compare_my_stocks/tests/test_composition_extended.py',
                 'src/compare_my_stocks/tests/test_currency_adjust.py',
                 'src/compare_my_stocks/tests/test_stockprices.py',
+                'src/compare_my_stocks/tests/test_jupytertools.py',
+                'src/compare_my_stocks/tests/test_inputprocessor_unit.py',
+                'src/compare_my_stocks/tests/test_call_graph_generator.py',
+                'src/compare_my_stocks/tests/test_default_notebook.py',
                 'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[price-line-UseInput.WITHINPUT|LOADDEFAULTCONFIG]',
                 'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[value-scatter-UseInput.WITHINPUT|LOADDEFAULTCONFIG|USEDATADIR]'
             )
