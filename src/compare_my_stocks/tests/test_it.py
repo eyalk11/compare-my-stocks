@@ -29,37 +29,8 @@ from tests.testtools import *
 # the whole module so the default `pytest` run skips them. Run them via:
 #   pytest -m integration src/compare_my_stocks/tests/test_it.py
 pytestmark = pytest.mark.integration
-@pytest.mark.parametrize("useinp", [UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT, UseInput.WITHINPUT,
-                                    UseInput.LOADDEFAULTCONFIG])
-def test_realengine(mock_config_to_default,realeng,useinp):
-    logging.info("Starting test_realengine, useinp=%s",useinp)
-    try:
-        eng = realeng
-        p =Parameters(
-            type=Types.PRICE, unite_by_group=UniteType.NONE
-            , isline=True,use_groups=True, groups=['FANG'], use_cache=UseCache.FORCEUSE,
-            show_graph=False)
-        if  useinp & UseInput.WITHINPUT:
-            p.fromdate=datetime.datetime.now()-datetime.timedelta(days=5)
-            p.todate=datetime.datetime.now()
-        else:
-            p.fromdate= datetime.datetime(2022, 11, 1)
-            p.todate = datetime.datetime(2022, 12, 1)
-
-        eng.gen_graph(p)
-        assert eng.call_graph_generator.call_args is not None
-        df= eng.call_graph_generator.call_args.args[0]
-        if useinp & UseInput.WITHINPUT:
-            assert df.shape[0] >=1 #at least one good day
-            assert df.shape[1] >= 2
-        else:
-            assert df.shape [0]>= (22)
-    finally:
-        if useinp & UseInput.WITHINPUT:
-            eng.input_processor.InputSource.disconnect()
-# def test_earnings(realeng):
-#     eng= realeng
-#     eng._inp.
+# test_realengine and test_synthetic_engine live in test_engine.py — one
+# is real-IB integration, the other uses a synthetic in-process IB source.
 
 def test_adjust_currency(realeng):
     eng = realeng

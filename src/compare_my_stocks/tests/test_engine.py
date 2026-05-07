@@ -1,6 +1,10 @@
-"""Engine-level tests: required_syms (the symbol-set assembler) and
-SymbolsHandler.get_options_from_groups (the group → symbols expander)."""
+"""Engine-level tests: required_syms (the symbol-set assembler),
+SymbolsHandler.get_options_from_groups (the group → symbols expander), and
+end-to-end engine tests — test_realengine (live IB Gateway, integration)
+and test_synthetic_engine (synthetic IB source, no live deps)."""
 
+import datetime
+import logging
 import os
 import sys
 from pathlib import Path
@@ -10,8 +14,9 @@ import pytest
 
 sys.path.insert(0, str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
 
-from common.common import Types, UniteType
+from common.common import Types, UniteType, UseCache, InputSourceType
 from engine.compareengine import InternalCompareEngine
+from engine.parameters import Parameters
 from engine.symbolshandler import SymbolsHandler
 
 
@@ -260,3 +265,179 @@ class TestGetOptionsFromGroups:
         # Should NOT raise; result is None (the pre-exception ret value).
         result = h.get_options_from_groups(['NotARealGroup'])
         assert result is None
+
+
+# ============================================================================
+# CompareEngine end-to-end (real IB Gateway, integration; and synthetic IB)
+# ============================================================================
+
+# Imported lazily here so test_engine.py can still be imported when the
+# integration test fixtures (additional_process etc.) aren't relevant.
+from tests.testtools import (
+    UseInput,
+    DATADIR,
+    assert_datadir_unchanged,
+    additional_process,
+    realeng,
+    mock_config_to_default,
+    generate_config,
+    get_eng,
+    make_synthetic_ibsource,
+)
+from config import config as _cfg, ConfigLoader as _ConfigLoader
+
+
+# Shared parameter grid — same shape as test_generic_graph.POSSIBLE_PARAMETERS
+# so synthetic-engine and graph-only tests cover the same Parameters surface.
+POSSIBLE_PARAMETERS = [
+    pytest.param(
+        Parameters(
+            type=Types.PRICE, unite_by_group=UniteType.NONE,
+            isline=True, use_groups=True, groups=['FANG'],
+            use_cache=UseCache.FORCEUSE, show_graph=False,
+        ),
+        id="price-line",
+    ),
+    pytest.param(
+        Parameters(
+            type=Types.PRICE | Types.RELTOSTART | Types.PRECENTAGE,
+            unite_by_group=UniteType.NONE,
+            isline=True, use_groups=True, groups=['FANG'],
+            use_cache=UseCache.FORCEUSE, show_graph=False,
+        ),
+        id="price-pct-rel-to-start",
+    ),
+    pytest.param(
+        Parameters(
+            type=Types.VALUE, unite_by_group=UniteType.NONE,
+            isline=False, use_groups=True, groups=['FANG'],
+            use_cache=UseCache.FORCEUSE, show_graph=False,
+        ),
+        id="value-scatter",
+    ),
+    pytest.param(
+        Parameters(
+            type=Types.PROFIT | Types.RELTOMAX,
+            unite_by_group=UniteType.NONE,
+            isline=True, use_groups=True, groups=['FANG'],
+            use_cache=UseCache.FORCEUSE, show_graph=False,
+            starthidden=True,
+        ),
+        id="profit-rel-to-max-hidden",
+    ),
+]
+
+
+def _maybe_guard_datadir(useinp, request):
+    """If USEDATADIR is set: pre-flight that the in-tree cache is loadable
+    in this env (skips with a clear reason otherwise), then activate the
+    assert_datadir_unchanged guard so the test fails on any data-dir mutation."""
+    if not (useinp & UseInput.USEDATADIR):
+        return
+    import pickle as _pkl
+    _hf = os.path.join(DATADIR, "HistFile.cache")
+    try:
+        with open(_hf, "rb") as _f:
+            _pkl.load(_f)
+    except Exception as _e:
+        pytest.skip(f"In-tree cache {_hf} cannot be loaded in this env: {_e!r}")
+    request.getfixturevalue("assert_datadir_unchanged")
+
+
+# ---------------------------------------------------------------------------
+# test_realengine — moved from test_it.py. Marked integration: requires a
+# live IB Gateway / sidecar.
+# ---------------------------------------------------------------------------
+@pytest.mark.integration
+@pytest.mark.parametrize("useinp", [
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT,
+    UseInput.WITHINPUT,
+    UseInput.LOADDEFAULTCONFIG,
+    UseInput.LOADDEFAULTCONFIG | UseInput.USEDATADIR,
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT | UseInput.USEDATADIR,
+])
+def test_realengine(mock_config_to_default, realeng, useinp, request):
+    logging.info("Starting test_realengine, useinp=%s", useinp)
+    _maybe_guard_datadir(useinp, request)
+    try:
+        eng = realeng
+        p = Parameters(
+            type=Types.PRICE, unite_by_group=UniteType.NONE,
+            isline=True, use_groups=True, groups=['FANG'],
+            use_cache=UseCache.FORCEUSE, show_graph=False,
+        )
+        if useinp & UseInput.WITHINPUT:
+            p.fromdate = datetime.datetime.now() - datetime.timedelta(days=5)
+            p.todate = datetime.datetime.now()
+        else:
+            p.fromdate = datetime.datetime(2022, 11, 1)
+            p.todate = datetime.datetime(2022, 12, 1)
+
+        eng.gen_graph(p)
+        assert eng.call_graph_generator.call_args is not None
+        df = eng.call_graph_generator.call_args.args[0]
+        if useinp & UseInput.WITHINPUT:
+            assert df.shape[0] >= 1
+            assert df.shape[1] >= 2
+        else:
+            assert df.shape[0] >= 22
+    finally:
+        if useinp & UseInput.WITHINPUT:
+            eng.input_processor.InputSource.disconnect()
+
+
+# ---------------------------------------------------------------------------
+# test_synthetic_engine — same engine path, but the IBSource is a
+# deterministic in-process mock (make_synthetic_ibsource). No IB Gateway,
+# no integration mark. Covers the full Parameters grid × flag combos.
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def synthetic_eng(useinp, monkeypatch):
+    """Build a CompareEngine whose IB source is the deterministic synthetic
+    mock. Honors UseInput flags via generate_config (LOADDEFAULTCONFIG /
+    WITHINPUT / USEDATADIR). Caches (transactions, hist) are mocked to no-op
+    so no on-disk file is mutated."""
+    cfg = generate_config(useinp)
+    cfg.Input.InputSource = InputSourceType.IB  # engine asks for an IBSource
+    _ConfigLoader.config.update_from(cfg, all=True)
+
+    synthetic = make_synthetic_ibsource()
+    # Patch the import site that CompareEngine.__init__ calls — this avoids
+    # spawning the real ibsrv subprocess.
+    monkeypatch.setattr(
+        "engine.compareengine.get_ibsource", lambda: synthetic, raising=True
+    )
+
+    eng = get_eng()
+    # get_eng() instantiated CompareEngine before our patch took effect for
+    # __init__ — but because monkeypatch is set first via fixture ordering,
+    # the engine's _inp._inputsource IS the synthetic. Belt-and-suspenders:
+    eng._inp._inputsource = synthetic
+    return eng
+
+
+@pytest.mark.parametrize("useinp", [
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT,
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT | UseInput.USEDATADIR,
+    UseInput.LOADDEFAULTCONFIG | UseInput.USEDATADIR,
+])
+@pytest.mark.parametrize("params", POSSIBLE_PARAMETERS)
+def test_synthetic_engine(params, useinp, synthetic_eng, request):
+    """Full engine path — config → InputProcessor → DataGenerator →
+    GraphGenerator — driven by the synthetic IBSource. Same parameter grid
+    as test_generic_graph.POSSIBLE_PARAMETERS so coverage matches."""
+    logging.info("test_synthetic_engine useinp=%s params=%s", useinp, params)
+    _maybe_guard_datadir(useinp, request)
+
+    from copy import copy as _copy
+    eng = synthetic_eng
+    p = _copy(params)
+    p.fromdate = datetime.datetime.now() - datetime.timedelta(days=120)
+    p.todate = datetime.datetime.now()
+
+    eng.gen_graph(p)
+    assert eng.call_graph_generator.call_args is not None, \
+        "graph generator was never called — engine path failed silently"
+    df = eng.call_graph_generator.call_args.args[0]
+    assert df.shape[0] >= 1, f"empty dataframe for {params.id if hasattr(params,'id') else params}"
+    assert df.shape[1] >= 1

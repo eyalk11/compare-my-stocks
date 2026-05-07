@@ -30,10 +30,13 @@ param(
     [string]$Extra  = '',
     [string]$Python = 'C:\Users\ekarni\.pyenv\pyenv-win\versions\3.11\python.exe',
     [switch]$NoLog,
-    [switch]$Venv11
+    [switch]$Venv11,
+    [switch]$Venv314
 )
 
-if ($Venv11) {
+if ($Venv314) {
+    $Python = Join-Path $PSScriptRoot '.venv314\Scripts\python.exe'
+} elseif ($Venv11) {
     $Python = Join-Path $PSScriptRoot '.venv11\Scripts\python.exe'
 }
 
@@ -71,7 +74,10 @@ function Get-PytestArgs {
             # across the core layers (parameters, common helpers, symbols,
             # serialization, currency, composition) plus the stockprices file
             # which contributes 1-2 RapidAPI integration tests (auto-skip if
-            # the key isn't configured). `-o addopts=` clears the default
+            # the key isn't configured) and two test_synthetic_engine variants
+            # that exercise the full CompareEngine path against a synthetic
+            # IBSource (one with USEDATADIR to assert the in-tree data dir
+            # is never mutated). `-o addopts=` clears the default
             # `-m 'not integration'` filter so the integration ones can run.
             $args += @(
                 '-o', 'addopts=',
@@ -82,7 +88,9 @@ function Get-PytestArgs {
                 'src/compare_my_stocks/tests/test_symbols.py',
                 'src/compare_my_stocks/tests/test_composition_extended.py',
                 'src/compare_my_stocks/tests/test_currency_adjust.py',
-                'src/compare_my_stocks/tests/test_stockprices.py'
+                'src/compare_my_stocks/tests/test_stockprices.py',
+                'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[price-line-UseInput.WITHINPUT|LOADDEFAULTCONFIG]',
+                'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[value-scatter-UseInput.WITHINPUT|LOADDEFAULTCONFIG|USEDATADIR]'
             )
         }
         'lf'      { $args += @('--lf', 'src/compare_my_stocks/tests') }
