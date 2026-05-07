@@ -98,6 +98,117 @@ def test_get_hist_split_empty_when_no_splits(monkeypatch):
     assert list(sp.get_hist_split("NOSPLITS")) == []
 
 
+def test_get_hist_split_disabled_yields_nothing(monkeypatch):
+    """UseYFinance=False → generator yields nothing without making any HTTP call."""
+    sp = _make_sp([])
+    from config import config
+    monkeypatch.setattr(config.Running, "UseYFinance", False, raising=False)
+    import http.client
+    def _boom(*a, **kw):
+        raise AssertionError("HTTPSConnection should not be constructed when disabled")
+    monkeypatch.setattr(http.client, "HTTPSConnection", _boom)
+    assert list(sp.get_hist_split("AAA")) == []
+
+
+def test_get_hist_split_no_key_yields_nothing(monkeypatch):
+    """Missing RapidYFinanaceKey → generator returns without HTTP call."""
+    sp = _make_sp([])
+    from config import config
+    monkeypatch.setattr(config.Running, "UseYFinance", True, raising=False)
+    monkeypatch.setattr(config.Jupyter, "RapidYFinanaceKey", "", raising=False)
+    import http.client
+    def _boom(*a, **kw):
+        raise AssertionError("no HTTP without API key")
+    monkeypatch.setattr(http.client, "HTTPSConnection", _boom)
+    assert list(sp.get_hist_split("AAA")) == []
+
+
+def test_get_hist_split_parses_splits(monkeypatch):
+    """Happy-path: API returns two splits → both yielded as (datetime, ratio)."""
+    sp = _make_sp([])
+    from config import config
+    monkeypatch.setattr(config.Running, "UseYFinance", True, raising=False)
+    monkeypatch.setattr(config.Jupyter, "RapidYFinanaceKey", "k", raising=False)
+
+    payload = {
+        "data": [
+            {"date": 1598832000000, "stockSplits": 5},  # 2020-08-31
+            {"date": 1661385600000, "stockSplits": 3},  # 2022-08-25
+        ]
+    }
+
+    class _Resp:
+        status = 200
+        def read(self):
+            import json as _j
+            return _j.dumps(payload).encode()
+
+    class _Conn:
+        def __init__(self, *a, **kw): pass
+        def request(self, *a, **kw): pass
+        def getresponse(self): return _Resp()
+
+    import http.client
+    monkeypatch.setattr(http.client, "HTTPSConnection", _Conn)
+    out = list(sp.get_hist_split("TSLA"))
+    assert [r for _, r in out] == [5.0, 3.0]
+
+
+def test_get_hist_split_non_200_yields_nothing(monkeypatch):
+    """Non-200 (and non-429) → log warning, yield nothing."""
+    sp = _make_sp([])
+    from config import config
+    monkeypatch.setattr(config.Running, "UseYFinance", True, raising=False)
+    monkeypatch.setattr(config.Jupyter, "RapidYFinanaceKey", "k", raising=False)
+
+    class _Resp:
+        status = 500
+        def read(self): return b'{"error": "internal"}'
+
+    class _Conn:
+        def __init__(self, *a, **kw): pass
+        def request(self, *a, **kw): pass
+        def getresponse(self): return _Resp()
+
+    import http.client
+    monkeypatch.setattr(http.client, "HTTPSConnection", _Conn)
+    assert list(sp.get_hist_split("BAD")) == []
+
+
+def test_get_hist_split_retries_on_429(monkeypatch):
+    """429 on first attempt → sleep + retry → 200 yields parsed splits."""
+    sp = _make_sp([])
+    from config import config
+    monkeypatch.setattr(config.Running, "UseYFinance", True, raising=False)
+    monkeypatch.setattr(config.Jupyter, "RapidYFinanaceKey", "k", raising=False)
+
+    calls = {"n": 0}
+
+    class _Resp429:
+        status = 429
+        def read(self): return b''
+
+    class _Resp200:
+        status = 200
+        def read(self):
+            import json as _j
+            return _j.dumps({"data": [{"date": 1598832000000, "stockSplits": 5}]}).encode()
+
+    class _Conn:
+        def __init__(self, *a, **kw): pass
+        def request(self, *a, **kw): pass
+        def getresponse(self):
+            calls["n"] += 1
+            return _Resp429() if calls["n"] == 1 else _Resp200()
+
+    import http.client, time
+    monkeypatch.setattr(http.client, "HTTPSConnection", _Conn)
+    monkeypatch.setattr(time, "sleep", lambda *_a, **_k: None)
+    out = list(sp.get_hist_split("TSLA"))
+    assert calls["n"] == 2
+    assert out and out[0][1] == 5.0
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not _HAS_YF, reason="RapidYFinanaceKey not configured")
 def test_get_hist_split_live_tsla(monkeypatch):

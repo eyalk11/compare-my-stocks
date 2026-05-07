@@ -181,6 +181,15 @@ More detail in `CLAUDE.md` and the wiki.
 pytest src/compare_my_stocks/tests
 ```
 
+The suite covers a wide range of functionality — pure utilities (`jupytertools`,
+`stockprices.get_hist_split`), engine orchestration (`call_graph_generator`,
+`required_syms`, the synthetic-IB end-to-end path), input-pipeline branches
+(`InputProcessor.get_hist_sym`, `get_status_df`, currency adjustment),
+data-generation parameter grids, serialization round-trips, IB-statement and
+ibflex parsing, form/parameter wiring, and the full Qt-form initialization.
+Integration tests (real IB Gateway, live RapidAPI) are gated behind
+`-m integration`; the default run is hermetic and offline.
+
 
 ---
 
