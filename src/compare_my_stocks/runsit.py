@@ -153,7 +153,7 @@ class MainClass:
             os._exit(1)
 
     @simple_exception_handling(err_description="main")
-    def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False, noprompt=False):
+    def main(self, console=False, ibconsole=False, debug=False, noconsole=False, nogui=False, noprompt=False, trace=False):
         # First we do logging to see what is going on
         #Then init_log to have basic formatting
         # Then we import config. SILENT should be false.
@@ -161,7 +161,7 @@ class MainClass:
         #logging.getLogger().setLevel(logging.INFO if not debug else logging.DEBUG)
 
 
-        init_log(debug=debug)
+        init_log(debug=debug, trace=trace)
 
 
 
@@ -182,6 +182,11 @@ class MainClass:
             self.SimpleMode = True
         config.Running.StartIbsrvInConsole = config.Running.StartIbsrvInConsole or ibconsole
         config.Running.Debug = config.Running.Debug or debug
+        if trace:
+            from common.loghandler import TRACELEVEL
+            config.Running.LogLevel = TRACELEVEL
+            import matplotlib
+            matplotlib.set_loglevel("DEBUG")
         if noprompt:
             config.TransactionHandlers.IB.PromptOnQueryFail = False
             config.Sources.IBSource.PromptOnConnectionFail = False

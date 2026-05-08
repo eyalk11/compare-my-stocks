@@ -118,9 +118,17 @@ def init_log_default(config):
 
     init_log(logfile=logfile,logerrorfile=logerrorfile,debug=debug,kwargs=kwargs,loglevel=loglevel )
 
-def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},loglevel=None):
+_TRACE_STICKY = False  # once set by --trace, later init_log calls (from config) keep TRACE level
+
+def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},loglevel=None,trace=False):
+    global _TRACE_STICKY
+    if trace:
+        _TRACE_STICKY = True
+    trace = trace or _TRACE_STICKY
     import matplotlib
-    matplotlib.set_loglevel("INFO")
+    matplotlib.set_loglevel("DEBUG" if trace else "INFO")
+    if trace:
+        logging.warning('[init_log] TRACE MODE ACTIVE (root=%s, mpl=DEBUG)', TRACELEVEL)
     def set_format(handler):
         if not ts:
             handler.setFormatter(ImpacketFormatter(**kwargs))
@@ -131,7 +139,9 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
     context = get_ctx()
 
     if context in ['main','track']:
-        if loglevel is not None:
+        if trace:
+            logging.getLogger().setLevel(TRACELEVEL)
+        elif loglevel is not None:
             logging.getLogger().setLevel(loglevel)
         elif debug and not dont_print():
             logging.getLogger().setLevel(logging.DEBUG)
@@ -156,7 +166,7 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
 
     if logfile:
         fh = logging.FileHandler(logfile)
-        fh.setLevel(logging.DEBUG)
+        fh.setLevel(TRACELEVEL if trace else logging.DEBUG)
         fh.setFormatter(MyFormatter())
         log.addHandler(fh)
     if logerrorfile:

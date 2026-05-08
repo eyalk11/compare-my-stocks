@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import inspect
 import logging
 import math
 import multiprocessing
@@ -10,7 +11,6 @@ import time
 from dataclasses import asdict
 from functools import lru_cache, partial
 from typing import Dict, Optional
-
 import pandas as pd
 import Pyro5.api
 import Pyro5.client
@@ -76,25 +76,55 @@ def _ib_preflight(host, port):
     _ib_check_failed = False
 
 
+def _check_ib_gate():
+    """Raise ConnectionRefusedError if the gate is currently armed.
+    Clears the gate if the cache window has expired."""
+    global _ib_check_started_ts, _ib_check_failed
+    if not _ib_check_failed:
+        return
+    cache_sec = getattr(config.Sources.IBSource, 'PreflightFailCacheSec', 40.0)
+    now = time.time()
+    if (now - _ib_check_started_ts) < cache_sec:
+        raise ConnectionRefusedError(
+            f"IB known down (cached {now - _ib_check_started_ts:.0f}s ago)"
+        )
+    _ib_check_failed = False  # window expired, allow retry
+
+
+def _arm_ib_gate(exc=None):
+    """Arm the gate. Safe to call from a SimpleExceptionContext callback —
+    only arms when exc is a ConnectionRefusedError (or None = unconditional)."""
+    global _ib_check_started_ts, _ib_check_failed
+    if exc is None or isinstance(exc, ConnectionRefusedError):
+        _ib_check_started_ts = time.time()
+        _ib_check_failed = True
+
+
 def skip_if_ib_down(func):
     """Short-circuit the call with ConnectionRefusedError if a recent IB attempt
     failed within PreflightFailCacheSec. After the window expires, calls are
-    let through; a fresh ConnectionRefusedError re-arms the gate."""
+    let through; a fresh ConnectionRefusedError re-arms the gate.
+
+    Generator-aware: for generator functions, uses ``yield from`` so the body
+    actually executes inside the try/except (a plain return would hand back the
+    generator object before any of the body — and any ConnectionRefusedError —
+    runs)."""
+    if inspect.isgeneratorfunction(func):
+        def wrapper(*args, **kwargs):
+            _check_ib_gate()
+            try:
+                yield from func(*args, **kwargs)
+            except ConnectionRefusedError:
+                _arm_ib_gate()
+                raise
+        return wrapper
+
     def wrapper(*args, **kwargs):
-        global _ib_check_started_ts, _ib_check_failed
-        cache_sec = getattr(config.Sources.IBSource, 'PreflightFailCacheSec', 40.0)
-        now = time.time()
-        if _ib_check_failed:
-            if (now - _ib_check_started_ts) < cache_sec:
-                raise ConnectionRefusedError(
-                    f"IB known down (cached {now - _ib_check_started_ts:.0f}s ago)"
-                )
-            _ib_check_failed = False  # window expired, allow retry
+        _check_ib_gate()
         try:
             return func(*args, **kwargs)
         except ConnectionRefusedError:
-            _ib_check_started_ts = time.time()
-            _ib_check_failed = True
+            _arm_ib_gate()
             raise
     return wrapper
 
@@ -379,9 +409,16 @@ class IBSource(InputSource):
         else:
             self.ibrem = IBSourceRem(host, port, clientId, readonly)
         try:
-            _ib_preflight(host, port)
+            # When proxying, ibrem.init() goes over Pyro5 to the sidecar at
+            # IBSrvPort — that's the actual endpoint to probe. Without proxy,
+            # ibrem talks to TWS directly on (host, port).
+            if proxy:
+                _ib_preflight('127.0.0.1', config.Sources.IBSource.IBSrvPort)
+            else:
+                _ib_preflight(host, port)
             self.ibrem.init()
         except ConnectionRefusedError:
+            _arm_ib_gate()
             logging.error("TWS not connected!")
             if getattr(config.Sources.IBSource, 'PromptOnConnectionFail', True):
                 from common.userprompt import confirm_yes_no
@@ -517,13 +554,14 @@ class IBSource(InputSource):
         return_succ=(None, []),
         never_throw=False, #to change
     )
-    @skip_if_ib_down
     def get_symbol_history(self, sym, startdate, enddate, iscrypto=False):
+        _check_ib_gate()
         with SimpleExceptionContext(
             "error resolving symbol",
             return_succ=(None, []),
             never_throw=True,
             detailed=False,
+            callback=_arm_ib_gate,
         ):
             l = self.resolve_symbol(sym)
             if not l:

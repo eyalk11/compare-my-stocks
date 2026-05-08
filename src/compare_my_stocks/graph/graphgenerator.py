@@ -535,7 +535,7 @@ class GraphGenerator:
                 ( (Types.PRICE & type) == Types.PRICE or type==Types.ABS))
 
             # self.remove_all_anotations()
-            self.cursor = mplcursors.cursor(mfig, hover=True)
+            self.cursor = mplcursors.cursor(mfig, hover=mplcursors.HoverMode.Transient)
             self.generation += 1
             self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar, generation=self.generation))
 

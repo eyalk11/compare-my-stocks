@@ -27,10 +27,7 @@ from config import config  # noqa: E402
 from common.serialization import is_json_file, load_serialized  # noqa: E402
 
 
-LOG_PATH = os.path.join(
-    os.environ.get("COMPARE_STOCK_PATH") or os.path.expanduser("~/.compare_my_stocks"),
-    "log.txt",
-)
+LOG_PATH = os.path.expanduser("~/.compare_my_stocks/log.txt")
 UPDATE_RE = re.compile(rb"update_graph called with params:")
 
 

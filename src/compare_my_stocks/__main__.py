@@ -72,6 +72,7 @@ if __name__ == "__main__":
     # Add the ibconsole switch
     parser.add_argument('--ibconsole', action='store_true', help='Enable ibconsole')
     parser.add_argument('--debug', action='store_true', help='Enable debug')
+    parser.add_argument('--trace', action='store_true', help='Enable TRACE-level logs (incl. matplotlib DEBUG)')
     parser.add_argument('--ibsrv', action='store_true', help='Use ibsrv instead')
     parser.add_argument('--nogui', action='store_true', help='Run without GUI')
     parser.add_argument('--noprompt', action='store_true', help='Disable interactive prompts (e.g. IB Flex token failure)')
@@ -89,4 +90,4 @@ if __name__ == "__main__":
         from compare_my_stocks import ibsrv
     else:
         _check_single_instance()
-        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui,args.noprompt)
+        MainClass().main(args.console,args.ibconsole,args.debug,args.noconsole,args.nogui,args.noprompt,trace=args.trace)

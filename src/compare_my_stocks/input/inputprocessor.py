@@ -208,6 +208,16 @@ class InputProcessor(InputProcessorInterface):
         factor=self._data.get_currency_factor_for_sym(sym)
         currency_df=currency_df.apply(lambda x: 1 / x / factor) #notice that this should be in the hist not here, but same same
         currency_df = currency_df[StandardColumns]
+        # Align index tz: SpecialSymbol hist (e.g. #ILS) carries tz-aware UTC,
+        # while cached FX history is tz-naive — pandas will refuse to join them.
+        hist_tz = getattr(hist.index, 'tz', None)
+        cur_tz = getattr(currency_df.index, 'tz', None)
+        if hist_tz is not None and cur_tz is None:
+            currency_df = currency_df.copy()
+            currency_df.index = currency_df.index.tz_localize(hist_tz)
+        elif hist_tz is None and cur_tz is not None:
+            currency_df = currency_df.copy()
+            currency_df.index = currency_df.index.tz_localize(None)
         hh = hist[StandardColumns].mul(currency_df, fill_value=numpy.nan)
         if len(set(hist.index) - set(currency_df.index)) > 0:
             logging.debug((log_conv('Not all entiries could be adjusted ', set(hist.index) - (set(currency_df.index)))))

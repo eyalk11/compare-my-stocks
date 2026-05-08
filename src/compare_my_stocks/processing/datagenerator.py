@@ -229,7 +229,7 @@ class DataGenerator(DataGeneratorInterface):
         if (self.used_unitetype & ~UniteType.ADDTOTALS):  # Non trivial unite. groups
             reqsym = self._eng.required_syms(want_unite_symbols=True, only_unite=True).intersection(set(df.columns))
             if len(reqsym) > 0:
-                ndf = df.loc[:, reqsym]
+                ndf = df.loc[:, list(reqsym)]
             else:
                 ndf = pandas.DataFrame(index=df.index, )
         else:  # just add total
