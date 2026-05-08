@@ -223,6 +223,66 @@ class TestCachedCurrencyHist:
 
 
 # ============================================================================
+# get_adjusted_df_for_currency: tz alignment regression
+# ============================================================================
+
+class TestGetAdjustedDfForCurrencyTzAlignment:
+    """SpecialSymbol-built hist (#XYZ) carries a tz-aware UTC DatetimeIndex,
+    while cached currency_hist is tz-naive. Pandas refuses to outer-join
+    those, raising 'Cannot join tz-naive with tz-aware DatetimeIndex'.
+    get_adjusted_df_for_currency must normalize before .mul."""
+
+    def _hist(self, tz):
+        idx = pd.to_datetime(['2026-01-15', '2026-01-16', '2026-01-19'])
+        if tz is not None:
+            idx = idx.tz_localize(tz)
+        return pd.DataFrame(
+            {'Open': [3.15, 3.14, 3.16], 'High': [3.15, 3.14, 3.16],
+             'Low': [3.15, 3.14, 3.16], 'Close': [3.15, 3.14, 3.16],
+             'Volume': [1, 1, 1]},
+            index=idx,
+        )
+
+    def _currency_df(self, tz):
+        idx = pd.to_datetime(['2026-01-15', '2026-01-16', '2026-01-19'])
+        if tz is not None:
+            idx = idx.tz_localize(tz)
+        return pd.DataFrame(
+            {'Open': [0.32, 0.32, 0.32], 'High': [0.32, 0.32, 0.32],
+             'Low': [0.32, 0.32, 0.32], 'Close': [0.32, 0.32, 0.32]},
+            index=idx,
+        )
+
+    def test_tz_aware_hist_with_tz_naive_currency_does_not_raise(self, proc):
+        hist = self._hist(tz='UTC')
+        currency_df = self._currency_df(tz=None)
+        proc.data.get_currency_factor_for_sym = MagicMock(return_value=1.0)
+        with patch.object(proc, 'get_currency_hist', return_value=currency_df):
+            out = proc.get_adjusted_df_for_currency(
+                'ILS',
+                datetime.datetime(2026, 1, 19),
+                datetime.datetime(2026, 1, 15),
+                hist, '#ILS',
+            )
+        assert out is not None
+        assert len(out) == 3
+
+    def test_tz_naive_hist_with_tz_aware_currency_does_not_raise(self, proc):
+        hist = self._hist(tz=None)
+        currency_df = self._currency_df(tz='UTC')
+        proc.data.get_currency_factor_for_sym = MagicMock(return_value=1.0)
+        with patch.object(proc, 'get_currency_hist', return_value=currency_df):
+            out = proc.get_adjusted_df_for_currency(
+                'ILS',
+                datetime.datetime(2026, 1, 19),
+                datetime.datetime(2026, 1, 15),
+                hist, '#ILS',
+            )
+        assert out is not None
+        assert len(out) == 3
+
+
+# ============================================================================
 # build_adjust_panel
 # ============================================================================
 
