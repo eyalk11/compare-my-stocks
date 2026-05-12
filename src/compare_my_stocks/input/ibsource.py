@@ -400,7 +400,7 @@ class IBSource(InputSource):
         super().__init__()
         if proxy:
             self._ibremgenerator = Pyro5.api.Proxy(
-                "PYRO:aaa@localhost:%s" % config.Sources.IBSource.IBSrvPort
+                "PYRO:aaa@127.0.0.1:%s" % config.Sources.IBSource.IBSrvPort
             )
             self._ibremgenerator._pyroTimeout = 20
 

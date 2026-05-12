@@ -1,12 +1,27 @@
 import logging
 import os
+import socket
 import subprocess
+import sys
 import time
 
 from common.common import singleton
 from config import config
 
 import multiprocessing
+
+
+def _ibsrv_port_in_use():
+    """Return True if something is already listening on IBSrvPort
+    on either IPv4 (127.0.0.1) or IPv6 (::1) loopback."""
+    port = config.Sources.IBSource.IBSrvPort
+    for host in ("127.0.0.1", "::1"):
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return True
+        except OSError:
+            continue
+    return False
 
 @singleton
 class RemoteProcess:
@@ -36,6 +51,11 @@ class RemoteProcess:
     @staticmethod
     def launch_without_console():
         import ibsrv
+        logging.info(
+            f"Launching ibsrv in-process via multiprocessing.Pool: "
+            f"module={ibsrv.__file__}, target=ibsrv.ibsrv, "
+            f"IBSrvPort={config.Sources.IBSource.IBSrvPort}"
+        )
         return multiprocessing.Pool(1).apply_async(ibsrv.ibsrv)
 
     def resolve_process(cls):
@@ -52,6 +72,13 @@ class RemoteProcess:
         v = ["start", "/wait"] + v
         return v
     def run_additional_process(cls):
+        if _ibsrv_port_in_use():
+            logging.critical(
+                f"IBSRV port {config.Sources.IBSource.IBSrvPort} is already in use — "
+                f"another ibsrv is running. Refusing to start a second one. Exiting."
+            )
+            sys.exit(2)
+
         try:
             open(config.File.IbSrvReady, 'w').write('notstarted')
             cls.no_ready_file = False

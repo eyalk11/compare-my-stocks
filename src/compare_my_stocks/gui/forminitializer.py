@@ -236,8 +236,9 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             
             #additems(org,self.graphObj.cols)
             refs: QListWidget = self.window.refstocks  # type:
+            ext_snapshot = list(self.graphObj.params.ext or [])
             refs.clear()
-            additems(refs, self.graphObj.params.ext)
+            additems(refs, ext_snapshot)
 
 
 
