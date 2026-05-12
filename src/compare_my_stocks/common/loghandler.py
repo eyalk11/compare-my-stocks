@@ -158,7 +158,7 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
     last_run = 0
     if logfile and MyFormatter.run_number is None:
         if os.path.exists(logfile):
-            for z in open(logfile):
+            for z in open(logfile,'rt'):
                  last_run=max(last_run,neverthrow(lambda: int(re.search('Run (\d+) \|',z).group(1)),default=0))
 
         last_run+=1
