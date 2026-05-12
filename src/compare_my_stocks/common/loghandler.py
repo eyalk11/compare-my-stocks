@@ -158,8 +158,20 @@ def init_log(mod=None,ts=False,logfile=None,logerrorfile=None,debug=0,kwargs={},
     last_run = 0
     if logfile and MyFormatter.run_number is None:
         if os.path.exists(logfile):
-            for z in open(logfile,'rt'):
-                 last_run=max(last_run,neverthrow(lambda: int(re.search('Run (\d+) \|',z).group(1)),default=0))
+            # encoding='utf-8' + errors='replace': old log lines can contain bytes
+            # that aren't valid in the platform default (cp1252 on Windows), and
+            # the file can be hundreds of MB. A decode crash here used to wipe
+            # log handlers mid-init_log because log.handlers.clear() had already
+            # run, leaving subsequent logging.info() calls silent.
+            try:
+                with open(logfile, 'rt', encoding='utf-8', errors='replace') as _lf:
+                    for z in _lf:
+                        last_run = max(
+                            last_run,
+                            neverthrow(lambda: int(re.search(r'Run (\d+) \|', z).group(1)), default=0),
+                        )
+            except OSError:
+                pass
 
         last_run+=1
         MyFormatter.run_number=last_run
