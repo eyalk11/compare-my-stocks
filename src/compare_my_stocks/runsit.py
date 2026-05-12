@@ -18,7 +18,7 @@ from common.simpleexceptioncontext import simple_exception_handling, SimpleExcep
 
 import psutil, os
 
-
+RANDOM="XXX"
 
 
 class MainClass:
@@ -199,7 +199,7 @@ class MainClass:
         with SimpleExceptionContext(err_description="no win32api",detailed=False):
             import win32api
             win32api.SetConsoleCtrlHandler(MainClass.killallchilds, True)
-        logging.info("Started")
+        logging.info(f"Started {RANDOM}")
 
 
 

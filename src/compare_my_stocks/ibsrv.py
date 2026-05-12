@@ -48,7 +48,7 @@ def ibsrv():
     #Pyro5.server.config.SERIALIZER='marshal'
     Pyro5.server.config.SERVERTYPE="multiplex"
     Pyro5.server.config.DETAILED_TRACEBACK=True
-    daemon = MyDeamon(host="localhost",port=config.Sources.IBSource.IBSrvPort)                # make a Pyro daemon
+    daemon = MyDeamon(host="127.0.0.1",port=config.Sources.IBSource.IBSrvPort)                # make a Pyro daemon
     uri = daemon.register(IBSourceRemGenerator,objectId="aaa")   # register the greeting maker as a Pyro object
 
 

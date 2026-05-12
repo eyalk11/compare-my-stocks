@@ -139,7 +139,9 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
         self.window.last_status.setText('')
         if self.ignore_updates_for_now:  # convert to lock
+            logging.debug(f"GUI update_graph IGNORED (ignore_updates_for_now) reset={reset_ranges} force={force}")
             return
+        logging.debug(f"GUI update_graph: reset={reset_ranges} force={force} btn={btn} ext={self.graphObj.params.ext} groups={self.graphObj.params.groups} cur_cat={self.graphObj.params.cur_category!r}")
         try:
             if (self.window.findChild(QCheckBox, name="auto_update").isChecked() and self._initiated) or force:
                 if self._update_graph_task.command_waiting >= 3:
@@ -164,6 +166,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             traceback.print_exc()
 
     def type_unite_toggled(self, name, value):
+        logging.debug(f"GUI type_unite_toggled: name={name!r} value={value}")
         types_dic = {
             'unite': (UniteType, 'unite_by_group', ResetRanges.FORCE),
             'limit': (LimitType, 'limit_by', 0),
@@ -187,15 +190,20 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
     def attribute_set(self, attr, value, reset_ranges=0):
         if attr in ['valuerange', 'numrange'] and self.disable_slider_values_updates:
             return
+        if attr not in ('valuerange', 'numrange'):
+            logging.debug(f"GUI attribute_set: {attr}={value!r} reset_ranges={reset_ranges}")
         setattr(self.graphObj.params, attr, value)
         self.update_graph(reset_ranges)
 
     def groups_changed(self):
         self.graphObj.params.groups = gr = [t.text() for t in self.window.groups.selectedItems()]
+        logging.debug(f"GUI groups_changed: groups={gr} ext_before_list={self.graphObj.params.ext}")
         self.update_stock_list()
+        logging.debug(f"GUI groups_changed after update_stock_list: ext={self.graphObj.params.ext}")
         self.update_graph(ResetRanges.IfAPROP)
 
     def date_changed(self, value, toupdate=True):
+        logging.debug(f"GUI date_changed: value={value} toupdate={toupdate}")
         if toupdate:
             self.window.startdate.setDateTime(value[0])
             self.window.enddate.setDateTime(value[1])
@@ -227,28 +235,35 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def compare_changed(self, num):
         if self.ignore_updates_for_now:
+            logging.debug(f"GUI compare_changed IGNORED num={num}")
             return
         self.ignore_updates_for_now = True
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
         self.graphObj.params.compare_with = self.window.comparebox.currentText()
+        logging.debug(f"GUI compare_changed: compare_with={self.graphObj.params.compare_with!r}")
         self.graphObj.params.type = self.graphObj.params.type | Types.COMPARE
         self.ignore_updates_for_now = False
         self.update_graph(ResetRanges.FORCE)
 
     def selected_changed(self, *args, **kw):
         if self.ignore_updates_for_now:
+            logging.debug(f"GUI selected_changed IGNORED widget_count={self.window.orgstocks.count()}")
             return
+        before = list(self.graphObj.params.selected_stocks or [])
         self.graphObj.params.selected_stocks = [SimpleSymbol(self.window.orgstocks.item(x)) for x in
                                                 range(self.window.orgstocks.count())]
+        logging.debug(f"GUI selected_changed: before={before} after={self.graphObj.params.selected_stocks} widget_count={self.window.orgstocks.count()}")
         if not self.window.use_groups.isChecked():
             self.update_graph(1)
 
     def refernced_changed(self, *args, **kw):
         if self.ignore_updates_for_now:
+            logging.debug(f"GUI refernced_changed IGNORED (ignore_updates_for_now). widget_count={self.window.refstocks.count()}")
             return
-        # befext=self.graphObj.params.ext
+        before = list(self.graphObj.params.ext or [])
         self.graphObj.params.ext = [SimpleSymbol(self.window.refstocks.item(x)) for x in
                                     range(self.window.refstocks.count())]
+        logging.debug(f"GUI refernced_changed: before={before} after={self.graphObj.params.ext} widget_count={self.window.refstocks.count()}")
         if self.window.findChild(QCheckBox, name="usereferncestock").isChecked():
             self.update_graph(1)
 
@@ -256,6 +271,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         self.window.last_status.setText(text)
 
     def use_groups(self, val):
+        logging.debug(f"GUI use_groups: val={val}")
         self.attribute_set('use_groups', val)
         if not val:
             self.selected_changed()
@@ -274,7 +290,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         v.generate_dialog([d]) 
 
     def clear_all(self):
-        self.clear_all_list() 
+        logging.info(f"GUI clear_all pressed")
+        self.clear_all_list()
         self.window.groups: QListWidget
         self.window.groups.clearSelection()
         self.window.comparebox : PySide6.QComboBox
@@ -297,17 +314,21 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     def category_changed(self, num):
         if self.ignore_cat_changes:
+            logging.info(f"GUI category_changed IGNORED num={num}")
             return
         category = self.window.categoryCombo.itemText(num)
+        logging.info(f"GUI category_changed: num={num} category={category!r} ext_before={self.graphObj.params.ext} groups_before={self.graphObj.params.groups}")
         self.graphObj.cur_category = category
         self.set_groups_values(0)
+        logging.info(f"GUI category_changed DONE: ext_after={self.graphObj.params.ext} groups_after={self.graphObj.params.groups}")
 
     def limit_port_changed(self, val):
-
+        logging.debug(f"GUI limit_port_changed: val={val}")
         self.attribute_set('limit_to_portfolio', val, reset_ranges=1)
         self.update_stock_list(justorgs=True)
 
     def adjust_currency_changed(self, val: PySide6.QtCore.Qt.CheckState):
+        logging.debug(f"GUI adjust_currency_changed: val={val}")
         self.graphObj.params.adjust_to_currency = False
         self.graphObj.params.adjusted_for_base_cur = False
 

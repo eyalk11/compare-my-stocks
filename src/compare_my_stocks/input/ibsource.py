@@ -398,40 +398,61 @@ class IBSource(InputSource):
         proxy=True,
     ):
         super().__init__()
-        if proxy:
-            self._ibremgenerator = Pyro5.api.Proxy(
-                "PYRO:aaa@localhost:%s" % config.Sources.IBSource.IBSrvPort
-            )
-            self._ibremgenerator._pyroTimeout = 20
-
-            self.ibrem = self._ibremgenerator.generate(host, port, clientId, readonly)
-            self.ibrem.__class__._Proxy__check_owner = lambda self: 1
-        else:
-            self.ibrem = IBSourceRem(host, port, clientId, readonly)
+        stage = "init"  # tracks which step is in flight so error messages can name the real culprit
         try:
-            # When proxying, ibrem.init() goes over Pyro5 to the sidecar at
-            # IBSrvPort — that's the actual endpoint to probe. Without proxy,
-            # ibrem talks to TWS directly on (host, port).
             if proxy:
+                stage = "sidecar-preflight"
                 _ib_preflight('127.0.0.1', config.Sources.IBSource.IBSrvPort)
+
+                stage = "sidecar-proxy"
+                self._ibremgenerator = Pyro5.api.Proxy(
+                    "PYRO:aaa@127.0.0.1:%s" % config.Sources.IBSource.IBSrvPort
+                )
+                self._ibremgenerator._pyroTimeout = 20
+
+                stage = "sidecar-generate"
+                self.ibrem = self._ibremgenerator.generate(host, port, clientId, readonly)
+                self.ibrem.__class__._Proxy__check_owner = lambda self: 1
             else:
+                stage = "tws-preflight"
                 _ib_preflight(host, port)
+                self.ibrem = IBSourceRem(host, port, clientId, readonly)
+
+            stage = "tws-connect"  # ibrem.init() makes the actual TWS connection
             self.ibrem.init()
-        except ConnectionRefusedError:
+        except ConnectionRefusedError as e:
             _arm_ib_gate()
-            logging.error("TWS not connected!")
+            if stage.startswith("sidecar"):
+                logging.error(
+                    f"ibsrv sidecar not reachable at 127.0.0.1:{config.Sources.IBSource.IBSrvPort} "
+                    f"(stage={stage}): {e}"
+                )
+                prompt_msg = (
+                    f"The ibsrv sidecar is not reachable on 127.0.0.1:{config.Sources.IBSource.IBSrvPort}.\n"
+                    "(This is NOT a TWS problem — TWS may be running fine.)\n\n"
+                    "Proceed without live IB connection (fall back to cache)?"
+                )
+                prompt_title = "ibsrv sidecar unreachable"
+            else:
+                logging.error(
+                    f"TWS not reachable from sidecar at {host}:{port} "
+                    f"(stage={stage}): {e}"
+                )
+                prompt_msg = (
+                    "TWS/IB Gateway is not connected (connection refused).\n"
+                    "Make sure TWS or IB Gateway is running and accepting connections.\n\n"
+                    "Proceed without live IB connection (fall back to cache)?"
+                )
+                prompt_title = "IB connection refused"
             if getattr(config.Sources.IBSource, 'PromptOnConnectionFail', True):
                 from common.userprompt import confirm_yes_no
-                msg = ("TWS/IB Gateway is not connected (connection refused).\n"
-                       "Make sure TWS or IB Gateway is running and accepting connections.\n\n"
-                       "Proceed without live IB connection (fall back to cache)?")
-                if not confirm_yes_no(msg, title="IB connection refused"):
+                if not confirm_yes_no(prompt_msg, title=prompt_title):
                     import os
                     os._exit(1)
         except TimeoutError:
-            logging.warn("Got timeout on initialization (TWS), will try again.")
+            logging.warn(f"Got timeout on initialization (stage={stage}), will try again.")
         except Exception as e:
-            logging.error("init failed unknown error. Will keep trying.")
+            logging.error(f"init failed unknown error (stage={stage}). Will keep trying.")
             print_formatted_traceback(True)
 
         self.lock = threading.Lock()
