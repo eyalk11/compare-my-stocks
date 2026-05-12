@@ -18,7 +18,7 @@ from common.simpleexceptioncontext import simple_exception_handling, SimpleExcep
 
 import psutil, os
 
-RANDOM="XXX"
+from current_random import RANDOM
 
 
 class MainClass:
