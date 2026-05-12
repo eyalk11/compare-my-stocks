@@ -31,11 +31,14 @@ param(
     [string]$Python = 'C:\Users\ekarni\.pyenv\pyenv-win\versions\3.11\python.exe',
     [switch]$NoLog,
     [switch]$Venv11,
+    [switch]$Venv11b,
     [switch]$Venv314
 )
 
 if ($Venv314) {
     $Python = Join-Path $PSScriptRoot '.venv314\Scripts\python.exe'
+} elseif ($Venv11b) {
+    $Python = Join-Path $PSScriptRoot '.venv11b\Scripts\python.exe'
 } elseif ($Venv11) {
     $Python = Join-Path $PSScriptRoot '.venv11\Scripts\python.exe'
 }

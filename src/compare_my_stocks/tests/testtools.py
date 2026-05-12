@@ -144,7 +144,7 @@ def assert_datadir_unchanged():
 
 @pytest.fixture
 def mock_config_to_default(useinp : UseInput):
-    ConfigLoader.c Accredited Investoronfig.update_from(generate_config(useinp),all=True0
+    ConfigLoader.config.update_from(generate_config(useinp),all=True)
 
     #with mock_patch('config.newconfig.ConfigLoader.config' ,generate_config(useinp)):
     #    yield
