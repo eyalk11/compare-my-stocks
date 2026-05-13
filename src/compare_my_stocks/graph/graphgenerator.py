@@ -230,6 +230,12 @@ class GraphGenerator:
             mpl_dates, cost, qtys, sources, adjustedpr = zip(*symbol_data)
             if len(cost) == 0:
                 continue
+            if getattr(config.Input, 'TransactionsOnNextDay', False):
+                # Display-only shift: keep storage (value panel) on the
+                # transaction day, but show the marker on the next day so the
+                # value step visually follows the buy/sell event.
+                _shift = timedelta(days=1)
+                mpl_dates = tuple(d + _shift for d in mpl_dates)
 
             if special:
                 ll=self.lines_dict.get(symbol)
