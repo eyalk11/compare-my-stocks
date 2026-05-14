@@ -127,6 +127,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         self.ignore_updates_for_now = False
 
     def set_groups_values(self, isinit=1,isinitialforstock=1):
+        logging.debug(f"GUI set_groups_values: isinit={isinit} isinitialforstock={isinitialforstock} ext_in={self.graphObj.params.ext}")
         b=False
         wc: QComboBox= self.window.categoryCombo
         self.ignore_cat_changes = True
@@ -230,8 +231,11 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             #additems(org,self.graphObj.cols)
             refs: QListWidget = self.window.refstocks  # type:
             ext_snapshot = list(self.graphObj.params.ext or [])
+            logging.debug(f"GUI update_stock_list: isinitial={isinitial} ext_snapshot={ext_snapshot} params.ext={self.graphObj.params.ext}")
             refs.clear()
+            logging.debug(f"GUI update_stock_list after refs.clear: params.ext={self.graphObj.params.ext}")
             additems(refs, ext_snapshot)
+            logging.debug(f"GUI update_stock_list after additems: params.ext={self.graphObj.params.ext} widget_count={refs.count()}")
 
 
 
