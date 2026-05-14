@@ -1,729 +1,560 @@
-import dataclasses
-import datetime
-import logging
+"""PyQtGraph-based GraphGenerator.
+
+Replaces the previous matplotlib + mplcursors implementation. Public
+surface is preserved (`active`, `gen_actual_graph`, `get_visible_cols`,
+`show_hide`, `adjust_date`) so `engine.compareengine` and the GUI need
+no changes beyond swapping the canvas widget.
+
+Native hover annotation reproduces what mplcursors gave us: a vertical
+reference line plus a tooltip listing every visible curve's interpolated
+value at the cursor's x, with transaction details when the cursor is
+near a scatter point.
+"""
+from __future__ import annotations
+
 import logging
 import math
 import threading
-import time
-from collections import defaultdict, namedtuple
-from contextlib import suppress
-from datetime import timedelta
-from functools import partial, lru_cache
-import random
+from typing import Optional
 
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib
 import numpy as np
-from matplotlib.axes import Axes
-from matplotlib.collections import PathCollection
-from matplotlib.legend_handler import HandlerPathCollection
+import pyqtgraph as pg
+from PySide6.QtCore import (
+    Qt, QPointF, QObject, QThread, QTimer, QCoreApplication,
+    QMetaObject, Slot,
+)
+from PySide6.QtGui import QColor
 
-try:
 
-    from common.dolongprocess import DoLongProcessSlots, TaskParams
-except:
-    pass #testing
+def _run_on_gui_thread(fn):
+    """Marshal `fn()` onto the GUI thread and wait for it to return.
 
+    pyqtgraph creates QGraphicsItems / Qt timers that must be parented
+    on the GUI thread. `gen_actual_graph` is called from a data-loader
+    worker, so we hop threads here. Exceptions propagate back.
+    """
+    app = QCoreApplication.instance()
+    if app is None or QThread.currentThread() == app.thread():
+        return fn()
+
+    done = threading.Event()
+    result = [None, None]  # [value, exception]
+
+    class _Invoker(QObject):
+        def __init__(self):
+            super().__init__()
+            self.moveToThread(app.thread())
+
+        def trigger(self):
+            QMetaObject.invokeMethod(self, "_run", Qt.QueuedConnection)
+
+        @Slot()
+        def _run(self):
+            try:
+                result[0] = fn()
+            except BaseException as e:  # noqa: BLE001
+                result[1] = e
+            finally:
+                done.set()
+
+    inv = _Invoker()
+    inv.trigger()
+    done.wait()
+    if result[1] is not None:
+        raise result[1]
+    return result[0]
+
+from common.common import Types, UniteType
 from common.loghandler import TRACELEVEL
+from common.simpleexceptioncontext import simple_exception_handling
+from config import config
 from engine.compareengineinterface import CompareEngineInterface
 
-matplotlib.set_loglevel("INFO")
-import mplcursors
-from PySide6.QtCore import QMutex, QRecursiveMutex
-# from matplotlib import pyplot as plt
-import numpy
-from config import config
 
-UseQT = config.UI.UseQT
-from common.common import Types, lmap, selfifnn, ifnn, timeit, UniteType
-from common.simpleexceptioncontext import simple_exception_handling
+# ---------------------------------------------------------------------------
+def _to_epoch(dt_index) -> np.ndarray:
+    """Convert pandas DatetimeIndex / list of datetimes to UNIX seconds."""
+    import pandas as pd
+    idx = pd.DatetimeIndex(dt_index)
+    if idx.tz is not None:
+        idx = idx.tz_convert('UTC').tz_localize(None)
+    return (idx.view('int64') // 1_000_000_000).astype('float64')
 
-# plt.rcParams["figure.autolayout"] = False
-get_val = lambda n: f"({round(n, 2)})" if n is not None else ''
-round_til_2 = lambda n: f"{round(n, 2)}" if n is not None else ''
 
-def mscatter(x,y,ax=None, m=None, **kw):
-    import matplotlib.markers as mmarkers
-    if not ax: ax=plt.gca()
-    sc = ax.scatter(x,y,**kw)
-    if (m is not None) and (len(m)==len(x)):
-        paths = []
-        for marker in m:
-            if isinstance(marker, mmarkers.MarkerStyle):
-                marker_obj = marker
-            else:
-                marker_obj = mmarkers.MarkerStyle(marker)
-            path = marker_obj.get_path().transformed(
-                        marker_obj.get_transform())
-            paths.append(path)
-        sc.set_paths(paths)
+def _palette(n: int):
+    base = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+        '#393b79', '#637939', '#8c6d31', '#843c39', '#7b4173',
+    ]
+    return [base[i % len(base)] for i in range(n)]
 
-    return sc
 
-@simple_exception_handling(err_description="simple err", never_throw=True)
-def show_annotation(sel, cls, ax, generation):
-    cls.generation_mutex.lock()
-    logging.log(TRACELEVEL, ('show locked'))
-    try:
+def _round2(v):
+    if v is None:
+        return ''
+    if isinstance(v, float) and math.isnan(v):
+        return ''
+    return f'{round(v, 2)}'
 
-        if cls.generation != generation:
-            logging.debug(('ignoring diff generation'))
-            with suppress(ValueError):
-                sel.annotation.remove()
-            for artist in sel.extras:
-                with suppress(ValueError):
-                    artist.remove()
 
-            return
-        if type(sel.artist) == matplotlib.collections.PathCollection:
-            generic=False
-
-            annotation_str = cls.point_to_annotation.get(tuple(sel.target))
-            if annotation_str is None:
-                generic=True
-
-        else:
-            generic = True
-
-        if generic:
-            xi = sel.target[0]
-            vertical_line = ax.axvline(xi, color='red', ls=':', lw=1)
-            sel.extras.append(vertical_line)
-            date = matplotlib.dates.num2date(xi)
-            names = [k._label for k in (getattr(ax.legend_, 'legend_handles', None) or ax.legend_.legendHandles)]
-            if cls.typ & (Types.PRECENTAGE | Types.DIFF):
-                ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
-                vals_orig = [numpy.interp(xi, ls, cls.orig_data[n]) for n in names]
-
-                
-            else:
-                vals_orig = [None] * len(names)
-                
-
-            val = [(round(numpy.interp(xi, ll._x, ll._y), 2), ll._visible, ll == sel[0]) for ll in ax.lines]
-            basic_str= lambda n,v1,val_orig   :     (f'{n}: {v1}{"%" if cls.typ & Types.PRECENTAGE else ""} {get_val(val_orig)}')
-            hold_str = lambda hold,price: f'(qty: {round_til_2(hold)} price: {round_til_2(price)})'
-
-            if cls.additional_df and ( ( cls.typ & (Types.RELPROFIT | Types.PROFIT | Types.VALUE | Types.TOTPROFIT) )
-            ) and (cls.unitetype & (UniteType.ADDTOTALS) == UniteType.NONE) :
-                ls = list(map(matplotlib.dates.date2num, cls.orig_data.index.to_list()))
-                holding_orig = [numpy.interp(xi, ls, cls.additional_df[0][n]) for n in names]
-                price_orig = [numpy.interp(xi, ls, cls.additional_df[1][n]) for n in names]
-                stls = [ ( basic_str(n,v1,val_orig) , hold_str(hold,price) ,targ)
-                        for n, (v1, vis, targ), val_orig,hold,price in
-                        zip(names, val, vals_orig, holding_orig,price_orig) if vis and not math.isnan(v1)]
-            else:                 
-                stls = [ (basic_str(n,v1,val_orig) ,'',targ)
-                        for n, (v1, vis, targ), val_orig in
-                        zip(names, val, vals_orig) if vis and not math.isnan(v1)]
-
-            annotation_str = '\n'.join(
-                [(s if not targ else ((r' $\bf{ %s }$' % s).replace('%', '\\%')+ ( '\n'+additional if additional else '') )) for s,additional, targ in stls])
-
-            annotation_str += '\n' + str(date.strftime('%Y-%m-%d'))
-        sel.annotation.set_horizontalalignment('left')
-        sel.annotation.set_multialignment('left')
-        sel.annotation.set_text(annotation_str)
-
-        cls.anotation_list += [sel]
-
-    finally:
-        logging.log(TRACELEVEL, ('show unlock'))
-        cls.generation_mutex.unlock()
-    # cls._annotation+=ann
-StringPointer=namedtuple('StringPointer', ['originalLocation', 'string'])
+# ---------------------------------------------------------------------------
 class GraphGenerator:
-    B = (1, 0.5)
+    """PyQtGraph-backed counterpart to the old matplotlib generator."""
 
-    def get_visible_cols(self):
-        ax = self._axes
-        vis = [l.get_visible() for l in ax.lines]
-        names = [k._label for k in (getattr(ax.legend_, 'legend_handles', None) or ax.legend_.legendHandles)]
-        l = filter(lambda x: x[1], zip(names, vis))
-        return list(map(lambda x: x[0], l))
+    def __init__(self, eng: CompareEngineInterface, axes):
+        """`axes` is the pyqtgraph PlotItem this generator draws into
+        (analogous to the old matplotlib Axes). May be None for headless
+        / --nogui mode."""
+        self._eng = eng
+        self._plot: Optional[pg.PlotItem] = axes
+        self._curves: dict[str, pg.PlotDataItem] = {}
+        self._curve_visible: dict[str, bool] = {}
+        self._scatters: dict[str, pg.ScatterPlotItem] = {}
+        self._tx_points: list[tuple[float, float, str]] = []
+        self.last_stock_list: set = set()
+        self.cur_shown_stock: set = set()
+        self.adjust_date = False
+        self.first_time = True
+        self.orig_data = None
+        self.additional_df = None
+        self.typ = None
+        self.unitetype = None
+        self._hover_proxy = None
+        self._vline: Optional[pg.InfiniteLine] = None
+        self._tooltip: Optional[pg.TextItem] = None
+        self._orig_epoch: Optional[np.ndarray] = None
 
+    # ------------------------------------------------------------------
     @property
     def params(self):
         return self._eng.params
 
-    def __init__(self, eng, axes):
-        self._eng: CompareEngineInterface = eng
-        self._axes = axes
-        self._linesandfig = []
-        self.last_stock_list = set()
-        self.cur_shown_stock = set()
-        self.first_time = True
-        self.generation_mutex = QRecursiveMutex()
-        self.generation = 0
-        self.anotation_list = []
-        self.point_to_annotation = {}
-        self.lines_dict= {}
-        self.symbols_to_blobs = defaultdict(list)
-        self.pick_lock= threading.Lock()
-        self.last_pick_event = None
-
-        if eng is not None: #for testing
-            self._unit_blob_task= DoLongProcessSlots(self.unite_blobs)
     @property
-    def active(self):
-        return self._axes is not None
-    def get_title(self):
-        type = self.params.type
+    def active(self) -> bool:
+        return self._plot is not None
 
-        def rel(type):
-            dic = {}
-            dic[Types.RELTOMAX] = 'relative to maximum '
-            dic[Types.RELTOMIN] = 'relative to minimum '
-            dic[Types.RELTOEND] = 'relative to end '
-            dic[Types.RELTOSTART] = '' if type & Types.COMPARE else 'relative to start time '
-            return dic.get(type & (Types.RELTOSTART | Types.RELTOMAX | Types.RELTOMIN | Types.RELTOEND), '')
+    # ------------------------------------------------------------------
+    def get_visible_cols(self):
+        return [n for n, v in self._curve_visible.items() if v]
 
-        def getbasetype(type):
-            dic = {}
-            dic[Types.PROFIT] = 'Unrealized profit'
-            dic[Types.VALUE] = 'Value'
-            dic[Types.PRICE] = 'Stock price'
-            dic[Types.TOTPROFIT] = 'Total profit'
-            dic[Types.PERATIO] = 'PE Ratio'
-            dic[Types.PRICESELLS] = 'Price to sells'
-            dic[Types.THEORTICAL_PROFIT] = 'Theortical profit'
-            dic[Types.RELPROFIT] = 'Realized Profit'
-            return dic.get(type & (
-                    Types.PROFIT | Types.VALUE | Types.PRICE | Types.RELPROFIT | Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT),
-                           dic[Types.PRICE])
+    def show_hide(self, toshow):
+        for name, curve in self._curves.items():
+            curve.setVisible(bool(toshow))
+            self._curve_visible[name] = bool(toshow)
+        for sc in self._scatters.values():
+            sc.setVisible(bool(toshow))
 
-        lowerfirst = lambda x: x[0].lower() + x[1:]
-        dic = {}
-        dic[Types.PRECENTAGE] = lambda s: f'Percentage change {rel(type)}of {lowerfirst(s)}'
-        dic[Types.PRECDIFF] = lambda s: f'Percentage change difference {rel(type)}of {lowerfirst(s)}'
-        dic[Types.DIFF] = lambda s: f'Difference {rel(type)}of {lowerfirst(s)}'
-        dic[Types.ABS] = lambda s: s
-        if ((type & Types.COMPARE) == 0) and type & (Types.PRECENTAGE | Types.DIFF):
-            type = type & ~Types.DIFF  # percentage diff when not comparing is meaningless
-        basestr = dic.get(type & (Types.PRECENTAGE | Types.PRECDIFF | Types.DIFF), dic[Types.ABS])
+    # ------------------------------------------------------------------
+    def get_title(self) -> str:
+        type_ = self.params.type
 
-        st = basestr(getbasetype(type))
-        if type & Types.COMPARE and self.params.compare_with:
+        def rel(t):
+            d = {
+                Types.RELTOMAX: 'relative to maximum ',
+                Types.RELTOMIN: 'relative to minimum ',
+                Types.RELTOEND: 'relative to end ',
+                Types.RELTOSTART: '' if t & Types.COMPARE else 'relative to start time ',
+            }
+            return d.get(t & (Types.RELTOSTART | Types.RELTOMAX | Types.RELTOMIN | Types.RELTOEND), '')
+
+        def getbasetype(t):
+            d = {
+                Types.PROFIT: 'Unrealized profit',
+                Types.VALUE: 'Value',
+                Types.PRICE: 'Stock price',
+                Types.TOTPROFIT: 'Total profit',
+                Types.PERATIO: 'PE Ratio',
+                Types.PRICESELLS: 'Price to sells',
+                Types.THEORTICAL_PROFIT: 'Theortical profit',
+                Types.RELPROFIT: 'Realized Profit',
+            }
+            return d.get(t & (
+                Types.PROFIT | Types.VALUE | Types.PRICE | Types.RELPROFIT |
+                Types.TOTPROFIT | Types.PERATIO | Types.PRICESELLS | Types.THEORTICAL_PROFIT),
+                         d[Types.PRICE])
+
+        lowerfirst = lambda s: s[0].lower() + s[1:]
+        d = {
+            Types.PRECENTAGE: lambda s: f'Percentage change {rel(type_)}of {lowerfirst(s)}',
+            Types.PRECDIFF: lambda s: f'Percentage change difference {rel(type_)}of {lowerfirst(s)}',
+            Types.DIFF: lambda s: f'Difference {rel(type_)}of {lowerfirst(s)}',
+            Types.ABS: lambda s: s,
+        }
+        t = type_
+        if ((t & Types.COMPARE) == 0) and t & (Types.PRECENTAGE | Types.DIFF):
+            t = t & ~Types.DIFF
+        basestr = d.get(t & (Types.PRECENTAGE | Types.PRECDIFF | Types.DIFF), d[Types.ABS])
+        st = basestr(getbasetype(t))
+        if t & Types.COMPARE and self.params.compare_with:
             st += ' compared with ' + self.params.compare_with
         return st
 
-    def extract_data(self,plot_data,special=False):
-        @lru_cache(maxsize=1)
-        def getfigheigt():
-            t = self.ax.transAxes.transform([(0, 0), (1, 1)])
-            t = self.ax.get_figure().get_dpi() / (t[1, 1] - t[0, 1]) / 72
-            _, fig_height = self.ax.figure.get_size_inches()
-            return fig_height
-        #allcolors = gencolors(len(plot_data))
-        total = np.array([])
-        fig_height=getfigheigt()
-        for symbol, symbol_data in plot_data.items():
-            mpl_dates, cost, qtys, sources, adjustedpr = zip(*symbol_data)
-            total= np.append(total, np.abs(np.array(qtys) * np.array(cost)))
-
-            typical = np.average(total)
-            if max(total) > 5 * typical:
-                typical = max(total) / 2
-
-        for symbol, symbol_data in plot_data.items():
-            mpl_dates, cost, qtys, sources, adjustedpr = zip(*symbol_data)
-            if len(cost) == 0:
-                continue
-
-            if special:
-                ll=self.lines_dict.get(symbol)
-                if ll is None:
-                    logging.error('no line for %s', symbol)
-                    continue
-                xs = np.array(lmap(matplotlib.dates.date2num,mpl_dates),dtype='float64')
-                yval=numpy.interp(xs, ll._x, ll._y)
-            else:
-                yval = [selfifnn(d, c) for c, d in zip(cost, adjustedpr)]
-
-
-            total = np.abs(np.array(qtys) * np.array(cost))
-
-            # Create a scatter plot
-
-            sizes = ((np.array(total) / typical) * (fig_height * 72)  * config.UI.CircleSizePercentage)**2  # 5% of y-range
-            #sizes= np.fmax(sizes,np.array([typical/3 * (fig_height * 72)  * config.UI.CircleSizePercentage ] * len(sizes)))
-
-            #
-            # r = next(allcolors)
-            # red = [1, 0.1, 0.1]
-            # reddier = np.convolve(*lmap(np.array, [red, r]), mode='same')
-            # if np.max(reddier) > 1:
-            #     reddier = reddier / np.max(reddier)
-            #colors = [(reddier if (q < 0) else r) for q in qtys]
-            m= ['s' if (q < 0) else 'o' for q in qtys]
-            #see https://stackoverflow.com/questions/14827650/pyplot-scatter-plot-marker-size
-            #want to make same trasactions same size.
-            sizes = [(s*3.14/4)  if (q < 0) else s for q,s in zip(qtys,sizes)]
-            try:
-                _yarr = np.asarray(yval, dtype='float64')
-                logging.log(TRACELEVEL, '[gg-tx] yield sym=%s n=%d special=%s yval[min,max]=(%s,%s) finiteY=%d',
-                                symbol, len(mpl_dates), special,
-                                (np.nanmin(_yarr) if _yarr.size else None),
-                                (np.nanmax(_yarr) if _yarr.size else None),
-                                int(np.isfinite(_yarr).sum()) if _yarr.size else 0)
-            except Exception as _e:
-                logging.log(TRACELEVEL, '[gg-tx] yield trace failed sym=%s: %r', symbol, _e)
-            yield m,sizes, mpl_dates, yval, symbol,cost, adjustedpr, qtys, sources
-    @timeit
-    def plot_transaction_info(self, ax, plot_data,special=False):
-        logging.log(TRACELEVEL, '[gg-tx] plot_transaction_info ENTER special=%s n_syms=%s',
-                        special, len(plot_data) if plot_data else 0)
-
-        # def gencolors(num):
-        #     phi = np.linspace(0, 2 * np.pi, 60)
-        #     rgb_cycle = (np.stack((np.cos(phi),  # Three sinusoids,
-        #                            np.cos(phi + 2 * np.pi / 3),  # 120° phase shifted,
-        #                            np.cos(phi - 2 * np.pi / 3)
-        #                            )).T  # Shape = (60,3)
-        #                  + 1) * 0.5
-        #     for k in range(0,len(rgb_cycle), len(rgb_cycle)//num):
-        #         yield rgb_cycle[k]
-
-        # def random_color():
-        #     red = [1, 0, 0]
-        #     white = [1, 1, 1]
-        #     while True:
-        #         color = [random.random(), random.random(), random.random()]  # Generate a random color
-        #         color = lmap(lambda x: x * 0.8 + 0.1, color)
-        #         if sum([(a - b) ** 2 for a, b in
-        #                 zip(color, white)]) < 0.2:
-        #             continue  # Check if the color is close to white
-        #
-        #         if sum([(a - b) ** 2 for a, b in
-        #                 zip(color, red)]) > 0.2:  # Check if the color is different enough from red
-        #             return color
-
-
-
-        allxy= list()
-
+    # ------------------------------------------------------------------
+    def _clear(self):
+        if self._plot is None:
+            return
         try:
-            self._unit_blob_task.mutex.lock()
+            self._plot.legend.clear()
+        except Exception:
+            pass
+        # Preserve the vline/tooltip across redraws; remove only data items.
+        for item in list(self._curves.values()) + list(self._scatters.values()):
+            self._plot.removeItem(item)
+        self._curves.clear()
+        self._curve_visible.clear()
+        self._scatters.clear()
+        self._tx_points = []
 
-            self.tmp_point_to_annotation = defaultdict(set)
+    # ------------------------------------------------------------------
+    @simple_exception_handling("Error while generating graph",
+                                err_to_ignore=[TypeError], always_throw=True)
+    def gen_actual_graph(self, *args, **kwargs):
+        return _run_on_gui_thread(lambda: self._gen_actual_graph(*args, **kwargs))
 
-            for m,sizes, mpl_dates, yval, symbol,cost, adjustedpr, qtys, sources in self.extract_data(plot_data,special=special):
-                mscatter(mpl_dates, yval, s=sizes, m=m , alpha=0.5,label=symbol,ax=ax)
-
-
-                for i, (t, y, a, q, s,curyval,ss) in enumerate(zip(mpl_dates, cost, adjustedpr, qtys, sources,yval,sizes)):
-                    str_with_adj = lambda x, adj: f" {round_til_2(x)} (adj. {round_til_2(adj)} )" if adj else round_til_2(x)
-                    curloc = (matplotlib.dates.date2num(t), curyval)
-                    while curloc in self.tmp_point_to_annotation:
-                        logging.debug("duplicate point %s %s", t, curyval)
-                        curloc=(curloc[0]+ 0.0001, curloc[1])
-                    allxy.append( ( curloc ,ss ))
-
-
-
-                    st= StringPointer(string='%s Date: %s \nCost: %s\nQty: %s\n Source %s\n' % (
-                        r' $\bf{ %s }$' % symbol,
-                        t.strftime(
-                            '%d/%m/%Y %H:%M'),
-                        str_with_adj(y, a),
-                        str_with_adj(q, ifnn(a, lambda: q * (y / a))),
-                        s),originalLocation=curloc)
-
-                    self.tmp_point_to_annotation[curloc].add(st)
-
-        finally:
-            self._unit_blob_task.mutex.unlock()
-
-
-
-
-        self._unit_blob_task.command.emit(TaskParams(params=(allxy,)))
-
-
-    def unite_blobs(self,allxy):
-        allxy.sort(key=lambda x: x[1])
-
-        # Check for overlap and adjust
-        for i in range(0, len(allxy)):
-            for j in range(i + 1, len(allxy)):
-                source , s = allxy[i]
-                destination, d = allxy[j]
-                distance = self.diff_func( source[0],destination[0], source[1], destination[1])
-
-                if (math.sqrt(s) / 2 + math.sqrt(d) / 2) > distance / 72:
-
-                    if len(self.tmp_point_to_annotation[destination]) == 0 and len(self.tmp_point_to_annotation[source]) != 0 :
-                        logging.debug(("really strange",i,j))
-                        self.tmp_point_to_annotation[destination].update(self.tmp_point_to_annotation[source])
-
-                    elif len(self.tmp_point_to_annotation[source])!=0:
-                        self.tmp_point_to_annotation[destination].update(self.tmp_point_to_annotation[source])
-                        self.tmp_point_to_annotation[source] = set()
-                        logging.debug( (f"{source} to {destination}",i,j))
-                        break
-        self.point_to_annotation={}
-        for k, ls in self.tmp_point_to_annotation.items():
-            newstring='\n'.join([it.string for it in ls ])
-            for it in ls:
-                self.point_to_annotation[it.originalLocation]=newstring #let all transfered locations point to the same string
-            self.point_to_annotation[k]=newstring
-
-
-        self.tmp_point_to_annotation= defaultdict(set)
-
-    def diff_func(self, xa, xb, ya, yb):
-        diffy = abs(ya - yb)
-        diffx = abs(xa - xb)
-        origin = self.ax.figure.dpi_scale_trans.transform((0, 0))
-        vec = self.ax.figure.dpi_scale_trans.transform((diffx, diffy))
-        vec = np.array(vec) - np.array(origin)
-        distance = np.linalg.norm(vec, ord=2)  # distange on display node
-        return distance
-
-    def order_labels(self,ar : Axes):
-        handles, labels = ar.get_legend_handles_labels()
-        lines = []
-        line_labels = []
-        collections = []
-        collection_labels = []
-
-        # separate handles into Line2D and PathCollection
-        for h, l in zip(handles, labels):
-            if isinstance(h, matplotlib.lines.Line2D):
-                lines.append(h)
-                line_labels.append(l)
-            elif isinstance(h, matplotlib.collections.PathCollection):
-                #h.set_sizes([config.UI.CircleSize])
-                collections.append(h)
-                collection_labels.append(l)
-
-        # clear handles and labels
-        handles = []
-        labels = []
-
-        # match Line2D and PathCollection with the same label
-        for line_label in line_labels:
-            line_index = line_labels.index(line_label)
-            if line_label in collection_labels:
-                collection_index = collection_labels.index(line_label)
-
-                handles.append((lines[line_index],collections[collection_index]))
-                labels.append(line_label)
-                #handles.append()
-                #labels.append("")  # empty label for collections
-            else:
-                handles.append(lines[line_index])
-                labels.append(line_label)
-
-        return handles, labels
-
-    @simple_exception_handling("Error while generating graph",err_to_ignore=[TypeError],always_throw=True)
-    def gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type, unitetype,orig_data, adjust_date=False,
-                         plot_data=None,additional_df=None):
-        def update_prop(handle, orig):
-            marker_size = 36
-            handle : PathCollection
-            handle.update_from(orig)
-            handle.set_sizes([marker_size])
-            import matplotlib.markers as mmarkers
-            marker_obj= mmarkers.MarkerStyle('o')
-            path = marker_obj.get_path().transformed(
-                marker_obj.get_transform())
-            handle.set_paths([path])
-
-
-        additional_options = config.UI.AdditionalOptions
-        self.generation_mutex.lock()
-        logging.log(TRACELEVEL, ('generation locked'))
+    def _gen_actual_graph(self, cols, dt, isline, starthidden, just_upd, type,
+                          unitetype, orig_data, adjust_date=False,
+                          plot_data=None, additional_df=None):
+        if self._plot is None:
+            return
 
         self.orig_data = orig_data
         self.additional_df = additional_df
         self.typ = type
-        self.unitetype=unitetype 
+        self.unitetype = unitetype
 
-        # plt.sca(self._axes)
+        self._clear()
+
+        x = _to_epoch(dt.index)
+        self._orig_epoch = _to_epoch(orig_data.index) if orig_data is not None else x
+
+        colours = _palette(len(dt.columns))
+        for col, colour in zip(dt.columns, colours):
+            yv = dt[col].to_numpy(dtype='float64')
+            mask = np.isfinite(yv)
+            if not mask.any():
+                continue
+            curve = self._plot.plot(x[mask], yv[mask],
+                                    pen=pg.mkPen(color=colour, width=2),
+                                    name=col)
+            self._curves[col] = curve
+            self._curve_visible[col] = True
+
+        self._plot.setTitle(self.get_title())
+
+        if plot_data and self.params.show_transactions_graph:
+            self._plot_transactions(plot_data, colours)
+
+        self._install_legend_toggles()
+        self._install_hover()
+        self._apply_shown_stock(starthidden, isline)
+
+        self._plot.enableAutoRange(axis='y', enable=True)
+        self.first_time = False
+
         try:
-            self.remove_all_anotations()
-            self.point_to_annotation = {}
-            if not just_upd:
-                self.cur_shown_stock = set()
-                logging.log(TRACELEVEL, ('not  justupdate'))
+            logging.log(TRACELEVEL, '[gg] FINAL curves=%d visible=%d',
+                        len(self._curves),
+                        sum(1 for v in self._curve_visible.values() if v))
+        except Exception:
+            pass
 
+    # ------------------------------------------------------------------
+    def _plot_transactions(self, plot_data, colours):
+        """Scatter each transaction at (date, price); circles for buys,
+        squares for sells; size scales with |qty * cost| so bigger
+        positions visually pop. Mirrors matplotlib generator's intent."""
+        colour_by_sym = {sym: c for sym, c in zip(self._curves.keys(), colours)}
 
-                # logging.debug (('calledreomve!'))
-            ar = self._axes
-            try:
-                _nonnan = {c: int(dt[c].notna().sum()) for c in dt.columns}
-                logging.log(TRACELEVEL, '[gg] PRE-plot dt shape=%s cols=%s nonnan=%s idx[0..1]=%s..%s',
-                             dt.shape, list(dt.columns), _nonnan,
-                             dt.index[0] if len(dt.index) else None,
-                             dt.index[-1] if len(dt.index) else None)
-                logging.log(TRACELEVEL, '[gg] PRE-plot ax.lines=%d ax has legend=%s xlim=%s ylim=%s',
-                             len(ar.lines), ar.legend_ is not None, ar.get_xlim(), ar.get_ylim())
-            except Exception as _e:
-                logging.log(TRACELEVEL, '[gg] PRE-plot trace failed: %r', _e)
-            dt.plot.line(reuse_plot=True, ax=ar, grid=True, x_compat=True, **additional_options)
-            try:
-                _line_info = []
-                for _l in ar.lines[:8]:
-                    try:
-                        _xy = _l.get_xydata()
-                        _line_info.append((_l.get_label(), _l.get_visible(), len(_xy),
-                                           bool(np.isfinite(_xy[:, 1]).any()) if len(_xy) else False))
-                    except Exception as _ee:
-                        _line_info.append((_l.get_label(), 'err', repr(_ee)))
-                logging.log(TRACELEVEL, '[gg] POST-plot ax.lines=%d sample=%s', len(ar.lines), _line_info)
-            except Exception as _e:
-                logging.log(TRACELEVEL, '[gg] POST-plot trace failed: %r', _e)
-
-            if just_upd or self.first_time:
-                if UseQT:
-                    self.cid = ar.figure.canvas.mpl_connect('pick_event', partial(GraphGenerator.onpick, self))
-
-            if ar is None:
-                return
-            FACy = 1.2
-            FACx = 2.4
-            box = ar.get_position()
-            ar.set_position([0, box.y0, 6 * FACx, box.height])
-            mfig = ar.figure
-
-            ar.set_title(self.get_title())
-
-
-
-            mfig.autofmt_xdate()
-
-            self.ax = ar
-            self.ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m-%d'))
-
-            if just_upd:
-                self.update_limit(ar, ar.legend_.figure, mfig, ar.lines)
-            elif self.params.show_graph:
-                logging.debug('strange')
-                pass  # plt.show()
-
-            mind = matplotlib.dates.date2num(min(dt.index))
-            maxd = matplotlib.dates.date2num(max(dt.index))
-            if mind < maxd:
-                self._axes.set_xlim([mind, maxd])
-            try:
-                logging.log(TRACELEVEL, '[gg] PRE-relim xlim=%s ylim=%s dataLim=%s',
-                             ar.get_xlim(), ar.get_ylim(), ar.dataLim.bounds)
-            except Exception:
-                pass
-            ar.relim()
-            ar.autoscale_view(scalex=False, scaley=True)
-            try:
-                logging.log(TRACELEVEL, '[gg] POST-autoscale xlim=%s ylim=%s dataLim=%s vis_lines=%d/%d',
-                             ar.get_xlim(), ar.get_ylim(), ar.dataLim.bounds,
-                             sum(1 for _l in ar.lines if _l.get_visible()), len(ar.lines))
-            except Exception:
-                pass
-            try:
-                logging.log(TRACELEVEL, '[gg-tx] plot_data?=%s show_tx=%s n_keys=%s sample_lens=%s',
-                                bool(plot_data), getattr(self.params, 'show_transactions_graph', None),
-                                (len(plot_data) if plot_data else 0),
-                                ([(k, len(v)) for k, v in list((plot_data or {}).items())[:5]]))
-            except Exception as _e:
-                logging.log(TRACELEVEL, '[gg-tx] trace failed: %r', _e)
-            if plot_data and self.params.show_transactions_graph:
-                #special if not a price graph
-                self.plot_transaction_info(ar, plot_data, special=
-                (self.params.adjust_to_currency or self.params.adjusted_for_base_cur)  or not
-                ( (Types.PRICE & type) == Types.PRICE or type==Types.ABS))
-
-            # self.remove_all_anotations()
-            self.cursor = mplcursors.cursor(mfig, hover=mplcursors.HoverMode.Transient)
-            self.generation += 1
-            self.cb = self.cursor.connect('add', partial(show_annotation, cls=self, ax=ar, generation=self.generation))
-
-            handles, labels = self.order_labels(ar)
-            self.handles_labels = { l: h for h, l in zip(handles, labels)}
-            # Put a legend to the right of the current aris
-            if len(cols) >= config.UI.MinColForColumns:
-
-                lgnd=ar.legend(handles, labels, loc='center left', bbox_to_anchor=self.B, ncol=len(cols) // config.UI.MinColForColumns,
-                               handleheight=2.4, labelspacing=0.05, handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
-            else:
-                lgnd=ar.legend(handles,labels, loc='center left', bbox_to_anchor=self.B, handleheight=2.4, labelspacing=0.05 , handler_map={matplotlib.collections.PathCollection : HandlerPathCollection(update_func=update_prop)})
-            self.blobs_legends = {l._label: l for l in ar.get_legend_handles_labels()[0] if
-                             isinstance(l, matplotlib.collections.PathCollection)}
-
-            self.lines_dict= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.lines.Line2D)}
-            self.lgnd= lgnd
-
-
-
-            if isline:
-                self.handle_line(ar, starthidden, just_upd)
-
-            try:
-                _hidden = [_l.get_label() for _l in ar.lines if not _l.get_visible()]
-                logging.log(TRACELEVEL, '[gg] FINAL ax.lines=%d hidden=%d hidden_labels=%s xlim=%s ylim=%s',
-                             len(ar.lines), len(_hidden), _hidden[:10],
-                             ar.get_xlim(), ar.get_ylim())
-            except Exception:
-                pass
-            mfig.canvas.draw_idle()
-
-        finally:
-            self.first_time = False
-            logging.log(TRACELEVEL, ('generation unlocked'))
-            self.generation_mutex.unlock()
-
-    def remove_all_anotations(self):
-        if self._axes is None:
-            return
-        if getattr(self, 'cursor', None):
-            self.cursor.remove()
-
-            # time.sleep(0.2)
-            self.cursor.disconnect('add', cb=self.cb)
-            # self.cb=lambda :None
-            logging.log(TRACELEVEL, (self.cursor._callbacks))
-            self.cursor._callbacks['add'] = {}
-
-        for child in self._axes.get_children():
-            if isinstance(child, matplotlib.lines.Line2D):
-                child.remove()
-            if isinstance(child, matplotlib.collections.PathCollection):
-                child.remove()
-
-        if getattr(self, 'cursor', None):
-            self._axes.figure.canvas.callbacks.disconnect(self.cb)
-            del self.cursor
-
-    def handle_line(self, ar, starthidden, just_upd):
-        lined = dict()
-        leg = ar.legend_
-        fig = leg.figure
-        nlst = set([x._label for x in leg.get_lines()])
-        if self.last_stock_list != nlst:
-            if self.last_stock_list < nlst or (self.cur_shown_stock != self.cur_shown_stock.intersection(
-                    nlst)):  # if there are more stocks , or we removed a stock that was shown
-                self.cur_shown_stock = set()
-
-        istrivial = (len(self.params.shown_stock) == 0 or len(self.params.shown_stock) == len(ar.lines))
-        iscurtrivial = (len(self.cur_shown_stock) == 0 or len(self.cur_shown_stock) == len(ar.lines))
-        if (iscurtrivial and starthidden):
-            self.cur_shown_stock = set()
-        if not istrivial:
-            self.cur_shown_stock = self.params.shown_stock
-
-        for origline, legline in zip(ar.lines, leg.get_lines()):
-            legline.set_picker(5)  # 5 pts tolerance
-
-            if not istrivial:
-                hide = legline._label not in self.params.shown_stock  # act based on shown_stock
-            else:
-                hide = (iscurtrivial and starthidden) or (
-                        not iscurtrivial and (legline._label not in self.cur_shown_stock))
-
-            if hide:
-                legline.set_alpha(0.2)  # hide
-                origline.set_visible(0)
-                if legline._label in self.blobs_legends:
-                    self.blobs_legends[legline._label].set_alpha(0.2)
-            else:
-                self.cur_shown_stock.add(legline._label)  # maybe there
-                legline.set_alpha(1)  # hide
-                origline.set_visible(1)
-                if legline._label in self.blobs_legends:
-                    self.blobs_legends[legline._label].set_alpha(0.5)
-        self.last_stock_list = nlst
-        return (lined, fig)
-
-    def update_limit(self, ar, fig, ofig, lines):
-
-        MAXV = 100000000000
-        maxline = -1 * MAXV
-        minline = MAXV
-        for l in lines:
-            if l.get_visible():
-                y = list(filter(lambda x: not math.isnan(x), l._y))
-                if len(y) == 0:
+        # First pass: collect totals to derive a typical-size baseline
+        # (so per-symbol scaling is comparable across symbols).
+        all_totals = []
+        for rows in plot_data.values():
+            for entry in rows or ():
+                _date, cost, qty, _src, _adj = entry
+                if cost is None or qty is None:
                     continue
-                # x = list(filter(lambda x:not math.isnan(x) , l._x))
-                maxline = max(maxline, max(y))
-                minline = min(minline, min(y))
-            # self.maxValue=0 if maxline==(-1)* MAX  V else maxline
-            # self.minValue=0 if minline== MAXV else minline
-        if maxline == minline:
-            ar.set_ylim(ymin=minline - 0.12 * minline, ymax=maxline + 0.12 * maxline)
+                if isinstance(cost, float) and math.isnan(cost):
+                    continue
+                all_totals.append(abs(qty * cost))
+        if all_totals:
+            arr = np.asarray(all_totals, dtype='float64')
+            typical = float(np.average(arr))
+            if arr.max() > 5 * typical:
+                typical = float(arr.max()) / 2
+            typical = max(typical, 1.0)
         else:
+            typical = 1.0
+
+        base_px = float(config.UI.CircleSize) * float(config.UI.CircleSizePercentage)
+        base_px = max(8.0, base_px)  # don't disappear when config is tiny
+        MIN_PX, MAX_PX = 6.0, 48.0
+
+        for sym, rows in plot_data.items():
+            if not rows:
+                continue
+            colour = colour_by_sym.get(sym, '#888888')
+            spots = []
+            for entry in rows:
+                date, cost, qty, source, adj = entry
+                if cost is None or (isinstance(cost, float) and math.isnan(cost)):
+                    continue
+                ts = float(_to_epoch([date])[0])
+                y = adj if adj is not None and not (isinstance(adj, float) and math.isnan(adj)) else cost
+                yv = float(y)
+                is_sell = qty is not None and qty < 0
+                total = abs((qty or 0) * cost)
+                size = base_px * math.sqrt(total / typical) if total > 0 else MIN_PX
+                size = max(MIN_PX, min(MAX_PX, size))
+                if is_sell:
+                    # match matplotlib's area adjustment for square markers
+                    size *= math.sqrt(math.pi / 4)
+
+                def _adj_str(value, adjusted):
+                    if adjusted:
+                        return f'{_round2(value)} (adj. {_round2(adjusted)})'
+                    return _round2(value)
+
+                qty_adj = (qty * (cost / adj)) if (adj and qty is not None) else None
+                tooltip = (
+                    f'{sym}\n'
+                    f'Date: {date.strftime("%Y-%m-%d %H:%M")}\n'
+                    f'Cost: {_adj_str(cost, adj)}\n'
+                    f'Qty: {_adj_str(qty, qty_adj)}\n'
+                    f'Source: {source}'
+                )
+
+                spots.append({
+                    'pos': (ts, yv),
+                    'size': size,
+                    'symbol': 's' if is_sell else 'o',
+                    'brush': pg.mkBrush(QColor(colour)),
+                    'pen': pg.mkPen(QColor(colour).darker(150)),
+                    'data': tooltip,
+                })
+                self._tx_points.append((ts, yv, tooltip))
+
+            if not spots:
+                continue
+            scat = pg.ScatterPlotItem(spots, pxMode=True, hoverable=True,
+                                      hoverBrush=pg.mkBrush('y'),
+                                      hoverPen=pg.mkPen('k', width=2))
+            scat.setOpacity(0.6)
+            self._plot.addItem(scat)
+            self._scatters[sym] = scat
+
+    # ------------------------------------------------------------------
+    def _install_legend_toggles(self):
+        legend = self._plot.legend
+        if legend is None:
+            return
+        for sample, label in list(legend.items):
+            name = label.text
+            if name not in self._curves:
+                continue
+            def _toggle(_ev, _name=name):
+                self._set_visible(_name, not self._curve_visible.get(_name, True))
+            sample.mouseClickEvent = _toggle
+            label.mouseClickEvent = _toggle
+
+    def _set_visible(self, name: str, vis: bool):
+        curve = self._curves.get(name)
+        if curve is None:
+            return
+        curve.setVisible(vis)
+        self._curve_visible[name] = vis
+        sc = self._scatters.get(name)
+        if sc is not None:
+            sc.setVisible(vis)
+        legend = self._plot.legend
+        if legend is not None:
+            for sample, label in legend.items:
+                if label.text == name:
+                    label.setOpacity(1.0 if vis else 0.35)
+                    sample.setOpacity(1.0 if vis else 0.35)
+        if vis:
+            self.cur_shown_stock.add(name)
+        else:
+            self.cur_shown_stock.discard(name)
+
+    def _apply_shown_stock(self, starthidden: bool, isline: bool):
+        if not isline:
+            return
+        shown = set(self.params.shown_stock or [])
+        if shown:
+            for name in list(self._curves.keys()):
+                self._set_visible(name, name in shown)
+            self.cur_shown_stock = set(shown)
+        elif starthidden:
+            for name in list(self._curves.keys()):
+                self._set_visible(name, False)
+            self.cur_shown_stock = set()
+        else:
+            self.cur_shown_stock = set(self._curves.keys())
+
+    # ------------------------------------------------------------------
+    # Native mplcursors-style hover.
+    def _install_hover(self):
+        plot = self._plot
+        if self._vline is None:
+            self._vline = pg.InfiniteLine(angle=90, movable=False,
+                                          pen=pg.mkPen('r', style=Qt.DashLine))
+            self._vline.setZValue(50)
+            self._vline.hide()
+            plot.addItem(self._vline, ignoreBounds=True)
+        if self._tooltip is None:
+            self._tooltip = pg.TextItem(anchor=(0, 1), color='k',
+                                        fill=pg.mkBrush(255, 255, 220, 220),
+                                        border=pg.mkPen(120, 120, 120))
+            self._tooltip.setZValue(60)
+            self._tooltip.hide()
+            plot.addItem(self._tooltip, ignoreBounds=True)
+
+        if self._hover_proxy is not None:
             try:
-                ar.set_ylim(ymin=minline - 0.12 * abs(max(minline, maxline - minline)),
-                            ymax=maxline + 0.12 * abs(max(maxline, maxline - minline)))
-            except ValueError:
-                logging.debug(('val error'))
+                self._hover_proxy.disconnect()
+            except Exception:
+                pass
+        self._hover_proxy = pg.SignalProxy(plot.scene().sigMouseMoved,
+                                           rateLimit=60,
+                                           slot=self._on_mouse_moved)
 
-        # fig.canvas.draw()
-        # ofig.canvas.draw()
-        # ofig.canvas.flush_events()
+    @simple_exception_handling(err_description="hover annotation failed",
+                                never_throw=True)
+    def _on_mouse_moved(self, evt):
+        pos = evt[0]
+        plot = self._plot
+        if not plot.sceneBoundingRect().contains(pos):
+            self._vline.hide()
+            self._tooltip.hide()
+            self._set_highlight(None)
+            return
+        mouse_pt: QPointF = plot.vb.mapSceneToView(pos)
+        x = float(mouse_pt.x())
+        y = float(mouse_pt.y())
 
-    def onpick(self, event):
+        rows, target = self._build_annotation_rows(x, y)
+        if not rows:
+            self._vline.hide()
+            self._tooltip.hide()
+            self._set_highlight(None)
+            return
 
-        with self.pick_lock:
-            if self.last_pick_event is not None:
-                if datetime.datetime.now() - self.last_pick_event < datetime.timedelta(seconds=0.5):
-                    return
-            # on the pick event, find the orig line corresponding to the
-            # legend proxy line, and toggle the visibility
-            # legline = event.artist
-            b = False
-            ar = self._axes
-            fig = ar.legend_.figure
-            blobs= { l._label : l for l in ar.get_children() if isinstance(l, matplotlib.collections.PathCollection)}
-
-            for origline, legline in zip(ar.lines, ar.legend_.get_lines()):
-                if legline == event.artist:
-                    # origline = lined[legline]
-                    vis = not origline.get_visible()
-                     #to avoid double counting
-                    origline.set_visible(vis)
-                    self.last_pick_event= datetime.datetime.now()
-                    logging.debug(('onpick legend hide or show', origline._label, vis))
-                    time.sleep(0.1)
-                    if legline._label in blobs:
-                        blobs[legline._label].set_visible(vis)
-                        #self.handles_labels[legline._label][1].set_visible(vis)
-                        # if legline._label in self.blobs_legends:
-                        #     self.blobs_legends[legline._label].set_alpha(0.2 if vis else 0.5)
-
-                    # Change the alpha on the line in the legend so we can see what lines
-                    # have been toggled
-                    if vis:
-                        legline.set_alpha(1.0)
-                        self.cur_shown_stock.add(legline._label)
-                    else:
-                        legline.set_alpha(0.2)
-                        self.cur_shown_stock.remove(legline._label)
-                    break
+        html_parts = []
+        for name, body in rows:
+            if name is None:
+                html_parts.append(body)
+                continue
+            if name == target:
+                html_parts.append(f'<b>{name}: {body}</b>')
             else:
-                logging.log(TRACELEVEL, ("onpick failed"))
-                return
+                html_parts.append(f'{name}: {body}')
+        import datetime as _dt
+        try:
+            html_parts.append(_dt.datetime.utcfromtimestamp(x)
+                              .strftime('%Y-%m-%d'))
+        except (ValueError, OSError):
+            pass
+        self._tooltip.setHtml('<br>'.join(html_parts))
+        self._tooltip.setPos(x, y)
+        self._tooltip.show()
+        self._vline.setPos(x)
+        self._vline.show()
+        self._set_highlight(target)
 
-            self.update_limit(ar, fig, origline.figure, ar.lines)
-                # if UseQT:
-                #    fig.canvas.draw()  # draw
-        # self._ax=
+    def _build_annotation_rows(self, x: float, y: float):
+        """Return (rows, target_name).
 
-    def show_hide(self, toshow):
-        ar = self._axes
-        leg = ar.legend_
-        fig = leg.figure
-        for l in ar.get_children():
-            if isinstance(l, matplotlib.collections.PathCollection):
-                l.set_visible(toshow)
+        rows: list of (name|None, body_html). name=None means a separator
+              or transaction tooltip (rendered verbatim).
+        target_name: name of the curve closest to the cursor's y (the one
+              to bold), or None.
+        """
+        is_pct = bool(self.typ is not None and (self.typ & (Types.PRECENTAGE | Types.DIFF)))
+        rows: list[tuple[Optional[str], str]] = []
+        target = None
+        best_dy = math.inf
+        for name, curve in self._curves.items():
+            if not self._curve_visible.get(name, True):
+                continue
+            xd, yd = curve.getData()
+            if xd is None or len(xd) == 0 or x < xd[0] or x > xd[-1]:
+                continue
+            yv = float(np.interp(x, xd, yd))
+            if math.isnan(yv):
+                continue
+            orig_val = self._interp_orig(name, x) if is_pct else None
+            suffix = '%' if is_pct else ''
+            extra = f' ({_round2(orig_val)})' if orig_val is not None else ''
+            body = f'{round(yv, 2)}{suffix}{extra}'
+            rows.append((name, body))
+            dy = abs(yv - y)
+            if dy < best_dy:
+                best_dy = dy
+                target = name
 
-        for origline, legline in zip(ar.lines, leg.get_lines()):
-            if not toshow:
-                legline.set_alpha(0.2)
-                origline.set_visible(0)
-            else:
-                legline.set_alpha(1)
-                origline.set_visible(1)
-        if UseQT:
-            fig.canvas.draw()  # draw
+        hit = self._nearest_tx(x)
+        if hit is not None:
+            rows.append((None, '---'))
+            rows.append((None, hit.replace('\n', '<br>')))
+        return rows, target
+
+    def _set_highlight(self, name: Optional[str]):
+        """Thicken the bolded curve so the selection reads on the plot
+        itself, not just in the tooltip. Idempotent; cheap (only touches
+        pens when the target changes)."""
+        if getattr(self, '_highlighted', None) == name:
+            return
+        prev = getattr(self, '_highlighted', None)
+        if prev and prev in self._curves:
+            pen = self._curves[prev].opts.get('pen')
+            if pen is not None:
+                try:
+                    pen.setWidth(2)
+                    self._curves[prev].setPen(pen)
+                except Exception:
+                    pass
+        if name and name in self._curves:
+            pen = self._curves[name].opts.get('pen')
+            if pen is not None:
+                try:
+                    pen.setWidth(4)
+                    self._curves[name].setPen(pen)
+                except Exception:
+                    pass
+        self._highlighted = name
+
+    def _nearest_tx(self, x: float):
+        """Return tooltip text for the transaction nearest to view-x, if
+        within a small pixel radius; else None. Pixel-based so it adapts
+        to zoom level."""
+        if not self._tx_points or self._plot is None:
+            return None
+        vb = self._plot.vb
+        xr = vb.viewRange()
+        xspan = max(1e-9, xr[0][1] - xr[0][0])
+        # ~6 pixels in view coords, given current viewport width.
+        vw = max(1.0, vb.width())
+        tol = (6.0 / vw) * xspan
+        best = None
+        best_d = tol
+        for tx, _ty, txt in self._tx_points:
+            d = abs(tx - x)
+            if d < best_d:
+                best_d = d
+                best = txt
+        return best
+
+    def _interp_orig(self, name: str, x: float):
+        if self.orig_data is None or name not in self.orig_data.columns:
+            return None
+        try:
+            yv = self.orig_data[name].to_numpy(dtype='float64')
+        except Exception:
+            return None
+        if self._orig_epoch is None or len(self._orig_epoch) == 0:
+            return None
+        if x < self._orig_epoch[0] or x > self._orig_epoch[-1]:
+            return None
+        val = float(np.interp(x, self._orig_epoch, yv))
+        return None if math.isnan(val) else val

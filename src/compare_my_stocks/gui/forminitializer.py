@@ -3,9 +3,8 @@ import logging
 import PySide6.QtWidgets
 
 from PySide6.QtWidgets import QRadioButton, QCheckBox, QListWidget, QSizePolicy,QComboBox
-from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
+
+from graph.pyqtgraph_canvas import PyQtGraphCanvas
 
 from common.common import LimitType, UniteType, Types, index_of, really_close
 from common.simpleexceptioncontext import simple_exception_handling
@@ -40,13 +39,7 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         return self._canvas.ax
 
     def prepare_graph_widget(self):
-        #tabWidget = self.window.tabWidget_8Page1  # type: QTabWidget
-
-        self._canvas = MplCanvas()
-        #sc.manager.window.move(1,1)
-        toolbar = NavigationToolbar(self._canvas, self.window)
-        #layout = QVBoxLayout()
-        self.window.graph_groupbox.layout().addWidget(toolbar)
+        self._canvas = PyQtGraphCanvas()
         self.window.graph_groupbox.layout().addWidget(self._canvas)
 
 
@@ -242,10 +235,3 @@ class FormInitializer(FormObserver, FormInitializerInterface):
 
 
 
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self):
-        self.fig = Figure()
-        self.ax = self.fig.add_subplot(111)
-        FigureCanvasQTAgg.__init__(self, self.fig)
-        FigureCanvasQTAgg.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        FigureCanvasQTAgg.updateGeometry(self)
