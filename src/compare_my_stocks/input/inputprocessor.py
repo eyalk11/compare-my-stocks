@@ -744,7 +744,10 @@ class InputProcessor(InputProcessorInterface):
                         break
                     _, cur_action = buyoperations.popitem(False)
 
-                tim = matplotlib.dates.date2num(t)
+                # Floor to day-boundary so transaction-bumped timestamps
+                # (e.g. 04-29 00:00:00.021 from buydic collision counter)
+                # collapse onto the daily grid instead of creating stray rows.
+                tim = float(int(matplotlib.dates.date2num(t)))
                 holdopt = set(_cur_holding_bystock.keys()).intersection(
                     partial_symbols_update) if partial_symbols_update else _cur_holding_bystock.keys()
                 for sym in holdopt:

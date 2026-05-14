@@ -39,6 +39,7 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
             self.internal_save(text)
 
     def internal_save(self, text, upd=True):
+        logging.info(f"GUI internal_save: text={text!r} upd={upd}")
         self.graphs[text] = copyit(self.graphObj.params)
         if upd:
             self.lastgraphtext = text
@@ -47,7 +48,9 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
         self.update_graph_list()
 
     def load_graph(self, text=None):
+        logging.info(f"GUI load_graph: text={text!r}")
         def after_task():
+            logging.info(f"GUI load_graph after_task: ext={self.graphObj.params.ext} groups={self.graphObj.params.groups} cur_cat={self.graphObj.params.cur_category!r}")
             self.setup_controls_from_params(0, 1)
             self.update_graph(ResetRanges.FORCE,
                               force=True)  # There is a bug of the graph not fitting in screen. This solves it.

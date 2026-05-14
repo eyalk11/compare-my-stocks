@@ -268,6 +268,12 @@ class InputConf:
     MaxRelevantCurrencyTime : datetime.timedelta = datetime.timedelta(minutes=60)
     MaxRelevantCurrencyTimeHeur: datetime.timedelta = datetime.timedelta(days=5)
     MinDaysForSymbol: int = 7
+    # Display-only: shift transaction markers on the graph forward by one
+    # day. Storage (the value/holding panels) is always aligned to the day
+    # of the transaction ("on the spot"); with this flag set, the marker
+    # is drawn on the next day so it visually appears alongside the value
+    # step rather than overlapping the pre-transaction bar.
+    TransactionsOnNextDay: bool = True
 
 @paramaware
 @dataclass
