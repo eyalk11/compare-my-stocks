@@ -250,6 +250,7 @@ def get_eng(have_graph_gen=False,params : Parameters=None):
         # (added in d160805) and never reaches call_graph_generator, so the Mock
         # never records. Plant a sentinel _axes so .active returns True for tests.
         eng._generator._axes = Mock()
+        eng._generator._plot = Mock()  # pyqtgraph backend reads _plot, not _axes
     eng.input_processor.save_data = Mock(
         return_value=None)  # Dont save anything please . Because loading data like that is not nice.
     return eng
