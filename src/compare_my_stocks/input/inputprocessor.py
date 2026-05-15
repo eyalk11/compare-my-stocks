@@ -926,6 +926,9 @@ class InputProcessor(InputProcessorInterface):
             fromdate = matplotlib.dates.num2date(min(dic.keys()) )
             todate = matplotlib.dates.num2date(max(dic.keys()) )
             range_gaps= list(self.get_range_gap( [  matplotlib.dates.num2date(k) for k,v in dic.items() if (( v is not None ) and (not math.isnan(v)))  ],fromdate,todate))
+            if not range_gaps:
+                yield fromdate, todate
+                return
             yield fromdate, range_gaps[0][0]
             for a,b  in zip(range_gaps,range_gaps[1:]):
                 yield a[1],b[0]

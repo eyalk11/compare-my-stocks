@@ -16,12 +16,9 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import matplotlib
-matplotlib.use("Agg")  # headless — no GUI windows during tests
-
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pyqtgraph as pg
 import pytest
 
 sys.path.insert(0, str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
@@ -29,6 +26,26 @@ sys.path.insert(0, str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
 from common.common import Types, UniteType, UseCache
 from engine.parameters import Parameters
 from graph.graphgenerator import GraphGenerator
+
+
+@pytest.fixture(scope="module")
+def _qapp():
+    """A QApplication is required to construct pyqtgraph PlotItems."""
+    return pg.mkQApp("test_generic_graph")
+
+
+def _make_plot_item():
+    """Construct a pyqtgraph PlotItem wired up the same way
+    PyQtGraphCanvas does in production (DateAxisItem on bottom + legend),
+    so GraphGenerator runs against an equivalent surface."""
+    layout = pg.GraphicsLayoutWidget()
+    date_axis = pg.DateAxisItem(orientation="bottom", utcOffset=0)
+    plot_item = layout.addPlot(axisItems={"bottom": date_axis})
+    plot_item.addLegend(offset=(10, 10))
+    # Keep a reference to the layout on the plot item so it isn't GC'd
+    # while the test still wants to inspect the plot.
+    plot_item._test_owner_layout = layout
+    return plot_item
 
 
 REAL_CACHE_PATH = (
@@ -122,15 +139,15 @@ def _hash_file(p: Path) -> str:
 def gen_graph_from_params(params: Parameters, df: pd.DataFrame | None = None,
                           symbols=("AAPL", "MSFT", "GOOGL"), days=120):
     """Run GraphGenerator.gen_actual_graph against synthetic data driven by
-    `params`. Returns (axes, generator) for assertion convenience."""
+    `params`. Returns (plot_item, generator)."""
     if df is None:
         df = make_synthetic_prices(symbols=symbols, days=days)
 
     eng = MagicMock()
     eng.params = params
 
-    fig, axes = plt.subplots(figsize=(8, 4))
-    gg = GraphGenerator(eng, axes)
+    plot_item = _make_plot_item()
+    gg = GraphGenerator(eng, plot_item)
     gg.gen_actual_graph(
         cols=list(df.columns),
         dt=df,
@@ -144,7 +161,7 @@ def gen_graph_from_params(params: Parameters, df: pd.DataFrame | None = None,
         plot_data=None,
         additional_df=None,
     )
-    return axes, gg, fig
+    return plot_item, gg
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +231,7 @@ def price_panel(request):
 
 
 @pytest.mark.parametrize("params", POSSIBLE_PARAMETERS)
-def test_graph_from_panel(params, price_panel, tmp_path):
+def test_graph_from_panel(params, price_panel, _qapp):
     """For every Parameters config × every data source (synthetic + real
     in-tree cache): produce a graph and assert the plot survived."""
     df = price_panel
@@ -223,28 +240,21 @@ def test_graph_from_panel(params, price_panel, tmp_path):
     # Snapshot the real cache so we can prove the test didn't mutate it.
     pre_hash = _hash_file(REAL_CACHE_PATH) if REAL_CACHE_PATH.exists() else None
 
-    axes, gg, fig = gen_graph_from_params(params, df=df)
+    plot_item, gg = gen_graph_from_params(params, df=df)
 
-    try:
-        assert len(axes.lines) == expected_lines
+    assert len(gg._curves) == expected_lines
 
-        title = axes.get_title()
-        assert title
-        if params.type & Types.PROFIT:
-            assert "profit" in title.lower()
-        elif params.type & Types.PRICE:
-            assert "price" in title.lower()
-        elif params.type & Types.VALUE:
-            assert "value" in title.lower()
+    title = gg.get_title()
+    assert title
+    if params.type & Types.PROFIT:
+        assert "profit" in title.lower()
+    elif params.type & Types.PRICE:
+        assert "price" in title.lower()
+    elif params.type & Types.VALUE:
+        assert "value" in title.lower()
 
-        assert axes.legend_ is not None
-        assert axes.xaxis.get_major_formatter().__class__.__name__ == "DateFormatter"
-
-        out = tmp_path / "graph.png"
-        fig.savefig(out)
-        assert out.exists() and out.stat().st_size > 0
-    finally:
-        plt.close(fig)
+    assert plot_item.legend is not None
+    assert isinstance(plot_item.getAxis("bottom"), pg.DateAxisItem)
 
     # Equivalent of the startvenv11_curdat invariant: nothing in
     # src/compare_my_stocks/data/ should be modified by tests.
@@ -254,7 +264,7 @@ def test_graph_from_panel(params, price_panel, tmp_path):
         )
 
 
-def test_real_cache_immutable_after_graph():
+def test_real_cache_immutable_after_graph(_qapp):
     """Standalone immutability check: load + render against the real
     in-tree cache and assert its on-disk bytes are unchanged. Mirrors
     the contract of startvenv11_curdat.ps1, which copies the same files
@@ -274,12 +284,11 @@ def test_real_cache_immutable_after_graph():
         use_cache=UseCache.DONT,
         show_graph=False,
     )
-    _, _, fig = gen_graph_from_params(p, df=df)
-    plt.close(fig)
+    gen_graph_from_params(p, df=df)
     assert _hash_file(REAL_CACHE_PATH) == pre_hash
 
 
-def test_graph_from_custom_dataframe(tmp_path):
+def test_graph_from_custom_dataframe(_qapp):
     """Caller can pass any DataFrame — useful when synthetic randomness
     isn't enough and a known panel is needed."""
     idx = pd.bdate_range("2026-01-02", periods=30)
@@ -299,13 +308,9 @@ def test_graph_from_custom_dataframe(tmp_path):
         use_cache=UseCache.DONT,
         show_graph=False,
     )
-    axes, gg, fig = gen_graph_from_params(p, df=df)
-    try:
-        assert len(axes.lines) == 2
-        # Monotonic ramps -> first/last value sanity.
-        line_aaa = next(l for l in axes.lines if l.get_label() == "AAA")
-        ydata = line_aaa.get_ydata()
-        assert ydata[0] == pytest.approx(100.0)
-        assert ydata[-1] == pytest.approx(130.0)
-    finally:
-        plt.close(fig)
+    plot_item, gg = gen_graph_from_params(p, df=df)
+    assert len(gg._curves) == 2
+    # Monotonic ramps -> first/last value sanity.
+    _x, y_aaa = gg._curves["AAA"].getData()
+    assert y_aaa[0] == pytest.approx(100.0)
+    assert y_aaa[-1] == pytest.approx(130.0)

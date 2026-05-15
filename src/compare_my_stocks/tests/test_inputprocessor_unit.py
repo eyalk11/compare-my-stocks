@@ -339,3 +339,4 @@ def test_return_df_output_shape_and_columns():
     assert set(out.columns.get_level_values(1)) == {"AAPL", "MSFT"}
     assert list(out.index) == list(prices.index), \
         "output must be reindexed onto original daily price dates"
+

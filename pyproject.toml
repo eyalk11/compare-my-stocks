@@ -11,7 +11,7 @@ addopts = "-m 'not integration'"
 
 [tool.poetry]
 name = "compare-my-stocks"
-version = "1.2.1"
+version = "1.2.6"
 description = "A system for visualizing interesting stocks. Has powerful comparison capabilities and works seamlessly with your jupyter notebook.   Written in QT with matplotlib + pyqtgraph."
 authors = ["eyalk5"]
 readme = "README.md"

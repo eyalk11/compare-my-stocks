@@ -225,8 +225,31 @@ def test_load_current_histfile_smoke(inp):
 def test_local_config_loads_histfile():
     """Load HistFile.cache via the local (alt) config in src/compare_my_stocks/data/."""
     from common.common import UseCache, VerifySave
+    from config import newconfig
     from config.newconfig import ConfigLoader
-    c = ConfigLoader.main(use_alternative=True)
+    # Imports earlier in the session already invoked ConfigLoader.main() with
+    # no use_alternative, which pinned the module-global DATA_DIR to the
+    # user's regular ~/.compare_my_stocks* dir. Once DATA_DIR is set,
+    # resolvefile() short-circuits and the use_alternative=True request is
+    # ignored. Wipe the cached state so the alt resolution actually runs,
+    # and restore after the test so nothing else regresses.
+    saved_data_dir = newconfig.DATA_DIR
+    saved_config = ConfigLoader.config
+    saved_env = os.environ.pop(newconfig.PROJPATHENV, None)
+    newconfig.DATA_DIR = ''
+    ConfigLoader.config = None
+    try:
+        c = ConfigLoader.main(use_alternative=True)
+        _run_local_histfile_assertions(c)
+    finally:
+        newconfig.DATA_DIR = saved_data_dir
+        ConfigLoader.config = saved_config
+        if saved_env is not None:
+            os.environ[newconfig.PROJPATHENV] = saved_env
+
+
+def _run_local_histfile_assertions(c):
+    from common.common import UseCache, VerifySave
     c.Running.IsTest = True
     c.TransactionHandlers.SaveCaches = False
     c.Running.VerifySaving = VerifySave.DONT

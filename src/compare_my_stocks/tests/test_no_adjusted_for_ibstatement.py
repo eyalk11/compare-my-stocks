@@ -50,15 +50,9 @@ class QSemaphore:  # noqa: N801 — drop-in for PySide6.QtCore.QSemaphore in tes
         for _ in range(n):
             self._sem.release()
 
-from common.common import InputSourceType
 from config import config as live_config
 from input.inputdata import InputDataImpl
 from input.inputprocessor import InputProcessor
-
-# Use a non-listening port so any stray IB connect attempt fails fast and
-# does not steal the live TWS session on 7596.
-TEST_IB_PORT = 27597
-
 
 CACHE = Path.home() / ".compare_my_stocks" / "ibstatement.cache"
 
@@ -77,13 +71,9 @@ def _load_ibstatement_cache():
 
 def _build_processor(symbol_currency: dict[str, str]) -> InputProcessor:
     """Construct an InputProcessor wired up just enough to run
-    get_buy_operations_with_adjusted. Uses a non-listening IB port and
-    disables prompts so it is safe to run alongside a live session."""
-    live_config.Sources.IBSource.PortIB = TEST_IB_PORT
-    live_config.Sources.IBSource.PromptOnConnectionFail = False
-    live_config.TransactionHandlers.IB.PromptOnQueryFail = False
-    live_config.Input.InputSource = InputSourceType.Cache
-
+    get_buy_operations_with_adjusted. inputsource=None and the immediate
+    proc.close() mean no IB connection is ever attempted, so we do not
+    touch live_config (mutating it would leak into later tests)."""
     symb = MagicMock()
     txh = MagicMock()
     proc = InputProcessor(symb, txh, inputsource=None)

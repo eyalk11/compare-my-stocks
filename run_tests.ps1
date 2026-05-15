@@ -28,19 +28,28 @@ param(
     [string]$Target = 'src/compare_my_stocks/tests',
 
     [string]$Extra  = '',
-    [string]$Python = 'C:\Users\ekarni\.pyenv\pyenv-win\versions\3.11\python.exe',
+    [string]$Python = '',
     [switch]$NoLog,
     [switch]$Venv11,
     [switch]$Venv11b,
-    [switch]$Venv314
+    [switch]$Venv314,
+    [switch]$Pyenv311
 )
-
-if ($Venv314) {
-    $Python = Join-Path $PSScriptRoot '.venv314\Scripts\python.exe'
+rm Env:\COMPARE_STOCK_PATH
+if ($Python) {
+    # explicit override, use as-is
 } elseif ($Venv11b) {
     $Python = Join-Path $PSScriptRoot '.venv11b\Scripts\python.exe'
+        $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
 } elseif ($Venv11) {
     $Python = Join-Path $PSScriptRoot '.venv11\Scripts\python.exe'
+        $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
+} elseif ($Pyenv311) {
+    $Python = 'C:\Users\ekarni\.pyenv\pyenv-win\versions\3.11\python.exe'
+    $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
+} else {
+    # default: .venv314
+    $Python = Join-Path $PSScriptRoot '.venv314\Scripts\python.exe'
 }
 
 # --- Paths --------------------------------------------------------------------
@@ -97,7 +106,8 @@ function Get-PytestArgs {
                 'src/compare_my_stocks/tests/test_call_graph_generator.py',
                 'src/compare_my_stocks/tests/test_default_notebook.py',
                 'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[price-line-UseInput.WITHINPUT|LOADDEFAULTCONFIG]',
-                'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[value-scatter-UseInput.WITHINPUT|LOADDEFAULTCONFIG|USEDATADIR]'
+                'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[value-scatter-UseInput.WITHINPUT|LOADDEFAULTCONFIG|USEDATADIR]',
+                'src/compare_my_stocks/tests/test_tries.py::test_local_config_loads_histfile'
             )
         }
         'lf'      { $args += @('--lf', 'src/compare_my_stocks/tests') }

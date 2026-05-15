@@ -387,6 +387,23 @@ def test_realengine(mock_config_to_default, realeng, useinp, request):
 
 
 # ---------------------------------------------------------------------------
+# Live earnings fetch — backs the PERATIO (P/E) and PRICESELLS (price-to-
+# sales) panels in DataGenerator (processing/datagenerator.py:183-190).
+# Hits the SeekingAlpha RapidAPI directly; needs the API key in config.
+# ---------------------------------------------------------------------------
+@pytest.mark.integration
+def test_live_earnings_fetch_for_peratio_pricesells():
+    from transactions.earningsproc import EarningProcessor
+    ep = EarningProcessor.__new__(EarningProcessor)
+    from transactions.earningscommon import RapidApi
+    RapidApi.__init__(ep, 'SeekingAlpha')
+    if not ep.is_initialized():
+        pytest.skip("SeekingAlpha RapidAPI key not configured")
+    rev, inc = ep.get_dfs('AAPL')
+    assert not rev.empty and not inc.empty, f"empty rev={rev.shape} inc={inc.shape}"
+
+
+# ---------------------------------------------------------------------------
 # test_synthetic_engine — same engine path, but the IBSource is a
 # deterministic in-process mock (make_synthetic_ibsource). No IB Gateway,
 # no integration mark. Covers the full Parameters grid × flag combos.
