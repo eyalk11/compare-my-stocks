@@ -166,6 +166,14 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
             traceback.print_exc()
 
     def type_unite_toggled(self, name, value):
+        if getattr(self, 'ignore_updates_for_now', False):
+            # Skip programmatic setChecked() ripples during
+            # setup_controls_from_params / set_all_toggled_value, which
+            # would otherwise OR the bit back into params.type and trigger
+            # spurious update_graphs. User-initiated clicks happen while
+            # this flag is False, so they still go through.
+            logging.debug(f"GUI type_unite_toggled IGNORED name={name!r} value={value}")
+            return
         logging.debug(f"GUI type_unite_toggled: name={name!r} value={value}")
         types_dic = {
             'unite': (UniteType, 'unite_by_group', ResetRanges.FORCE),
