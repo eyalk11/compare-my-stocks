@@ -42,7 +42,7 @@ class EarningProcessor(TrasnasctionHandler,RapidApi,TransactionHandlerImplementa
 
     def get_dfs(self, sym):
         def do(df):
-            df = df[(df['value'] != False)]
+            df = df[(df['value'] != False)].copy()
             df['name'] = df['name'].apply(lambda x: dateutil.parser.parse("%s 1st %s" % tuple(x.replace('12 Months ', '').split(' '))))
             df = df.set_index('name')
             df= df[['raw_value']]
