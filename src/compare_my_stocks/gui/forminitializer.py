@@ -149,9 +149,19 @@ class FormInitializer(FormObserver, FormInitializerInterface):
 
             l=[wc.itemText(x) for x in range(wc.count())]
             ind=index_of(self.graphObj.params.compare_with,l)
-            self.window.comparebox.setCurrentIndex(ind)
-            if ind==-1:
-                self.window.comparebox.setCurrentText(self.graphObj.params.compare_with)
+            # Block signals: setCurrentIndex/setCurrentText emit
+            # currentIndexChanged, which would route to compare_changed and
+            # OR Types.COMPARE into params.type even when the saved graph
+            # had it off. ignore_updates_for_now also guards this, but
+            # a deferred index resolution (when items are added later) can
+            # fire the signal outside the guard window.
+            was_blocked = wc.blockSignals(True)
+            try:
+                wc.setCurrentIndex(ind)
+                if ind == -1:
+                    wc.setCurrentText(self.graphObj.params.compare_with)
+            finally:
+                wc.blockSignals(was_blocked)
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(self.graphObj.params.type & Types.COMPARE)
         if initial:
             self.load_existing_graphs()
@@ -276,8 +286,19 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             #self._last_choice=  self.window.comparebox.currentText()
             if isinitial:
                 for comp in  [self.window.comparebox,self.window.addstock] :
-                    comp.clear()
-                    comp.addItems(alloptions)
+                    # Block signals during repopulation: otherwise adding the
+                    # previously-set currentText as an item resolves the combo's
+                    # index, fires currentIndexChanged, and runs compare_changed
+                    # — which would OR Types.COMPARE into params.type even
+                    # though the saved graph had it off. See log trace where
+                    # compare_changed fires after setup_controls_from_params
+                    # has already released ignore_updates_for_now.
+                    was_blocked = comp.blockSignals(True)
+                    try:
+                        comp.clear()
+                        comp.addItems(alloptions)
+                    finally:
+                        comp.blockSignals(was_blocked)
             
             
             
