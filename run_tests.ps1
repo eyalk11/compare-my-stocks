@@ -134,6 +134,9 @@ function Get-PytestArgs {
                 'src/compare_my_stocks/tests/test_default_notebook.py',
                 'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[price-line-UseInput.WITHINPUT|LOADDEFAULTCONFIG]',
                 'src/compare_my_stocks/tests/test_engine.py::test_synthetic_engine[value-scatter-UseInput.WITHINPUT|LOADDEFAULTCONFIG|USEDATADIR]',
+                'src/compare_my_stocks/tests/test_engine.py::test_realengine[UseInput.LOADDEFAULTCONFIG]',
+                'src/compare_my_stocks/tests/test_engine.py::test_realengine[UseInput.LOADDEFAULTCONFIG|USEDATADIR]',
+                'src/compare_my_stocks/tests/test_engine.py::test_adjust_currency[UseInput.LOADDEFAULTCONFIG|USEDATADIR]',
                 'src/compare_my_stocks/tests/test_tries.py::test_local_config_loads_histfile'
             )
         }
