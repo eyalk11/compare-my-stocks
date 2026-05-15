@@ -4,8 +4,8 @@ from pathlib import Path
 import sys
 from PySide6 import QtCore
 import PySide6
-from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QFile, QTimer
+from PySide6.QtWidgets import QMainWindow, QLabel
+from PySide6.QtCore import QFile, QTimer, QEvent
 from PySide6.QtUiTools import QUiLoader
 from superqt.sliders._labeled import EdgeLabelMode
 from superqt import QLabeledRangeSlider
@@ -79,7 +79,127 @@ class MainWindow(FormInitializer,QMainWindow):
             myappid = 'MyOrganization.MyGui.1.0.0' # arbitrary string
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
         self.wind.configure_btn.clicked.connect(self._open_config_editor)
+        self._setup_status_bar()
         self.after_load()
+
+    # ------------------------------------------------------------------
+    # Status bar: shows IB connection + which API keys are configured.
+    # Auto-hides ~4s after startup; reappears when the cursor hovers near
+    # the bottom edge of the window.
+    # ------------------------------------------------------------------
+    def _setup_status_bar(self):
+        sb = self.statusBar()
+        sb.setSizeGripEnabled(False)
+        self._sb_labels = {}
+        for key, caption in [
+            ("IB", "IB"),
+            ("Flex", "Flex"),
+            ("StockPrices", "RAPID StockPrices"),
+            ("SeekingAlpha", "RAPID SeekingAlpha"),
+            ("RapidYFinance", "RAPID YFinance"),
+            ("Polygon", "Polygon"),
+        ]:
+            lbl = QLabel()
+            lbl.setProperty("caption", caption)
+            lbl.setContentsMargins(6, 0, 6, 0)
+            # addWidget (not addPermanentWidget) anchors to the LEFT side of
+            # the status bar so users see connection state immediately.
+            sb.addWidget(lbl)
+            self._sb_labels[key] = lbl
+        # Hint shown only when at least one indicator is red — tells the
+        # user where to go to fix it.
+        self._sb_hint = QLabel(
+            "<b>⚠ Select <i>Edit Config</i> → <i>Help</i> to fix</b>"
+        )
+        self._sb_hint.setStyleSheet(
+            "color: #c62828; padding: 1px 8px;"
+        )
+        self._sb_hint.setVisible(False)
+        sb.addWidget(self._sb_hint)
+        self._refresh_status()
+
+        self._sb_refresh = QTimer(self)
+        self._sb_refresh.setInterval(2000)
+        self._sb_refresh.timeout.connect(self._refresh_status)
+        self._sb_refresh.start()
+
+        self._sb_hide = QTimer(self)
+        self._sb_hide.setSingleShot(True)
+        self._sb_hide.timeout.connect(sb.hide)
+        self._sb_hide.start(4000)
+
+        # Poll cursor position; show status bar when near the bottom edge.
+        # Cheaper than installing a global event filter, and works even
+        # when the bar is hidden (event filters on a hidden widget don't
+        # see mouse moves into its old area).
+        self._sb_hover = QTimer(self)
+        self._sb_hover.setInterval(300)
+        self._sb_hover.timeout.connect(self._check_status_hover)
+        self._sb_hover.start()
+
+    def _check_status_hover(self):
+        if not self.isVisible():
+            return
+        local = self.mapFromGlobal(QtGui.QCursor.pos())
+        if 0 <= local.x() <= self.width() and \
+                self.height() - 24 <= local.y() <= self.height():
+            sb = self.statusBar()
+            if not sb.isVisible():
+                sb.show()
+            # Each hover keeps it up another 3s past the last hover.
+            self._sb_hide.start(3000)
+
+    def _refresh_status(self):
+        try:
+            ib_ok = self._is_ib_connected()
+        except Exception:
+            ib_ok = False
+        keys = self._configured_api_keys()
+        states = {
+            "IB": ib_ok,
+            "Flex": keys["Flex"],
+            "StockPrices": keys["StockPrices"],
+            "SeekingAlpha": keys["SeekingAlpha"],
+            "RapidYFinance": keys["RapidYFinance"],
+            "Polygon": keys["Polygon"],
+        }
+        self._set_label("IB", "IB", states["IB"], ok_text="connected", bad_text="down")
+        self._set_label("Flex", "Flex", states["Flex"])
+        self._set_label("StockPrices", "RAPID StockPrices", states["StockPrices"])
+        self._set_label("SeekingAlpha", "RAPID SeekingAlpha", states["SeekingAlpha"])
+        self._set_label("RapidYFinance", "RAPID YFinance", states["RapidYFinance"])
+        self._set_label("Polygon", "Polygon", states["Polygon"])
+        if getattr(self, "_sb_hint", None) is not None:
+            self._sb_hint.setVisible(not all(states.values()))
+
+    def _set_label(self, key, caption, ok, ok_text="set", bad_text="missing"):
+        lbl = self._sb_labels.get(key)
+        if lbl is None:
+            return
+        colour = "#2e7d32" if ok else "#c62828"  # green / red
+        lbl.setText(f"{caption}: {ok_text if ok else bad_text}")
+        lbl.setStyleSheet(
+            f"color: white; background: {colour}; "
+            f"border-radius: 3px; padding: 1px 6px;"
+        )
+
+    def _is_ib_connected(self):
+        eng = getattr(self, "_graphObj", None)
+        inp = getattr(eng, "input_processor", None) if eng is not None else None
+        src = getattr(inp, "_inputsource", None) if inp is not None else None
+        return bool(getattr(src, "connected", False))
+
+    @staticmethod
+    def _configured_api_keys():
+        def has(s):
+            return bool(s and str(s).strip())
+        return {
+            "Flex": has(getattr(getattr(config.TransactionHandlers, "IB", None), "FlexToken", None)),
+            "StockPrices": has(getattr(config.StockPricesHeaders, "X_RapidAPI_Key", None)),
+            "SeekingAlpha": has(getattr(config.SeekingAlphaHeaders, "X_RapidAPI_Key", None)),
+            "RapidYFinance": has(getattr(config.Jupyter, "RapidYFinanaceKey", None)),
+            "Polygon": has(getattr(getattr(config.Sources, "PolySource", None), "Key", None)),
+        }
 
     def _open_config_editor(self):
         from gui.config_gui import ConfigEditor, _default_config_path

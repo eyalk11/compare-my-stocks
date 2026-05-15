@@ -455,7 +455,11 @@ class IBSource(InputSource):
             logging.error(f"init failed unknown error (stage={stage}). Will keep trying.")
             print_formatted_traceback(True)
 
-        self.lock = threading.Lock()
+        # RLock: req_details() is called transitively from inside
+        # get_right_contract_bars() which already holds the lock.
+        # Reentrant lock prevents the nested-acquire from deadlocking
+        # once we serialize every self.ibrem.* call through it.
+        self.lock = threading.RLock()
 
     def disconnect(self):
         self.ibrem._pyroRelease()
@@ -465,7 +469,8 @@ class IBSource(InputSource):
     @skip_if_ib_down
     def get_positions(self):
         logging.debug("positions")
-        y = self.ibrem.reqPositions()
+        with self.lock:
+            y = self.ibrem.reqPositions()
 
         for k in y:
             k = Position(*k)
@@ -496,7 +501,8 @@ class IBSource(InputSource):
             return None
         reverse, contract = r
         try:
-            res = self.ibrem.get_current_currency_for_contract(asdict(contract))
+            with self.lock:
+                res = self.ibrem.get_current_currency_for_contract(asdict(contract))
         except RequestError:
             res = None
         if res is None:
@@ -601,7 +607,8 @@ class IBSource(InputSource):
     @cache_if_not_none
     @cached
     def req_details(self, conid):
-        return self.ibrem.req_details(conid)
+        with self.lock:
+            return self.ibrem.req_details(conid)
 
     def resolve_contract(self, contract):
         # try to find the right exchange etc. returns dict
@@ -701,7 +708,8 @@ class IBSource(InputSource):
         if (
             is_cached
         ):  # used cache - the bars are probably wrong. but the contract is right
-            bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td)
+            with self.lock:
+                bars = self.ibrem.reqHistoricalData_ext(cont, enddate.replace(hour=23), td)
         df = nbutil.df(bars)
         if df is None:
             return None
@@ -743,9 +751,10 @@ class IBSource(InputSource):
         """
         forex = Forex(pair_str)
         dd = {k: v for k, v in forex.__dict__.items() if k in self.FOREX_KEYS}
-        details = list(self.ibrem.get_contract_details_ext(
-            dd, includelist=self.FOREX_KEYS + ['conId']
-        ))
+        with self.lock:
+            details = list(self.ibrem.get_contract_details_ext(
+                dd, includelist=self.FOREX_KEYS + ['conId']
+            ))
         if not details:
             return None
         return self.get_contract(details[0])

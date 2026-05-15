@@ -35,21 +35,56 @@ param(
     [switch]$Venv314,
     [switch]$Pyenv311
 )
-rm Env:\COMPARE_STOCK_PATH
+Remove-Item Env:\COMPARE_STOCK_PATH -ErrorAction SilentlyContinue
 if ($Python) {
     # explicit override, use as-is
 } elseif ($Venv11b) {
     $Python = Join-Path $PSScriptRoot '.venv11b\Scripts\python.exe'
-        $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
+    $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
 } elseif ($Venv11) {
     $Python = Join-Path $PSScriptRoot '.venv11\Scripts\python.exe'
-        $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
+    $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
 } elseif ($Pyenv311) {
     $Python = 'C:\Users\ekarni\.pyenv\pyenv-win\versions\3.11\python.exe'
     $envCOMPARE_STOCK_PATH = 'C:\Users\ekarni\.compare_my_stocks11'
 } else {
-    # default: .venv314
+    # default: .venv314 → isolated data dir so tests can run alongside a
+    # live compare_my_stocks (which uses ~/.compare_my_stocks).
     $Python = Join-Path $PSScriptRoot '.venv314\Scripts\python.exe'
+    $envCOMPARE_STOCK_PATH = Join-Path $HOME '.compare_my_stocks14'
+}
+
+# Ensure the test data dir exists with a config that won't collide with a
+# live app (different IBSrvPort). Seed from the in-tree default once; never
+# touch it again so the user can customize.
+if ($envCOMPARE_STOCK_PATH) {
+    if (-not (Test-Path $envCOMPARE_STOCK_PATH)) {
+        New-Item -ItemType Directory -Path $envCOMPARE_STOCK_PATH | Out-Null
+    }
+    $cfg = Join-Path $envCOMPARE_STOCK_PATH 'myconfig.yaml'
+    if (-not (Test-Path $cfg)) {
+        $seed = Join-Path $PSScriptRoot 'src\compare_my_stocks\data\myconfig.yaml'
+        if (Test-Path $seed) {
+            Copy-Item $seed $cfg
+        }
+    }
+    $env:COMPARE_STOCK_PATH = $envCOMPARE_STOCK_PATH
+}
+
+# Warn if a live compare_my_stocks instance is holding the default IBSrvPort
+# (9091). The conftest fixture re-points the in-process port to 9092, but
+# tests that reload config from yaml (e.g. LOADDEFAULTCONFIG variants) will
+# pick the on-disk 9091 back up and collide. Surface that up front.
+$ibPortInUse = $false
+try {
+    $ibPortInUse = [bool](Get-NetTCPConnection -LocalPort 9091 -State Listen -ErrorAction SilentlyContinue)
+} catch { }
+if ($ibPortInUse) {
+    Write-Host ''
+    Write-Host '!!  IBSrvPort 9091 is in use — a live compare_my_stocks is probably running.' -ForegroundColor Yellow
+    Write-Host '!!  IB-touching integration tests that reload config from yaml may fail with' -ForegroundColor Yellow
+    Write-Host '!!  SystemExit:2 ("port already in use"). Pure unit tests are unaffected.' -ForegroundColor Yellow
+    Write-Host ''
 }
 
 # --- Paths --------------------------------------------------------------------

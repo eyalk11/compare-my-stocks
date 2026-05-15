@@ -260,7 +260,14 @@ class GraphGenerator:
         self._install_hover()
         self._apply_shown_stock(starthidden, isline)
 
-        self._plot.enableAutoRange(axis='y', enable=True)
+        # Y always follows the new data. X is preserved across non-forced
+        # updates (so user pans/zooms survive incidental redraws), but on
+        # ResetRanges.FORCE — or the very first plot — we snap X back to the
+        # data extent. See gui/formobserver.py:155 where reset_ranges is
+        # threaded through Parameters.
+        reset_x = bool(self.first_time) or int(getattr(self.params, 'reset_ranges', 0)) >= 2
+        axis = 'xy' if reset_x else 'y'
+        self._plot.enableAutoRange(axis=axis, enable=True)
         self.first_time = False
 
         try:

@@ -351,7 +351,7 @@ def print_if_ok(*args):
         return
 
     if 'SILENT' in __builtins__ and __builtins__['SILENT'] == False\
-            or any('pytest' in x for x in sys.argv):
+            or 'pytest' in sys.modules:
         logging.info(*args)
 
 
@@ -496,7 +496,17 @@ class ConfigLoader():
         else:
             use_alternative = cls.config.Running.UseAlterantiveLocation
 
-        if not 'SILENT' in __builtins__ and not  any('pytest' in x for x in sys.argv):
+        # Under pytest, don't let the yaml's IBSrvPort (9091) collide with a
+        # live compare_my_stocks app already holding it. Pin to 9092 here so
+        # every (re)load — including LOADDEFAULTCONFIG paths — picks the test
+        # port.
+        if 'pytest' in sys.modules:
+            try:
+                cls.config.Sources.IBSource.IBSrvPort = 9092
+            except Exception:
+                pass
+
+        if not 'SILENT' in __builtins__ and 'pytest' not in sys.modules:
             logging.getLogger().setLevel(logging.CRITICAL) #it is first time and not run from main => probably jupyter
 
         for x in RESOLVE_FILES:

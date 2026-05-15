@@ -51,10 +51,13 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
 
     @simple_exception_handling("refresh task",never_throw=True)
     def refresh_task(self, x, params):
-        self.window.last_status.setText('Refreshing data')
+        # Runs on the DoLongProcessSlots worker thread — touching QLabel
+        # directly is undefined; emit through statusChanges so the slot
+        # runs on the GUI thread via the queued connection.
+        self.graphObj.statusChanges.emit('Refreshing data')
         self.graphObj.process(set(x), params, force_upd_all_range=not self._min_refresh)
         self.update_graph(1, True)
-        self.window.last_status.setText('Finished refreshing')
+        self.graphObj.statusChanges.emit('Finished refreshing')
 
     def decrease(self, *args):
         self._update_graph_task.command_waiting = self._update_graph_task.command_waiting - 1
@@ -89,7 +92,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         tim = datetime.now()
         self.window.enddate.setDateTime(tim)
         self.graphObj.params.todate = tim
-        self.update_graph(1)
+        self.update_graph(ResetRanges.FORCE)
 
     @simple_exception_handling("visible to selected")
     def vis_to_selected(self, *args):
@@ -154,6 +157,7 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 self._update_graph_task.finished.connect(call)
                 param=Parameters(ignore_minmax=(reset_ranges > ResetRanges.DONT))
                 param.is_forced=btn #after init
+                param.reset_ranges = int(reset_ranges)
                 taskparams = TaskParams(params=(param,),
                                         finish_params=(after, adjust_date))
                 self._update_graph_task.command.emit(taskparams)  # no params so update current

@@ -55,6 +55,11 @@ class Parameters:
     show_transactions_graph : bool = True
     is_forced: bool = False #doesn't matter actually, only for caching
     weighted_for_portfolio: bool = True
+    # ResetRanges value (0=DONT, 1=IfAPROP, 2=FORCE). Transient — excluded
+    # from graphs.json serialization (see GraphsHandler) so saved graphs
+    # don't carry stale reset behavior. Read by GraphGenerator to decide
+    # whether to reset the chart's X auto-range on update.
+    reset_ranges: int = 0
 
     #Resolve hack is meant to provide custom symbol data to the input processor
     #most of the code originally written to work with strings. So, here we input the entire info the dic and treat the symbol as dic.

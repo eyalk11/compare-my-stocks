@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import logging
 
@@ -9,6 +10,11 @@ from engine.parameters import Parameters, copyit
 from gui.forminitializerinterface import FormInitializerInterface
 from gui.formobserverinterface import FormObserverInterface, ResetRanges
 
+# Fields that are transient control flags, not part of the saved graph
+# definition. Stripped on save and ignored on load so the on-disk JSON
+# stays stable across UI sessions.
+_TRANSIENT_PARAM_FIELDS = ('reset_ranges',)
+
 
 class GraphsHandler(FormObserverInterface, FormInitializerInterface):
     def __init__(self):
@@ -19,6 +25,9 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
         try:
             # gg=Deserializer(open(config.File.GraphFN,'rt'))
             gg = json.load(open(config.File.GraphFN, 'rt'))  # ,object_hook=Deserializer
+            for v in gg.values():
+                for k in _TRANSIENT_PARAM_FIELDS:
+                    v.pop(k, None)
             self.graphs = {k: Parameters.load_from_json_dict(v) for k, v in gg.items()}
             self.update_graph_list()
         except:
@@ -44,7 +53,13 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
         if upd:
             self.lastgraphtext = text
 
-        open(config.File.GraphFN, 'wt').write(json.dumps(self.graphs, cls=EnhancedJSONEncoder))
+        serializable = {}
+        for name, params in self.graphs.items():
+            d = dataclasses.asdict(params)
+            for k in _TRANSIENT_PARAM_FIELDS:
+                d.pop(k, None)
+            serializable[name] = d
+        open(config.File.GraphFN, 'wt').write(json.dumps(serializable, cls=EnhancedJSONEncoder))
         self.update_graph_list()
 
     def load_graph(self, text=None):

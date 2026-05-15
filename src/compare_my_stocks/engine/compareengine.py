@@ -194,6 +194,57 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
         self.statusChanges.emit("No Data For Graph! (retries exhausted)")
         return False
 
+    def _format_staleness_warning(self, df):
+        # Stale = column's last non-NaN sample lands >7 calendar days
+        # before the graph's end. Catches "no data fetched" holes
+        # (e.g. an FX/symbol where IB returned 0 bars for the recent
+        # span) without flagging weekend/holiday gaps.
+        try:
+            if df is None or df.empty:
+                return ""
+            graph_end = df.index.max()
+            import pandas as _pd
+            threshold = graph_end - _pd.Timedelta(days=7)
+            stale_syms = []
+            for col in df.columns:
+                last = df[col].last_valid_index()
+                if last is not None and last < threshold:
+                    stale_syms.append((str(col), last))
+
+            stale_currency = None
+            cur = getattr(self.params, "currency_to_adjust", None)
+            if (
+                cur
+                and getattr(self.params, "adjust_to_currency", False)
+                and cur != getattr(config.Symbols, "Basecur", None)
+                and self._inp is not None
+                and getattr(self._inp, "data", None) is not None
+            ):
+                ch = getattr(self._inp.data, "currency_hist", None)
+                if ch is not None and cur in ch:
+                    series_end = ch[cur].dropna().index.max() if not ch[cur].empty else None
+                    if series_end is not None and _pd.Timestamp(series_end) < threshold:
+                        stale_currency = (cur, series_end)
+                else:
+                    stale_currency = (cur, None)
+
+            parts = []
+            if stale_currency is not None:
+                cur, when = stale_currency
+                parts.append(
+                    f"FX {cur} stale (last {when.date()})" if when is not None
+                    else f"FX {cur} missing"
+                )
+            if stale_syms:
+                stale_syms.sort(key=lambda t: t[1])
+                shown = ", ".join(s for s, _ in stale_syms[:5])
+                more = "" if len(stale_syms) <= 5 else f" +{len(stale_syms)-5}"
+                parts.append(f"stale data: {shown}{more}")
+            return f"  ⚠ {' ; '.join(parts)}" if parts else ""
+        except Exception as e:
+            logging.debug(f"staleness check failed: {e}")
+            return ""
+
     def call_graph_generator(
         self, df, just_upd, type, orig_data, adjust_date=False, additional_df=None
     ):
@@ -236,10 +287,11 @@ class InternalCompareEngine(SymbolsHandler, CompareEngineInterface):
                 additional_df=additional_df,
             )
             logging.debug("call_graph_generator: gen_actual_graph end")
+            staleness_suffix = self._format_staleness_warning(df)
             if self._inp.failed_to_get_new_data:
-                upd("Generated Graph with old data  (  Query failed :() ")
+                upd("Generated Graph with old data  (  Query failed :() " + staleness_suffix)
             else:
-                upd("Generated Graph :)")
+                upd("Generated Graph :)" + staleness_suffix)
             self.params.is_forced = False
             self.finishedGeneration.emit(1)
         except TypeError as e:
