@@ -861,6 +861,80 @@ class TestUniteGroups:
         assert 'Portfolio' in ndf.columns
         assert ndf['Portfolio'].iloc[0] == pytest.approx(30.0)  # A+B
 
+    def test_portfolio_weighted_uses_time_varying_positions(self):
+        """With weighted_for_portfolio=True, the Portfolio curve weights
+        each stock by its position *as of that date* (step-function between
+        transactions), not by a single current-positions snapshot."""
+        import datetime as _dt
+        import matplotlib.dates as _mdates
+        d1 = _mdates.date2num(_dt.datetime(2024, 1, 1))
+        d2 = _mdates.date2num(_dt.datetime(2024, 1, 2))
+        d3 = _mdates.date2num(_dt.datetime(2024, 1, 3))
+        df = pd.DataFrame(
+            {'A': [100.0, 110.0, 120.0], 'B': [50.0, 60.0, 70.0]},
+            index=[d1, d2, d3],
+        )
+        dg = _make_unite_dg(
+            params_groups=['Portfolio'],
+            group_members={},
+            used_unitetype=UniteType.SUM, df=df,
+            portfolio=['A', 'B'],
+            weighted_for_portfolio=True,
+        )
+        # Step-function holdings: A doubles on d2; B opens on d3.
+        dg._eng.input_processor._data._holding_by_stock = {
+            'A': {d1: 10, d2: 20},
+            'B': {d3: 5},
+        }
+        ndf, _ = dg.unite_groups(df)
+        # d1: (10*100) / 10              = 100
+        # d2: (20*110) / 20              = 110
+        # d3: (20*120 + 5*70) / (20+5)   = 110
+        assert list(ndf['Portfolio']) == pytest.approx([100.0, 110.0, 110.0])
+
+    def test_portfolio_weighted_pre_first_transaction_is_nan(self):
+        """Dates before any holding exists have zero total weight; the
+        weighted curve must be NaN there (not silently nansum-fallback,
+        which would imply positions we didn't have)."""
+        import datetime as _dt
+        import matplotlib.dates as _mdates
+        d1 = _mdates.date2num(_dt.datetime(2024, 1, 1))
+        d2 = _mdates.date2num(_dt.datetime(2024, 1, 2))
+        df = pd.DataFrame(
+            {'A': [100.0, 110.0], 'B': [50.0, 60.0]},
+            index=[d1, d2],
+        )
+        dg = _make_unite_dg(
+            params_groups=['Portfolio'],
+            group_members={},
+            used_unitetype=UniteType.SUM, df=df,
+            portfolio=['A', 'B'],
+            weighted_for_portfolio=True,
+        )
+        # First (and only) transaction lands on d2 — d1 has no position.
+        dg._eng.input_processor._data._holding_by_stock = {
+            'A': {d2: 10},
+        }
+        ndf, _ = dg.unite_groups(df)
+        assert np.isnan(ndf['Portfolio'].iloc[0])
+        # d2: (10*110)/10 = 110
+        assert ndf['Portfolio'].iloc[1] == pytest.approx(110.0)
+
+    def test_portfolio_unweighted_still_uses_nansum(self):
+        """weighted_for_portfolio=False keeps the legacy plain-sum behavior
+        on the Portfolio group."""
+        df = self._df(['2024-01-01'],
+                      {'A': [10.0], 'B': [20.0]})
+        dg = _make_unite_dg(
+            params_groups=['Portfolio'],
+            group_members={},
+            used_unitetype=UniteType.SUM, df=df,
+            portfolio=['A', 'B'],
+            weighted_for_portfolio=False,
+        )
+        ndf, _ = dg.unite_groups(df)
+        assert ndf['Portfolio'].iloc[0] == pytest.approx(30.0)
+
     def test_unknown_group_is_skipped_not_raised(self):
         """A stale group name in params.groups that's not in Groups is
         skipped with a warning rather than raising KeyError."""

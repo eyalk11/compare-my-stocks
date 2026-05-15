@@ -262,12 +262,31 @@ class DataGenerator(DataGeneratorInterface):
                 return ndf,[]
 
             if self.used_unitetype & UniteType.SUM or gr in ['All', 'Portfolio']:
-                for i in range(1):
-                    if self.params.weighted_for_portfolio:
-                        if gr == 'Portfolio':
-                            pos_df = pandas.DataFrame(self._eng.input_processor.get_position_dict(), index=['aa'])
-                            ndf.loc[:, gr] =np.average(arr, axis=0, weights=np.array(pos_df[rel])[0])
-                            break
+                if self.params.weighted_for_portfolio and gr == 'Portfolio':
+                    # Time-varying weights: position size as of each date.
+                    # _holding_by_stock[sym] is a dict keyed on matplotlib
+                    # float dates (same as df.index here — unite_groups runs
+                    # before conv_index). Positions are step-functions
+                    # between transactions, so we ffill onto the price grid.
+                    # Pre-IPO / pre-first-transaction dates stay at 0 and
+                    # contribute zero weight (the curve is NaN until any
+                    # holding exists).
+                    hbs = self._eng.input_processor._data._holding_by_stock
+                    W = np.zeros_like(arr, dtype='float64')
+                    for i, sym in enumerate(rel):
+                        sym_dict = hbs.get(sym)
+                        if not sym_dict:
+                            continue
+                        series = pandas.Series(dict(sym_dict)).sort_index()
+                        series = series.reindex(df.index, method='ffill').fillna(0)
+                        W[i, :] = series.values
+                    arr_masked = np.where(np.isnan(arr), 0.0, arr)
+                    W_eff = np.where(np.isnan(arr), 0.0, W)
+                    wsum = W_eff.sum(axis=0)
+                    out = np.full(arr.shape[1], np.nan)
+                    good = wsum > 0
+                    out[good] = (arr_masked * W_eff).sum(axis=0)[good] / wsum[good]
+                    ndf.loc[:, gr] = out
                 else:
                     ndf.loc[:, gr] = numpy.nansum(arr, axis=0)
 

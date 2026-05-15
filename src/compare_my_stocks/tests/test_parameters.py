@@ -92,9 +92,9 @@ class TestParametersInitialization:
         assert p.is_forced is False
 
     def test_parameters_default_weighted_for_portfolio(self):
-        """Test default weighted_for_portfolio is False."""
+        """Test default weighted_for_portfolio is True."""
         p = Parameters()
-        assert p.weighted_for_portfolio is False
+        assert p.weighted_for_portfolio is True
 
     def test_parameters_default_adjusted_for_base_cur(self):
         """Test default adjusted_for_base_cur is True."""
