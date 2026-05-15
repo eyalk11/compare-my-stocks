@@ -132,6 +132,7 @@ class InputProcessor(InputProcessorInterface):
         self._inputsource: InputSource = inputsource
         if self._inputsource is None:
             logging.warn("not using any source")
+        self.cancel_requested = False  # set by UI to stop the next-symbol loop in get_data_from_source
         self._eng : SymbolsInterface  =symb
         self._transaction_handler= transaction_handler
         self._income, self._revenue, = None,None
@@ -1052,7 +1053,14 @@ class InputProcessor(InputProcessorInterface):
         successful_once=False
         if fromdate==todate:
             raise Exception("identical dates")
+        # Cooperative cancellation: refresh_stocks UI sets this when the
+        # user presses "Stop Refreshing"; we break before the next symbol
+        # so any in-flight RPC still completes (no kill-thread surgery).
+        self.cancel_requested = False
         for sym in list(self._data._symbols_wanted if not partial_symbols_update else partial_symbols_update):
+            if self.cancel_requested:
+                logging.info(f"refresh cancelled by user before {sym}")
+                break
 
             sym_corrected = self.process_params.resolve_hack.get(sym, None)
 

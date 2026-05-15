@@ -194,8 +194,21 @@ class FormInitializer(FormObserver, FormInitializerInterface):
         if minmax[0]==minmax[1]:
             minmax = (minmax[0],minmax[0]+0.1)
         self.window.min_crit.setRange(minmax[0], minmax[1])
-        self.window.min_crit.setValue(minmax)
-        self.graphObj.params.valuerange = list(minmax)
+        # Preserve the user's lo/hi if they still fit inside the new
+        # data bounds — otherwise the slider handles get yanked back to
+        # the data extremes on every redraw and the user can't move them.
+        # Reset only when the previous range is stale (out of bounds, or
+        # unset) — that's the Type/Unite-switch case the regression test
+        # in test_forminitializer_ranges.py protects against.
+        cur = getattr(self.graphObj.params, 'valuerange', None)
+        if (cur is None
+                or cur[0] is None or cur[1] is None
+                or cur[0] < minmax[0] or cur[1] > minmax[1]
+                or cur[0] >= cur[1]):
+            self.window.min_crit.setValue(minmax)
+            self.graphObj.params.valuerange = list(minmax)
+        else:
+            self.window.min_crit.setValue(tuple(cur))
         self.disable_slider_values_updates = False
 
     def update_range_num(self,nuofoptions):
@@ -203,8 +216,19 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             nuofoptions=1
         self.disable_slider_values_updates=True
         self.window.max_num.setRange(0, nuofoptions)
-        self.window.max_num.setValue((0, nuofoptions))
-        self.graphObj.params.numrange = (None, None)
+        # Same preservation logic as update_rangeb: keep the user's
+        # numrange selection across redraws unless it's stale.
+        cur = getattr(self.graphObj.params, 'numrange', None)
+        stale = (cur is None
+                 or cur == (None, None)
+                 or cur[0] is None or cur[1] is None
+                 or cur[0] < 0 or cur[1] > nuofoptions
+                 or cur[0] >= cur[1])
+        if stale:
+            self.window.max_num.setValue((0, nuofoptions))
+            self.graphObj.params.numrange = (None, None)
+        else:
+            self.window.max_num.setValue(tuple(cur))
         self.disable_slider_values_updates = False
 
     def update_ranges(self,reset_type=ResetRanges.IfAPROP):

@@ -76,6 +76,8 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         # self._toselectall=False
         # task = lambda x: self.graphObj.process(set(x))
         self._refresh_stocks_task = DoLongProcessSlots(self.refresh_task)
+        self._refresh_stocks_task.finished.connect(self._refresh_done)
+        self._refresh_btn_default_text = None
 
         # self._refresh_stocks_task.postinit()
         # self._refresh_stocks_task.moveToThread(self._refresh_stocks_task.thread)
@@ -104,6 +106,17 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 sel.takeItem(sel.row(t))
 
     def refresh_stocks(self, *args):
+        # Second press while a refresh is in flight = request stop. The
+        # worker thread checks InputProcessor.cancel_requested between
+        # symbols (input/inputprocessor.py:1057) and breaks out cleanly.
+        if self._refresh_stocks_task.is_started:
+            inp = getattr(self.graphObj, 'input_processor', None)
+            if inp is not None:
+                inp.cancel_requested = True
+            self.graphObj.statusChanges.emit('Stopping refresh…')
+            self._refresh_btn_set_label('Stopping…', enabled=False)
+            return
+
         wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT #lets ignore this
         toupdate = self.graphObj.required_syms(True, wantitall, True)
         params = copyit(self.graphObj.params)
@@ -118,10 +131,26 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         if len(toupdate) == 0:
             return
 
-        if self._refresh_stocks_task.is_started:
-            self.window.last_status.setText("Already runnning another")
-            return
+        inp = getattr(self.graphObj, 'input_processor', None)
+        if inp is not None:
+            inp.cancel_requested = False
+        self._refresh_btn_set_label('Stop Refreshing', enabled=True)
         self._refresh_stocks_task.command.emit(TaskParams(params=(toupdate, params)))
+
+    def _refresh_btn_set_label(self, text, enabled=True):
+        btn = self.window.findChild(QPushButton, name="refresh_stock")
+        if btn is None:
+            return
+        if not hasattr(self, '_refresh_btn_default_text') or not self._refresh_btn_default_text:
+            self._refresh_btn_default_text = btn.text() or 'Refresh Stock'
+        btn.setText(text)
+        btn.setEnabled(enabled)
+
+    def _refresh_done(self, *args):
+        self._refresh_btn_set_label(
+            getattr(self, '_refresh_btn_default_text', None) or 'Refresh Stock',
+            enabled=True,
+        )
 
         # self._dolongprocess.run(set(toupdate))
 

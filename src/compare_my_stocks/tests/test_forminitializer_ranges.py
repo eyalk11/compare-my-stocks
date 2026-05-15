@@ -48,15 +48,36 @@ def _make(min_v, max_v, n_options):
 
 
 def test_update_rangeb_resets_stale_valuerange():
-    obj = _make(0.0, 169564.895, 4)
-    obj.update_rangeb((0.0, 169564.895))
-    assert obj.graphObj.params.valuerange == [0.0, 169564.895]
+    # Previous range [12.09, 332.0825] is wholly below new data range
+    # [1_000, 169564.895] -> must reset, otherwise everything gets filtered out.
+    obj = _make(1_000.0, 169564.895, 4)
+    obj.update_rangeb((1_000.0, 169564.895))
+    assert obj.graphObj.params.valuerange == [1_000.0, 169564.895]
+
+
+def test_update_rangeb_preserves_in_bounds_valuerange():
+    # User-customized range that still fits inside the new bounds must
+    # survive a minMaxChanged tick, otherwise the lower handle snaps
+    # back to the data minimum on every redraw.
+    obj = _make(0.0, 1000.0, 4)
+    obj.graphObj.params.valuerange = [50.0, 500.0]
+    obj.update_rangeb((0.0, 1000.0))
+    assert obj.graphObj.params.valuerange == [50.0, 500.0]
 
 
 def test_update_range_num_resets_numrange():
-    obj = _make(0.0, 100.0, 10)
-    obj.update_range_num(10)
+    # Previous numrange (0, 5) is invalid when only 3 options exist now -> reset.
+    obj = _make(0.0, 100.0, 3)
+    obj.graphObj.params.numrange = (0, 5)
+    obj.update_range_num(3)
     assert obj.graphObj.params.numrange == (None, None)
+
+
+def test_update_range_num_preserves_in_bounds_numrange():
+    obj = _make(0.0, 100.0, 10)
+    obj.graphObj.params.numrange = (2, 7)
+    obj.update_range_num(10)
+    assert obj.graphObj.params.numrange == (2, 7)
 
 
 def test_update_ranges_force_resets_both():
