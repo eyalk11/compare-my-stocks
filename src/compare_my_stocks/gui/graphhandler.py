@@ -64,28 +64,57 @@ class GraphsHandler(FormObserverInterface, FormInitializerInterface):
 
     def load_graph(self, text=None):
         logging.info(f"GUI load_graph: text={text!r}")
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QApplication
+
+        # Hard-block compare_changed for the full duration of the load:
+        # both blockSignals AND ignore_updates_for_now have proven racy
+        # here — editable combos re-emit currentIndexChanged via the inner
+        # QLineEdit after both guards are released. Use a dedicated flag
+        # that compare_changed checks, released only after the Qt event
+        # loop has had a chance to drain queued signals.
+        self._loading_graph = True
+        wc = self.window.comparebox
+
+        def release():
+            self._loading_graph = False
+            logging.debug("GUI load_graph: _loading_graph released")
+
         def after_task():
             logging.info(f"GUI load_graph after_task: ext={self.graphObj.params.ext} groups={self.graphObj.params.groups} cur_cat={self.graphObj.params.cur_category!r}")
             self.setup_controls_from_params(0, 1)
             self.update_graph(ResetRanges.FORCE,
                               force=True)  # There is a bug of the graph not fitting in screen. This solves it.
+            # Flush queued events (deferred currentIndexChanged from the
+            # editable combo's inner QLineEdit will land here), THEN
+            # release the flag on the next event-loop tick.
+            QApplication.processEvents()
+            QTimer.singleShot(0, release)
 
         try:
             if text == None:
                 if not self.window.graphList.currentItem():
+                    release()
                     return
                 text = self.window.graphList.currentItem().text()
             if text not in self.graphs:
                 logging.warn(f'graph {text} not found')
+                release()
                 return
-            self.graphObj.params = copyit(self.graphs[text])
-            self.update_graph(ResetRanges.FORCE, force=True, after=after_task)
+            # Also block at the widget level for the synchronous portion.
+            wc.blockSignals(True)
+            try:
+                self.graphObj.params = copyit(self.graphs[text])
+                self.update_graph(ResetRanges.FORCE, force=True, after=after_task)
+            finally:
+                wc.blockSignals(False)
             # should wait after update with controls -> after_task
 
         except:
             import traceback;
             traceback.print_exc()
             logging.debug(('failed loading graph'))
+            release()
 
     def save_last_graph(self):
         if config.Running.LastGraphName:

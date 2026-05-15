@@ -2,6 +2,7 @@ import logging
 
 import PySide6.QtWidgets
 
+
 from PySide6.QtWidgets import QRadioButton, QCheckBox, QListWidget, QSizePolicy,QComboBox
 
 from graph.pyqtgraph_canvas import PyQtGraphCanvas
@@ -285,20 +286,23 @@ class FormInitializer(FormObserver, FormInitializerInterface):
             
             #self._last_choice=  self.window.comparebox.currentText()
             if isinitial:
-                for comp in  [self.window.comparebox,self.window.addstock] :
-                    # Block signals during repopulation: otherwise adding the
-                    # previously-set currentText as an item resolves the combo's
-                    # index, fires currentIndexChanged, and runs compare_changed
-                    # — which would OR Types.COMPARE into params.type even
-                    # though the saved graph had it off. See log trace where
-                    # compare_changed fires after setup_controls_from_params
-                    # has already released ignore_updates_for_now.
-                    was_blocked = comp.blockSignals(True)
-                    try:
-                        comp.clear()
-                        comp.addItems(alloptions)
-                    finally:
-                        comp.blockSignals(was_blocked)
+                # Belt-and-suspenders: blockSignals on the combo, AND raise
+                # ignore_updates_for_now. blockSignals alone isn't bulletproof
+                # for editable combos (the inner QLineEdit can re-sync and
+                # re-fire currentIndexChanged after blockSignals(False)). The
+                # variable guard catches the deferred slot path too.
+                prev_ignore = getattr(self, 'ignore_updates_for_now', False)
+                self.ignore_updates_for_now = True
+                try:
+                    for comp in  [self.window.comparebox,self.window.addstock] :
+                        was_blocked = comp.blockSignals(True)
+                        try:
+                            comp.clear()
+                            comp.addItems(alloptions)
+                        finally:
+                            comp.blockSignals(was_blocked)
+                finally:
+                    self.ignore_updates_for_now = prev_ignore
             
             
             

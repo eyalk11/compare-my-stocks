@@ -278,9 +278,26 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
         if self.ignore_updates_for_now:
             logging.debug(f"GUI compare_changed IGNORED num={num}")
             return
+        if getattr(self, '_loading_graph', False):
+            # Hard-block while a saved graph is loading. Released only
+            # after the Qt event loop drains, so deferred re-emits from
+            # the editable comparebox's inner QLineEdit can't sneak past.
+            logging.debug(f"GUI compare_changed IGNORED (_loading_graph) num={num}")
+            return
+        new_text = self.window.comparebox.currentText()
+        # Repopulation echo guard: combobox.currentIndexChanged can fire
+        # deferred (e.g. when items arrive after setCurrentText on an
+        # editable combo, or when the inner QLineEdit re-syncs), after
+        # ignore_updates_for_now has already been released. If the text
+        # matches what's already in params, treat it as an echo and do
+        # nothing — otherwise picking a benchmark during graph load would
+        # silently OR Types.COMPARE into params.type.
+        if new_text == (self.graphObj.params.compare_with or ""):
+            logging.debug(f"GUI compare_changed NO-OP (text unchanged={new_text!r})")
+            return
         self.ignore_updates_for_now = True
         self.window.findChild(QCheckBox, name="COMPARE").setChecked(1)
-        self.graphObj.params.compare_with = self.window.comparebox.currentText()
+        self.graphObj.params.compare_with = new_text
         logging.debug(f"GUI compare_changed: compare_with={self.graphObj.params.compare_with!r}")
         self.graphObj.params.type = self.graphObj.params.type | Types.COMPARE
         self.ignore_updates_for_now = False
