@@ -72,6 +72,14 @@ class RemoteProcess:
         v = ["start", "/wait"] + v
         return v
     def run_additional_process(cls):
+        # Idempotent: if THIS process already spawned a sidecar (singleton
+        # state), reuse it. Without this check, a second test fixture in the
+        # same pytest session would see its own sidecar's port-in-use and
+        # bail with sys.exit(2).
+        if cls.proc is not None:
+            logging.info("ibsrv already spawned in this process; reusing.")
+            return True
+
         if _ibsrv_port_in_use():
             logging.critical(
                 f"IBSRV port {config.Sources.IBSource.IBSrvPort} is already in use — "

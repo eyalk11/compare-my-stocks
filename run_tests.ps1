@@ -54,22 +54,14 @@ if ($Python) {
     $envCOMPARE_STOCK_PATH = Join-Path $HOME '.compare_my_stocks14'
 }
 
-# Ensure the test data dir exists with a config that won't collide with a
-# live app (different IBSrvPort). Seed from the in-tree default once; never
-# touch it again so the user can customize.
 if ($envCOMPARE_STOCK_PATH) {
-    if (-not (Test-Path $envCOMPARE_STOCK_PATH)) {
-        New-Item -ItemType Directory -Path $envCOMPARE_STOCK_PATH | Out-Null
-    }
-    $cfg = Join-Path $envCOMPARE_STOCK_PATH 'myconfig.yaml'
-    if (-not (Test-Path $cfg)) {
-        $seed = Join-Path $PSScriptRoot 'src\compare_my_stocks\data\myconfig.yaml'
-        if (Test-Path $seed) {
-            Copy-Item $seed $cfg
-        }
-    }
     $env:COMPARE_STOCK_PATH = $envCOMPARE_STOCK_PATH
 }
+
+# Override IBSrvPort (read by ConfigLoader.main → propagates to spawned
+# ibsrv subprocesses too) so the test-side sidecar can't collide with a
+# live app on the default 9091.
+$env:COMPARE_STOCK_IBSRV_PORT = '9092'
 
 # Warn if a live compare_my_stocks instance is holding the default IBSrvPort
 # (9091). The conftest fixture re-points the in-process port to 9092, but

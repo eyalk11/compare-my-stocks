@@ -496,13 +496,14 @@ class ConfigLoader():
         else:
             use_alternative = cls.config.Running.UseAlterantiveLocation
 
-        # Under pytest, don't let the yaml's IBSrvPort (9091) collide with a
-        # live compare_my_stocks app already holding it. Pin to 9092 here so
-        # every (re)load — including LOADDEFAULTCONFIG paths — picks the test
-        # port.
-        if 'pytest' in sys.modules:
+        # Allow $COMPARE_STOCK_IBSRV_PORT to override the yaml's IBSrvPort.
+        # Used by run_tests.ps1 to keep test-side ibsrv off port 9091 when a
+        # live app holds it. Env var (not a sys.modules check) so the value
+        # propagates to the spawned ibsrv subprocess too.
+        port_override = os.environ.get('COMPARE_STOCK_IBSRV_PORT')
+        if port_override:
             try:
-                cls.config.Sources.IBSource.IBSrvPort = 9092
+                cls.config.Sources.IBSource.IBSrvPort = int(port_override)
             except Exception:
                 pass
 

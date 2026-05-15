@@ -92,7 +92,7 @@ def test_resolve(IBSourceSess):
     fn = IBSource.get_right_contract_bars
     if hasattr(fn, "cache_remove_if"):
         fn.cache_remove_if(lambda x, y, z: True)
-    uu=x.get_right_contract_bars(ls[0]['contract'],datetime.datetime.now(),3)
+    uu=x.get_right_contract_bars(zz[0].contract,datetime.datetime.now(),3)
     assert len(uu)>0
 
 

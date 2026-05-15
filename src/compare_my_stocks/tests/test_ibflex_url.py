@@ -34,9 +34,29 @@ def test_request_statement_url_is_correct():
 
 @pytest.mark.integration
 def test_request_statement_live():
-    """Hit IB live: configured token+query should yield a ReferenceCode."""
+    """Hit IB live: configured token+query should yield a ReferenceCode.
+
+    IB's Flex service often returns Code=1001 ("Statement could not be
+    generated at this time. Please try again shortly.") on the first call;
+    retry a few times before giving up.
+    """
+    import time
+
     token, query_id = _load_flex_creds()
-    stmt_access = ibclient.request_statement(token, query_id)
+    last_err = None
+    for attempt in range(5):
+        try:
+            stmt_access = ibclient.request_statement(token, query_id)
+            break
+        except ibclient.ResponseCodeError as e:
+            last_err = e
+            if getattr(e, 'code', None) == 1001 or '1001' in str(e):
+                time.sleep(15)
+                continue
+            raise
+    else:
+        pytest.skip(f"IB Flex service returned 1001 on every retry: {last_err}")
+
     assert stmt_access.ReferenceCode
     assert re.fullmatch(r"\d+", str(stmt_access.ReferenceCode))
     assert "gdcdyn.interactivebrokers.com" in stmt_access.Url
