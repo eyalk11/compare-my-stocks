@@ -8,11 +8,14 @@ ib_insync.Contract) for [full_no_ib] / [mini] installs.
 
 Usage:
     python fetch_polygon_cache.py [--symbols AAPL,QQQ,...] [--years 5]
+                                  [--currencies ILS,EUR,...]
                                   [--out path/to/HistFile.cache]
                                   [--key POLYGON_API_KEY]
 
 Defaults: symbols = union of groups in ~/.compare_my_stocks/groups.json
 (alpha-numeric tickers only; crypto-style names skipped) or a small fallback.
+Currencies default to "ILS" so cache-only test_adjust_currency can resolve
+USD→ILS without a live IB Gateway.
 Output: src/compare_my_stocks/data/HistFile.cache.
 API key: --key, $POLYGON_API_KEY, or config.Sources.PolySource.Key in myconfig.yaml.
 """
@@ -28,7 +31,7 @@ from copy import copy
 from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
-REPO = Path(__file__).parent
+REPO = Path(__file__).resolve().parent.parent  # scripts/ is one below repo root
 SRC = REPO / "src"
 PKG = SRC / "compare_my_stocks"
 sys.path.insert(0, str(SRC))
@@ -70,12 +73,55 @@ def discover_symbols() -> list[str]:
     return sorted(cleaned) or FALLBACK_SYMBOLS
 
 
+def _fetch_currency_hist(client, currencies_csv: str, startdate, enddate):
+    """Build a currency_hist DataFrame with MultiIndex columns
+    (CUR, OHLC-field) matching the live-cache shape. Empty DF on no
+    currencies or empty result."""
+    import pandas
+    if not currencies_csv.strip():
+        return pandas.DataFrame()
+    codes = [c.strip().upper() for c in currencies_csv.split(",") if c.strip()]
+    frames = []
+    for code in codes:
+        ticker = f"C:USD{code}"  # Polygon FX format
+        try:
+            aggs = list(client.list_aggs(
+                ticker=ticker, multiplier=1, adjusted=True, timespan="day",
+                from_=startdate.date(), to=enddate.date(), limit=5000))
+        except Exception as e:
+            logging.warning(f"FX fetch failed for {ticker}: {e}")
+            continue
+        if not aggs:
+            logging.warning(f"FX fetch returned no bars for {ticker}")
+            continue
+        df = pandas.DataFrame(aggs).rename(
+            columns={"open": "Open", "close": "Close", "high": "High", "low": "Low"})
+        df["date"] = df["timestamp"].apply(
+            lambda x: datetime.datetime.fromtimestamp(x / 1000).date())
+        df["date"] = pandas.to_datetime(df["date"])
+        df.set_index("date", inplace=True)
+        df = df[["Open", "Close", "High", "Low"]]
+        df.columns = pandas.MultiIndex.from_product([[code], df.columns])
+        frames.append(df)
+        logging.info(f"FX {code}: {len(df)} bars [{df.index.min().date()} .. {df.index.max().date()}]")
+    if not frames:
+        return pandas.DataFrame()
+    return pandas.concat(frames, axis=1)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--symbols", help="comma-separated tickers; default: groups.json or fallback")
     ap.add_argument("--years", type=int, default=5)
+    ap.add_argument("--months", type=int, default=None,
+                    help="If set, overrides --years (window = months*30 days).")
+    ap.add_argument("--currencies", default="ILS",
+                    help="comma-separated currency codes vs USD (e.g. ILS,EUR). "
+                         "Empty string disables FX fetch.")
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--key", help="Polygon API key (else POLYGON_API_KEY env or myconfig.yaml)")
+    ap.add_argument("--no-strip", action="store_true",
+                    help="Skip the strip_bundled_cache post-step.")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -98,15 +144,34 @@ def main() -> int:
     config.Sources.PolySource.Key = api_key
     config.Input.InputSource = InputSourceType.Polygon
     config.TransactionHandlers.SaveCaches = False
+    # ForceSave — skips the QMessageBox prompt (which needs a QApplication)
+    # AND the DONT-branch early return that would otherwise skip writing the
+    # file when no prior cache was loaded.
+    from common.common import VerifySave  # noqa: E402
+    config.Running.VerifySaving = VerifySave.ForceSave
     config.File.HistF = str(args.out.resolve())
     config.File.HistFBackup = str(args.out.resolve()) + ".back"
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
+    # Backup any existing cache before overwriting — easy revert if the
+    # regenerated cache is broken or missing expected symbols/currencies.
+    if args.out.exists():
+        import shutil
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup = args.out.with_name(args.out.name + f".bak.{ts}")
+        shutil.copy2(args.out, backup)
+        logging.info(f"backed up existing cache → {backup}")
+
     symbols = ([s.strip().upper() for s in args.symbols.split(",")]
                if args.symbols else discover_symbols())
     enddate = datetime.datetime.now(tz=datetime.timezone.utc)
-    startdate = enddate - datetime.timedelta(days=365 * args.years)
-    logging.info(f"fetching {len(symbols)} symbols, {args.years}y window -> {args.out}")
+    if args.months is not None:
+        startdate = enddate - datetime.timedelta(days=30 * args.months)
+        window_label = f"{args.months}m"
+    else:
+        startdate = enddate - datetime.timedelta(days=365 * args.years)
+        window_label = f"{args.years}y"
+    logging.info(f"fetching {len(symbols)} symbols, {window_label} window -> {args.out}")
 
     # Same construction as tests/testtools.py::inp_poly.
     eng = MagicMock()
@@ -131,7 +196,8 @@ def main() -> int:
     tr._buydic = {}  # process_transactions is stubbed out, so initialize what buydic property returns
     inp = InputProcessor(eng, tr, poly)
     inp.data = InputDataImpl(semaphore=inp._semaphore)
-    inp.data.currency_hist = pandas.DataFrame()  # save_data calls .to_dict() on it
+    inp.data.currency_hist = _fetch_currency_hist(
+        poly.client, args.currencies, startdate, enddate)
     tr._inp = inp
     inp.process_params = copy(params)
     inp.process_params.use_cache = UseCache.DONT
@@ -142,12 +208,22 @@ def main() -> int:
     inp.process(set(), params=params)
 
     inp.save_data()
-    if args.out.exists():
-        logging.info(f"wrote {args.out} ({args.out.stat().st_size/1e6:.1f} MB, "
-                     f"{len(inp.data._hist_by_date)} dates, {len(inp.data.symbol_info)} symbols)")
-        return 0
-    logging.error("save_data did not produce a file")
-    return 1
+    if not args.out.exists():
+        logging.error("save_data did not produce a file")
+        return 1
+    logging.info(f"wrote {args.out} ({args.out.stat().st_size/1e6:.1f} MB, "
+                 f"{len(inp.data._hist_by_date)} dates, {len(inp.data.symbol_info)} symbols)")
+
+    if not args.no_strip:
+        # Polygon path already produces plain-dict symbol_info, so the strip
+        # step is usually a no-op, but it guarantees the bundle stays
+        # importable on environments without ib_insync.
+        try:
+            from strip_bundled_cache import strip as _strip
+            _strip(args.out)
+        except Exception as e:
+            logging.warning(f"strip step skipped: {e}")
+    return 0
 
 
 if __name__ == "__main__":

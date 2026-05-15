@@ -325,6 +325,10 @@ def generate_config(useinp):
         # fixture guarantees nothing here is mutated by the test.
         c.File.HistF = os.path.join(DATADIR, "HistFile.cache")
         c.File.JsonFilename = os.path.join(DATADIR, "groups.json")
+        # FullData is a derived InputDataImpl pickle that full_data_load reads
+        # preferentially over HistF. Without pinning, a stale per-user copy
+        # short-circuits the HistF load and leaves currency_hist empty.
+        c.File.FullData = os.path.join(DATADIR, "__nonexistent_fulldata__.bin")
 
     return c
 

@@ -345,45 +345,166 @@ def _maybe_guard_datadir(useinp, request):
 
 
 # ---------------------------------------------------------------------------
-# test_realengine — moved from test_it.py. Marked integration: requires a
-# live IB Gateway / sidecar.
+# test_realengine — two variants share the same body via _realengine_body:
+#   * test_realengine (cache-only): pins to in-tree HistFile.cache via the
+#     USEDATADIR-style config; deterministic, no IB Gateway required. Not
+#     marked integration.
+#   * test_realengine_live: hits a live IB Gateway / sidecar to fetch a
+#     now-10d → now window; integration-marked.
 # ---------------------------------------------------------------------------
-@pytest.mark.integration
-@pytest.mark.parametrize("useinp", [
-    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT,
-    UseInput.WITHINPUT,
-    UseInput.LOADDEFAULTCONFIG,
-    UseInput.LOADDEFAULTCONFIG | UseInput.USEDATADIR,
-    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT | UseInput.USEDATADIR,
-])
-def test_realengine(mock_config_to_default, realeng, useinp, request):
-    logging.info("Starting test_realengine, useinp=%s", useinp)
-    _maybe_guard_datadir(useinp, request)
+def _realengine_body(eng, fromdate, todate, expect_live, disconnect_after):
+    p = Parameters(
+        type=Types.PRICE, unite_by_group=UniteType.NONE,
+        isline=True, use_groups=True, groups=['FANG'],
+        use_cache=UseCache.FORCEUSE, show_graph=False,
+    )
+    p.fromdate = fromdate
+    p.todate = todate
     try:
-        eng = realeng
-        p = Parameters(
-            type=Types.PRICE, unite_by_group=UniteType.NONE,
-            isline=True, use_groups=True, groups=['FANG'],
-            use_cache=UseCache.FORCEUSE, show_graph=False,
-        )
-        if useinp & UseInput.WITHINPUT:
-            p.fromdate = datetime.datetime.now() - datetime.timedelta(days=5)
-            p.todate = datetime.datetime.now()
-        else:
-            p.fromdate = datetime.datetime(2022, 11, 1)
-            p.todate = datetime.datetime(2022, 12, 1)
-
         eng.gen_graph(p)
         assert eng.call_graph_generator.call_args is not None
         df = eng.call_graph_generator.call_args.args[0]
-        if useinp & UseInput.WITHINPUT:
+        if expect_live:
             assert df.shape[0] >= 1
             assert df.shape[1] >= 2
         else:
             assert df.shape[0] >= 22
     finally:
-        if useinp & UseInput.WITHINPUT:
+        if disconnect_after:
             eng.input_processor.InputSource.disconnect()
+
+
+@pytest.mark.parametrize("useinp", [
+    UseInput.LOADDEFAULTCONFIG,
+    UseInput.LOADDEFAULTCONFIG | UseInput.USEDATADIR,
+])
+def test_realengine(mock_config_to_default, realeng, useinp, request):
+    logging.info("Starting test_realengine, useinp=%s", useinp)
+    _maybe_guard_datadir(useinp, request)
+    _realengine_body(
+        realeng,
+        # Window inside the in-tree HistFile.cache (Apr 2025 → Apr 2026).
+        # ~25 trading days to comfortably clear the `df.shape[0] >= 22` floor.
+        fromdate=datetime.datetime(2025, 12, 15),
+        todate=datetime.datetime(2026, 2, 1),
+        expect_live=False,
+        disconnect_after=False,
+    )
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("useinp", [
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT,
+    UseInput.WITHINPUT,
+    UseInput.LOADDEFAULTCONFIG | UseInput.WITHINPUT | UseInput.USEDATADIR,
+])
+def test_realengine_live(mock_config_to_default, realeng, useinp, request):
+    logging.info("Starting test_realengine_live, useinp=%s", useinp)
+    _maybe_guard_datadir(useinp, request)
+    _realengine_body(
+        realeng,
+        fromdate=datetime.datetime.now() - datetime.timedelta(days=10),
+        todate=datetime.datetime.now(),
+        expect_live=True,
+        disconnect_after=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# test_adjust_currency — cache-only sibling here; the live (now-10d → now)
+# variant lives in test_it.py and reuses _adjust_currency_body. The in-tree
+# HistFile.cache is regenerated via scripts/fetch_polygon_cache.py and now
+# includes ILS FX rows so adjustment can resolve from cache alone.
+# ---------------------------------------------------------------------------
+def _adjust_currency_body(eng, fromdate, todate, stub_fx_source=False,
+                          use_cache=UseCache.FORCEUSE):
+    import numpy
+    p = Parameters(
+        type=Types.PRICE, unite_by_group=UniteType.NONE,
+        isline=True, use_groups=False, groups=['FANG'],
+        use_cache=use_cache, show_graph=False,
+        adjust_to_currency=True, currency_to_adjust='ILS',
+    )
+    p.fromdate = fromdate
+    p.todate = todate
+    eng.params = p
+    eng.to_use_ext = eng.params.use_ext
+    eng.used_unitetype = eng.params.unite_by_group
+    eng.process()
+    if stub_fx_source:
+        # After cache load but before currency adjustment: stub the source so
+        # get_currency_hist's "re-query" path returns None (cached FX used as
+        # is) AND get_current_currency returns a real numeric rate (needed
+        # by readjust_for_currency's `newdf[x].mul(1 / rate)`). Done here,
+        # not earlier, because process() still expects a real source for
+        # symbol-history unpacking.
+        from unittest.mock import MagicMock
+        src = MagicMock()
+        src.get_currency_history = MagicMock(return_value=None)
+        # USD→ILS spot rate ~3.7 — only matters that it's a finite float.
+        src.get_current_currency = MagicMock(return_value=3.7)
+        eng.input_processor._inputsource = src
+    eng.call_data_generator()
+    arr = numpy.isnan(eng._datagen.orig_df).all(axis=1)
+    assert arr.loc[arr == False].size >= 2
+
+
+@pytest.fixture
+def cacheonly_eng(mock_config_to_default, useinp):
+    """CompareEngine pinned to the bundled HistFile.cache, with NO live IB
+    sidecar (AddProcess=None, InputSource=Cache). Mirrors get_eng() in
+    testtools but skips additional_process — currency adjustment uses cached
+    FX so a live sidecar is unnecessary.
+
+    Order matters: ConfigLoader.config is shared across tests, so resetting
+    these fields here (after mock_config_to_default may have set them via
+    update_from) protects against earlier-test pollution.
+    """
+    from config import config as _cfg
+    _cfg.Sources.IBSource.AddProcess = None
+    _cfg.Input.InputSource = InputSourceType.Cache
+    # Belt-and-suspenders: directly pin the bundled-cache paths here. update_
+    # _from() in generate_config has subtle field-tracking behavior that
+    # sometimes leaves File.FullData pointing at a stale per-user copy when
+    # tests run in suite order.
+    from tests.testtools import DATADIR, get_eng
+    _cfg.File.HistF = os.path.join(DATADIR, "HistFile.cache")
+    _cfg.File.FullData = os.path.join(DATADIR, "__nonexistent_fulldata__.bin")
+    eng = get_eng()
+    # Reset per-test FX state so cached relevant_currencies_rates from an
+    # earlier test (test_realengine_live) don't shadow our stub.
+    eng.input_processor._relevant_currencies_rates = {}
+    return eng
+
+
+@pytest.mark.parametrize("useinp", [
+    UseInput.LOADDEFAULTCONFIG | UseInput.USEDATADIR,
+])
+def test_adjust_currency(cacheonly_eng, useinp, request):
+    """Cache-only currency adjustment. Pinned to USEDATADIR so HistF points
+    at the bundled HistFile.cache (regenerated with ILS FX rows by
+    scripts/fetch_polygon_cache.py). No live IB sidecar — see cacheonly_eng."""
+    _maybe_guard_datadir(useinp, request)
+    _adjust_currency_body(
+        cacheonly_eng,
+        fromdate=datetime.datetime(2026, 1, 1),
+        todate=datetime.datetime(2026, 2, 1),
+        stub_fx_source=True,
+    )
+
+
+@pytest.mark.integration
+def test_adjust_currency_live(realeng):
+    """Live IB Gateway variant: fetches FX for the last 10d via the real
+    IB sidecar. Shares the body with the cache-only sibling above.
+    UseCache.DONT forces a live fetch for both price and FX history; the
+    cache-only path is exercised by test_adjust_currency."""
+    _adjust_currency_body(
+        realeng,
+        fromdate=datetime.datetime.now() - datetime.timedelta(days=10),
+        todate=datetime.datetime.now(),
+        use_cache=UseCache.DONT,
+    )
 
 
 # ---------------------------------------------------------------------------

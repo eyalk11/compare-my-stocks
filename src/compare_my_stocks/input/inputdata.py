@@ -234,6 +234,16 @@ class InputDataImpl(InputDataImplInterface):
 
                 if type(self.currency_hist) == dict:  # backward compatability
                     self.currency_hist = pandas.DataFrame(self.currency_hist)
+                    # to_dict() of a MultiIndex-columned DataFrame produces
+                    # tuple keys, and DataFrame(dict) reconstructs flat
+                    # tuple-labeled columns (NOT MultiIndex). Re-promote so
+                    # `currency in df` / df[currency] level-0 access works.
+                    if (len(self.currency_hist.columns) > 0
+                            and isinstance(self.currency_hist.columns[0], tuple)
+                            and not isinstance(self.currency_hist.columns,
+                                               pandas.MultiIndex)):
+                        self.currency_hist.columns = pandas.MultiIndex.from_tuples(
+                            self.currency_hist.columns)
 
                 if (
                     self._cache_date - datetime.datetime.now()

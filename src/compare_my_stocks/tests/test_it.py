@@ -36,25 +36,8 @@ pytestmark = pytest.mark.integration
 # test_realengine and test_synthetic_engine live in test_engine.py — one
 # is real-IB integration, the other uses a synthetic in-process IB source.
 
-def test_adjust_currency(realeng):
-    eng = realeng
-    p =Parameters(
-        type=Types.PRICE, unite_by_group=UniteType.NONE
-        , isline=True,use_groups=False, groups=['FANG'], use_cache=UseCache.FORCEUSE,
-        show_graph=False,adjust_to_currency=True,currency_to_adjust='ILS')
-
-    p.fromdate=datetime.datetime.now()-datetime.timedelta(days=5)
-    p.todate=datetime.datetime.now()
-    eng.params=p
-    eng.to_use_ext = eng.params.use_ext
-    eng.used_unitetype = eng.params.unite_by_group
-    eng.process()
-    eng.call_data_generator()
-    arr = numpy.isnan(eng._datagen.orig_df).all(axis=1)
-    assert(arr.loc[arr==False].size>=2)
-    a=1
-    #df= eng.call_graph_generator.call_args.args[0]
-    #assert df.shape == (3,2)
+# test_adjust_currency and test_adjust_currency_live both live in
+# test_engine.py now (colocated with the shared _adjust_currency_body).
 
 
 #pytest.
