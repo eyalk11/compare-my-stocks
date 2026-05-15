@@ -205,3 +205,137 @@ def test_get_hist_sym_applies_exchange_currency_override(monkeypatch):
     assert inp.data.symbol_info["AAA"]["currency"] == "GBp"
     # And adjusted_df was requested (because GBp != USD base)
     inp.get_adjusted_df_for_currency.assert_called_once()
+
+
+# ============================================================================
+# InputProcessor.return_df — time-interpolated earnings spread.
+# Replaces the previous monthly bfill/ffill step function with a time-
+# weighted linear interpolation between known earnings anchors, ffilled
+# past the last anchor and left NaN before the first (no look-ahead).
+# ============================================================================
+
+def _build_panels(price_dates, prices_by_sym, earnings_dates, earnings_by_sym):
+    """Helper: build the (mpl-num indexed) daily price panel and the
+    Timestamp-indexed quarterly earnings panel that return_df expects."""
+    import numpy as np
+    from matplotlib.dates import date2num
+    idx = [date2num(d.to_pydatetime()) for d in pd.bdate_range(*price_dates)]
+    prices = pd.DataFrame(
+        {sym: np.linspace(*span, num=len(idx))
+         for sym, span in prices_by_sym.items()},
+        index=idx,
+    )
+    earnings = pd.DataFrame(
+        earnings_by_sym, index=pd.to_datetime(earnings_dates),
+    )
+    return prices, earnings
+
+
+def test_return_df_time_interpolates_between_anchors():
+    """Between two known earnings reports, the divisor must follow a straight
+    time-weighted line from the earlier anchor to the later one — not a step
+    at month boundaries. Probe a date roughly 1/3 of the way from Mar to Jun
+    and assert the divisor matches the time-weighted blend."""
+    from matplotlib.dates import date2num
+    prices, earnings = _build_panels(
+        ("2026-01-01", "2026-08-31"),
+        {"AAPL": (150.0, 200.0)},
+        ["2026-03-01", "2026-06-01"],   # 92 days apart
+        {"AAPL": [25.0, 28.0]},          # +3.0 over 92 days
+    )
+
+    out = InputProcessor.return_df(prices, earnings, "peratio")
+
+    # Mid-April: ~45 days past Mar-1 anchor, ~47 days before Jun-1.
+    # Expected divisor = 25 + (45/92) * 3
+    probe = pd.Timestamp("2026-04-15")
+    days_from_mar = (probe - pd.Timestamp("2026-03-01")).days
+    span = (pd.Timestamp("2026-06-01") - pd.Timestamp("2026-03-01")).days
+    expected_divisor = 25.0 + (days_from_mar / span) * (28.0 - 25.0)
+
+    probe_mpl = date2num(probe.to_pydatetime())
+    nearest = min(out.index, key=lambda x: abs(x - probe_mpl))
+    expected_ratio = prices.loc[nearest, "AAPL"] / expected_divisor
+    assert out.loc[nearest, ("peratio", "AAPL")] == pytest.approx(
+        expected_ratio, rel=1e-3
+    ), "interpolation between anchors must be time-weighted linear"
+
+
+def test_return_df_leaves_pre_first_anchor_nan():
+    """Dates before the first reported quarter must stay NaN — no bfill, so
+    we never silently borrow a future-reported earnings figure (no look-ahead)."""
+    from matplotlib.dates import date2num
+    prices, earnings = _build_panels(
+        ("2026-01-01", "2026-08-31"),
+        {"AAPL": (150.0, 200.0)},
+        ["2026-03-01", "2026-06-01"],
+        {"AAPL": [25.0, 28.0]},
+    )
+
+    out = InputProcessor.return_df(prices, earnings, "peratio")
+
+    probe = date2num(pd.Timestamp("2026-01-15").to_pydatetime())
+    nearest = min(out.index, key=lambda x: abs(x - probe))
+    assert pd.isna(out.loc[nearest, ("peratio", "AAPL")]), \
+        "pre-first-anchor dates must be NaN (no look-ahead bfill)"
+
+
+def test_return_df_ffills_past_last_anchor():
+    """After the last reported quarter, the last known earnings figure
+    carries forward (constant divisor) — interpolation can't extrapolate
+    so ffill is the safe default."""
+    from matplotlib.dates import date2num
+    prices, earnings = _build_panels(
+        ("2026-01-01", "2026-08-31"),
+        {"AAPL": (150.0, 200.0)},
+        ["2026-03-01", "2026-06-01"],
+        {"AAPL": [25.0, 28.0]},
+    )
+
+    out = InputProcessor.return_df(prices, earnings, "peratio")
+
+    probe = date2num(pd.Timestamp("2026-08-15").to_pydatetime())
+    nearest = min(out.index, key=lambda x: abs(x - probe))
+    expected = prices.loc[nearest, "AAPL"] / 28.0
+    assert out.loc[nearest, ("peratio", "AAPL")] == pytest.approx(expected, rel=1e-9), \
+        "past-last-anchor must ffill the last known earnings value"
+
+
+def test_return_df_clamps_negative_ratios_to_zero():
+    """Negative earnings (loss period) → ratio clamped to 0 by `cur[cur<0]=0`."""
+    from matplotlib.dates import date2num
+    prices, earnings = _build_panels(
+        ("2026-01-01", "2026-08-31"),
+        {"LOSS": (100.0, 100.0)},
+        ["2026-03-01", "2026-06-01"],
+        {"LOSS": [-5.0, -3.0]},
+    )
+    out = InputProcessor.return_df(prices, earnings, "peratio")
+    interior_idx = [
+        i for i in out.index
+        if date2num(pd.Timestamp("2026-04-01").to_pydatetime())
+        <= i
+        <= date2num(pd.Timestamp("2026-06-01").to_pydatetime())
+    ]
+    interior = out.loc[interior_idx, ("peratio", "LOSS")]
+    assert (interior == 0).all(), \
+        f"negative earnings must clamp to 0, got {interior.unique()}"
+
+
+def test_return_df_output_shape_and_columns():
+    """Structural sanity: MultiIndex columns, output reindexed onto every
+    original price date, and the symbol set preserved."""
+    prices, earnings = _build_panels(
+        ("2026-01-01", "2026-08-31"),
+        {"AAPL": (150.0, 200.0), "MSFT": (400.0, 450.0)},
+        ["2026-03-01", "2026-06-01"],
+        {"AAPL": [25.0, 28.0], "MSFT": [80.0, 85.0]},
+    )
+
+    out = InputProcessor.return_df(prices, earnings, "pricesells")
+
+    assert isinstance(out.columns, pd.MultiIndex)
+    assert list(out.columns.get_level_values(0).unique()) == ["pricesells"]
+    assert set(out.columns.get_level_values(1)) == {"AAPL", "MSFT"}
+    assert list(out.index) == list(prices.index), \
+        "output must be reindexed onto original daily price dates"

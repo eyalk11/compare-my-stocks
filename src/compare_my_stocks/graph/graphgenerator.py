@@ -243,7 +243,18 @@ class GraphGenerator:
         self._plot.setTitle(self.get_title())
 
         if plot_data and self.params.show_transactions_graph:
-            self._plot_transactions(plot_data, colours)
+            # Match matplotlib's `special` decision: snap markers to the
+            # displayed line (instead of using raw cost) whenever the
+            # y-axis is not the raw price — i.e. currency-adjusted price,
+            # percentage, value, profit, etc. Otherwise the markers
+            # sit at the historical transaction price and float far away
+            # from the line the user is reading.
+            special = bool(
+                self.params.adjust_to_currency
+                or self.params.adjusted_for_base_cur
+                or not ((Types.PRICE & type) == Types.PRICE or type == Types.ABS)
+            )
+            self._plot_transactions(plot_data, colours, special=special)
 
         self._install_legend_toggles()
         self._install_hover()
@@ -260,10 +271,15 @@ class GraphGenerator:
             pass
 
     # ------------------------------------------------------------------
-    def _plot_transactions(self, plot_data, colours):
+    def _plot_transactions(self, plot_data, colours, special=False):
         """Scatter each transaction at (date, price); circles for buys,
         squares for sells; size scales with |qty * cost| so bigger
-        positions visually pop. Mirrors matplotlib generator's intent."""
+        positions visually pop. Mirrors matplotlib generator's intent.
+
+        When `special` is True (currency-adjusted / non-raw-price graphs),
+        snap marker y to the displayed curve at the transaction's x via
+        linear interpolation, so dots sit on the line rather than at the
+        raw historical cost."""
         colour_by_sym = {sym: c for sym, c in zip(self._curves.keys(), colours)}
 
         # First pass: collect totals to derive a typical-size baseline
@@ -295,13 +311,27 @@ class GraphGenerator:
                 continue
             colour = colour_by_sym.get(sym, '#888888')
             spots = []
+            shift_next_day = getattr(config.Input, 'TransactionsOnNextDay', False)
             for entry in rows:
                 date, cost, qty, source, adj = entry
                 if cost is None or (isinstance(cost, float) and math.isnan(cost)):
                     continue
-                ts = float(_to_epoch([date])[0])
-                y = adj if adj is not None and not (isinstance(adj, float) and math.isnan(adj)) else cost
-                yv = float(y)
+                # Display-only shift: marker appears on the day after the
+                # transaction so the value step visually follows it.
+                display_date = (date + __import__('datetime').timedelta(days=1)
+                                if shift_next_day else date)
+                ts = float(_to_epoch([display_date])[0])
+                if special and sym in self._curves:
+                    xd, yd = self._curves[sym].getData()
+                    if xd is not None and len(xd) > 0:
+                        yv = float(np.interp(ts, xd, yd))
+                    else:
+                        yv = float(cost)
+                else:
+                    y = adj if adj is not None and not (isinstance(adj, float) and math.isnan(adj)) else cost
+                    yv = float(y)
+                if math.isnan(yv):
+                    continue
                 is_sell = qty is not None and qty < 0
                 total = abs((qty or 0) * cost)
                 size = base_px * math.sqrt(total / typical) if total > 0 else MIN_PX

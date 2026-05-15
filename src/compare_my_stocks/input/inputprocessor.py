@@ -1222,40 +1222,35 @@ class InputProcessor(InputProcessorInterface):
         self._data._reg_panel = pd.concat(dataframes,axis=1)
 
     @staticmethod
-    def return_df(df, cur,name):
-        def adjust(df):
-            # Resample the DataFrame to monthly frequency
-            df_monthly = df.resample('MS').asfreq()
-
-            # Forward fill the missing values with a limit of 12
-            df_filled = df_monthly.bfill(limit=12)
-            df_filled = df_filled.ffill(limit=4) #lets fill up to 4 months forward
-            return df_filled
-        origdf=df.copy()
+    def return_df(df, cur, name):
+        # Spread quarterly earnings anchors onto the daily price grid by
+        # time-weighted linear interpolation between known reports, then
+        # ffill past the last anchor. Dates before the first reported quarter
+        # stay NaN — we deliberately do NOT bfill, so a mid-April P/E never
+        # silently borrows June's not-yet-reported earnings (no look-ahead).
+        origdf = df.copy()
         from ordered_set import OrderedSet
-        from jupyter.jupytertools import convert_dates_df, convert_df_dates
-        common = list(OrderedSet(df.columns).intersection(cur.columns))
-        df=df[common]
         from matplotlib.dates import num2date
-        df.index = df.index.to_series().apply(lambda x: num2date(x))
-        df.index = df.index.to_series().apply(lambda x: Timestamp(x.to_pydatetime().date()))
-        #df=convert_df_dates(df)
-        df=df.resample('MS').asfreq()
-        cur=cur[common]
-        cur = cur.reindex((df.index))
-        cur=adjust(cur)
-        #cur=cur.fillna(value=-1)
+        common = list(OrderedSet(df.columns).intersection(cur.columns))
+        cur = cur[common]
 
-        #cur.sort_index(axis=0, inplace=True)
+        # Convert origdf's mpl-num index to a daily Timestamp axis so the
+        # earnings series (also Timestamp-indexed) can share a unified
+        # time-aware index for interpolation.
+        daily_ts = pd.DatetimeIndex([
+            Timestamp(num2date(x).date()) for x in origdf.index
+        ])
 
-        cur=convert_dates_df(cur)
-        cur=cur.reindex(sorted(list(origdf.index)),method='ffill')
-        #cur[cur==-1]=numpy.NaN
+        combined = cur.index.union(daily_ts).unique().sort_values()
+        cur = cur.reindex(combined)
+        cur = cur.interpolate(method='time').ffill()
+        cur = cur.loc[daily_ts]
+        cur.index = origdf.index  # back to mpl-num so the price divide aligns
 
-        #cur = cur.loc[:,~cur.columns.duplicated()].copy()
-        cur= origdf[common].divide(cur[common]) #pr ps / eps = price / earnings
-        cur.columns = pd.MultiIndex.from_product([[name], (common)], names=['Name', 'Symbols'])
-        cur[cur<0]=0
+        cur = origdf[common].divide(cur[common])  # price / earnings
+        cur.columns = pd.MultiIndex.from_product(
+            [[name], common], names=['Name', 'Symbols'])
+        cur[cur < 0] = 0
         return cur
 
 

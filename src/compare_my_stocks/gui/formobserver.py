@@ -101,16 +101,16 @@ class FormObserver(ListsObserver, GraphsHandler, JupyterHandler):
                 sel.takeItem(sel.row(t))
 
     def refresh_stocks(self, *args):
-        TOLLERANCEGETIT = 5
         wantitall = self.graphObj.used_unitetype & UniteType.ADDPROT == UniteType.ADDPROT #lets ignore this
         toupdate = self.graphObj.required_syms(True, wantitall, True)
         params = copyit(self.graphObj.params)
-        logging.info((f'refreshing {toupdate} from {params.fromdate} to {params.todate}'))
-        now = datetime.now(tz=params.todate.tzinfo)
-        if params.todate < now and (now - params.todate).days < TOLLERANCEGETIT:
-            params.todate = None
-        # if self.window.enddate.date().toPy-datetime.
-        # params.transactions_todate=None #datetime.now() #always till the end
+        # Refresh is an explicit "go pull fresh data" action — the user's
+        # display-filter End date shouldn't cap the fetch range. Clear it
+        # on the *copy* so the data fetch goes through to now(); the live
+        # graphObj.params keeps the user's filter for display.
+        params.todate = None
+        params.transactions_todate = None
+        logging.info((f'refreshing {toupdate} from {params.fromdate} to now'))
         logging.debug(('updating stocks from '))
         if len(toupdate) == 0:
             return

@@ -41,6 +41,37 @@ class FormInitializer(FormObserver, FormInitializerInterface):
     def prepare_graph_widget(self):
         self._canvas = PyQtGraphCanvas()
         self.window.graph_groupbox.layout().addWidget(self._canvas)
+        self._canvas.xRangeChanged.connect(self._on_chart_xrange)
+
+    @simple_exception_handling(err_description="chart->datepicker sync failed",
+                                never_throw=True)
+    def _on_chart_xrange(self, start, end):
+        logging.debug(f"[chart-zoom] _on_chart_xrange start={start} end={end}")
+        """Mirror the chart's visible x-range into the DatePicker widgets.
+
+        Visual sync only — does NOT trigger date_changed / re-filter, so
+        zooming the chart stays a free interaction. Slider signals are
+        blocked during the update to avoid the feedback loop
+        (slider.setValue → dateValueChanged → date_changed → update_graph
+        → setXRange → ...).
+        """
+        if start is None or end is None:
+            return
+        self.window.startdate.blockSignals(True)
+        self.window.enddate.blockSignals(True)
+        try:
+            self.window.startdate.setDateTime(start)
+            self.window.enddate.setDateTime(end)
+        finally:
+            self.window.startdate.blockSignals(False)
+            self.window.enddate.blockSignals(False)
+        slider = getattr(self.window, 'daterangepicker', None)
+        if slider is not None:
+            slider.blockSignals(True)
+            try:
+                slider.datevalue = (start, end)
+            finally:
+                slider.blockSignals(False)
 
 
     def after_load(self):
